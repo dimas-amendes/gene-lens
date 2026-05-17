@@ -1215,6 +1215,19 @@ def clear():
     return redirect(url_for("index"))
 
 
+@app.route("/settings")
+def settings():
+    """Show installation status of databases and optional integrations."""
+    from src.system_status import check_all
+    t = get_strings(_get_lang())
+    return render_template(
+        "settings.html",
+        t=t,
+        lang=_get_lang(),
+        components=check_all(),
+    )
+
+
 def run_dashboard(port: int = 5000, debug: bool = False):
     ensure_directories()
     HISTORY_DIR.mkdir(parents=True, exist_ok=True)

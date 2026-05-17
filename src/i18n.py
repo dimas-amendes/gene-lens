@@ -310,6 +310,19 @@ STRINGS = {
         # Labels
         "warning_label": "AVISO",
         "stars": "estrelas",
+
+        # Settings page
+        "settings_link": "Configuracoes",
+        "settings_title": "Configuracoes do sistema",
+        "settings_subtitle": "Status dos bancos de dados de referencia e integracoes opcionais. Tudo roda localmente.",
+        "settings_safety_note": "Esta pagina nao executa instaladores automaticamente. Copie os comandos e rode no seu terminal — voce sempre tem controle sobre o que e instalado.",
+        "settings_back": "Voltar",
+        "settings_required": "obrigatorio",
+        "settings_installed": "instalado",
+        "settings_not_installed": "ausente",
+        "settings_copy": "Copiar",
+        "settings_copied": "Copiado!",
+        "settings_docs": "Documentacao oficial",
     },
 
     "en": {
@@ -592,6 +605,19 @@ STRINGS = {
 
         "warning_label": "WARNING",
         "stars": "stars",
+
+        # Settings page
+        "settings_link": "Settings",
+        "settings_title": "System settings",
+        "settings_subtitle": "Status of reference databases and optional integrations. Everything runs locally.",
+        "settings_safety_note": "This page never runs installers automatically. Copy the commands and run them in your terminal — you always stay in control of what gets installed.",
+        "settings_back": "Back",
+        "settings_required": "required",
+        "settings_installed": "installed",
+        "settings_not_installed": "missing",
+        "settings_copy": "Copy",
+        "settings_copied": "Copied!",
+        "settings_docs": "Official docs",
     },
 }
 

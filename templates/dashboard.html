@@ -141,6 +141,7 @@ a { color: var(--accent); }
   <div class="container">
     <div class="logo"><span class="logo-icon"><i class="ti ti-flask"></i></span> {{ t.app_title }} <span class="priv-pill"><i class="ti ti-lock"></i> {{ t.privacy_badge|safe }}</span></div>
     <div class="d-flex align-items-center gap-2">
+      <a href="/settings" class="lang-sw" style="margin-right:8px;color:#a1a1aa;text-decoration:none;font-size:13px;display:inline-flex;align-items:center;gap:4px" title="{{ t.settings_link }}"><i class="ti ti-settings"></i> {{ t.settings_link }}</a>
       <div class="lang-sw"><a href="/lang/pt" class="{% if lang == 'pt' %}active{% endif %}">PT-BR</a> <a href="/lang/en" class="{% if lang == 'en' %}active{% endif %}">EN</a></div>
     </div>
   </div>

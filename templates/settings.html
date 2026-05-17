@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" data-bs-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ t.settings_title }} · {{ t.app_title }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/halfmoon.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tabler-icons.min.css') }}">
+<style>
+@font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-400.woff2') }}") format('woff2'); font-weight:400; font-display:swap; }
+@font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-500.woff2') }}") format('woff2'); font-weight:500; font-display:swap; }
+@font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-600.woff2') }}") format('woff2'); font-weight:600; font-display:swap; }
+@font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-700.woff2') }}") format('woff2'); font-weight:700; font-display:swap; }
+@font-face { font-family:'Geist Mono'; src:url("{{ url_for('static', filename='fonts/geist-mono-400.woff2') }}") format('woff2'); font-weight:400; font-display:swap; }
+:root { --bs-body-bg: #09090b; --red: #ef4444; --green: #22c55e; --green-soft: rgba(34,197,94,.1); --accent: #3b82f6; --accent-soft: rgba(59,130,246,.1); --yellow: #eab308; }
+body { font-family: 'Geist', -apple-system, system-ui, sans-serif; background: var(--bs-body-bg); color: #fafafa; margin: 0; }
+.site-header { background: #09090b; border-bottom: 1px solid #27272a; padding: 16px 0; }
+.site-header .container { display: flex; justify-content: space-between; align-items: center; max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+.logo { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+.logo-icon { color: var(--accent); font-size: 22px; }
+.back-link { color: #a1a1aa; text-decoration: none; font-size: 13px; display: inline-flex; align-items: center; gap: 4px; }
+.back-link:hover { color: #d4d4d8; }
+.wrap { max-width: 880px; margin: 32px auto; padding: 0 16px; }
+h1.page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+.subtitle { color: #71717a; font-size: 14px; margin-bottom: 28px; }
+.card { background: #18181b; border: 1px solid #27272a; border-radius: 12px; padding: 20px 22px; margin-bottom: 14px; }
+.card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.card-title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin: 0 0 4px; }
+.card-meta { font-size: 12px; color: #71717a; font-family: 'Geist Mono', monospace; }
+.badge { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.badge.ok { color: var(--green); background: var(--green-soft); }
+.badge.missing { color: var(--red); background: rgba(239,68,68,.1); }
+.badge.required { color: var(--yellow); background: rgba(234,179,8,.1); margin-left: 6px; }
+.commands { background: #0a0a0c; border: 1px solid #27272a; border-radius: 8px; padding: 12px 14px; margin-top: 14px; font-family: 'Geist Mono', monospace; font-size: 12px; line-height: 1.8; color: #d4d4d8; overflow-x: auto; }
+.commands .cmt { color: #52525b; }
+.commands button { background: transparent; border: 1px solid #3f3f46; color: #a1a1aa; font-size: 10px; padding: 2px 8px; border-radius: 4px; cursor: pointer; float: right; font-family: 'Geist', sans-serif; }
+.commands button:hover { color: #fafafa; border-color: #71717a; }
+.docs-link { font-size: 12px; color: var(--accent); text-decoration: none; margin-top: 10px; display: inline-flex; align-items: center; gap: 4px; }
+.docs-link:hover { text-decoration: underline; }
+.note { background: rgba(59,130,246,.05); border: 1px solid rgba(59,130,246,.2); border-radius: 10px; padding: 14px 18px; font-size: 13px; color: #cbd5e1; margin-bottom: 24px; }
+.note .ti { color: var(--accent); margin-right: 6px; }
+</style>
+</head>
+<body>
+<header class="site-header">
+  <div class="container">
+    <div class="logo"><span class="logo-icon"><i class="ti ti-flask"></i></span> {{ t.app_title }}</div>
+    <a href="/" class="back-link"><i class="ti ti-arrow-left"></i> {{ t.settings_back }}</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <h1 class="page-title">{{ t.settings_title }}</h1>
+  <p class="subtitle">{{ t.settings_subtitle }}</p>
+
+  <div class="note"><i class="ti ti-info-circle"></i> {{ t.settings_safety_note }}</div>
+
+  {% for c in components %}
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h3 class="card-title">
+          {% if c.installed %}<i class="ti ti-circle-check" style="color:var(--green)"></i>{% else %}<i class="ti ti-circle-x" style="color:var(--red)"></i>{% endif %}
+          {{ c.name }}
+          {% if c.required %}<span class="badge required">{{ t.settings_required }}</span>{% endif %}
+        </h3>
+        <div class="card-meta">{{ c.detail }}</div>
+      </div>
+      <span class="badge {% if c.installed %}ok{% else %}missing{% endif %}">
+        {% if c.installed %}<i class="ti ti-check"></i> {{ t.settings_installed }}{% else %}<i class="ti ti-x"></i> {{ t.settings_not_installed }}{% endif %}
+      </span>
+    </div>
+
+    {% if not c.installed or c.key == 'ollama' %}
+    <div class="commands">
+      <button onclick="copyCmds(this)" data-cmds="{% for cmd in c.install_commands %}{{ cmd }}{% if not loop.last %}&#10;{% endif %}{% endfor %}">{{ t.settings_copy }}</button>
+      {% for cmd in c.install_commands %}
+      <div>{% if cmd.startswith('#') %}<span class="cmt">{{ cmd }}</span>{% else %}<span style="color:var(--accent)">$</span> {{ cmd }}{% endif %}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if c.docs_url %}
+    <a href="{{ c.docs_url }}" target="_blank" rel="noopener noreferrer" class="docs-link">{{ t.settings_docs }} <i class="ti ti-external-link"></i></a>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+function copyCmds(btn) {
+  const text = btn.dataset.cmds.replaceAll('&#10;', '\n');
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '{{ t.settings_copied }}';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
+}
+</script>
+</body>
+</html>

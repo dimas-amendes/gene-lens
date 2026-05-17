@@ -31,3 +31,10 @@
 - Always test with `sample/sample_genome.csv` (synthetic, 200+ SNPs)
 - Verify both languages work after any text change
 - Run `python main.py privacy-check` after touching privacy code
+
+## Data classification (anti-leakage)
+
+- **Tracked + safe**: `sample/*` (synthetic only; CI enforces "SYNTHETIC" header), `src/snp_database.py` and other `src/*.py` (public reference data: rsid+gene+description, no genotypes), reports/templates with no rsid+genotype pairs.
+- **Tracked + forbidden**: any file outside `sample/` matching `rs[0-9]+[,\t][0-9XYMT]+[,\t][0-9]+[,\t][AGCT]{1,2}`. CI rejects.
+- **Untracked (gitignored)**: `input/`, `output/`, `history/`, `data/*.tsv`, `*.log`, `.genetics_consent`. Never `git add -f` these.
+- **Adding new fixtures**: put in `sample/`, prefix header `# SYNTHETIC SAMPLE - NOT REAL GENETIC DATA`, update `sample/README.md`.

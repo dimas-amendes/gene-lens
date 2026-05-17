@@ -118,20 +118,37 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check for sensitive data patterns
+      - name: Check for genome-shaped data outside sample/
         run: |
-          echo "Checking for real genetic data in tracked files outside sample/..."
-          # Find SNP-shaped lines (rsNNN\t<chr>\t...) in tracked files, excluding sample/ fixtures.
+          echo "Scanning for rsid<sep>chr<sep>pos<sep>genotype rows in non-sample files..."
+          # Match both TSV and CSV genome shapes: rsNNNN<tab|,>chr<tab|,>pos<tab|,>[AGCT]{1,2}
           MATCHES=$(git ls-files \
             | grep -v '^sample/' \
             | grep -v '^genetics-docs/' \
-            | xargs -I{} grep -l -E "^rs[0-9]+	[0-9XYMT]+	[0-9]+" {} 2>/dev/null || true)
+            | xargs -I{} grep -l -E "^rs[0-9]+[	,][0-9XYMT]+[	,][0-9]+[	,][AGCT]{1,2}" {} 2>/dev/null || true)
           if [ -n "$MATCHES" ]; then
-            echo "ERROR: SNP data found in non-sample files:"
+            echo "ERROR: Real-looking genome data found outside sample/:"
             echo "$MATCHES"
             exit 1
           fi
-          echo "OK: No real genetic data found in tracked files"
+          echo "OK: No genome-shaped data found outside sample/"
+
+      - name: Verify sample/ fixtures are marked synthetic
+        run: |
+          echo "Every file in sample/ must contain SYNTHETIC in its first 5 lines..."
+          FAIL=0
+          for f in $(git ls-files 'sample/*'); do
+            # Skip README and similar docs
+            case "$f" in
+              sample/README.md|sample/README*) continue ;;
+            esac
+            if ! head -n 5 "$f" | grep -qi 'synthetic'; then
+              echo "ERROR: $f does not declare 'SYNTHETIC' in its first 5 lines"
+              FAIL=1
+            fi
+          done
+          if [ "$FAIL" -eq 1 ]; then exit 1; fi
+          echo "OK: all sample/ fixtures properly marked"
 
       - name: Scan for secrets (gitleaks)
         uses: gitleaks/gitleaks-action@v2

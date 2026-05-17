@@ -1,74 +1,74 @@
 # Gene Lens
 
-> Leia em [Ingles](README.md).
+> Leia em [Inglês](README.md).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-green.svg)](https://python.org)
 [![Local First](https://img.shields.io/badge/Privacidade-Local_First-brightgreen.svg)](#arquitetura-de-privacidade)
 
-**Dashboard de exploracao genetica local-first.** Projetado para analise offline de dados brutos de DNA de servicos de genotipagem (23andMe, AncestryDNA, MyHeritage, Genera/MeuDNA) contra bancos de dados publicos de referencia (ClinVar, PharmGKB) — bloqueia acesso padrao de rede do Python durante analise e processa tudo na sua maquina.
+**Dashboard de exploração genética local-first.** Projetado para análise offline de dados brutos de DNA de serviços de genotipagem (23andMe, AncestryDNA, MyHeritage, Genera/MeuDNA) contra bancos de dados públicos de referência (ClinVar, PharmGKB) — bloqueia o acesso padrão de rede do Python durante a análise e processa tudo na sua máquina.
 
-Construido com Flask, Apache ECharts, Halfmoon CSS e fonte Geist. IA local opcional via Ollama e traducao neural via Argos Translate.
+Construído com Flask, Apache ECharts, Halfmoon CSS e fonte Geist. IA local opcional via Ollama e tradução neural via Argos Translate.
 
 ---
 
 ## Por que criei este projeto
 
-Tem uma longa linha de doencas hereditarias na minha familia — condicoes que apareceram em varias geracoes, com componente genetico documentado. Crescer com isso significa carregar uma pergunta silenciosa: quanto da minha saude ja esta escrita, e quanto e coincidencia?
+Tem uma longa linha de doenças hereditárias na minha família — condições que apareceram em várias gerações, com componente genético documentado. Crescer com isso significa carregar uma pergunta silenciosa: quanto da minha saúde já está escrita, e quanto é coincidência?
 
-Quando esbarrei num [post sobre explorar dados brutos do 23andMe contra bancos publicos](https://www.youtube.com/@nicksaraev), o assunto clicou. Eu tinha o arquivo. Os bancos de referencia (ClinVar, PharmGKB) eram gratuitos. So faltava uma ferramenta que nao mandasse meu DNA pra algum servico em nuvem pra ser processado.
+Quando esbarrei num [post sobre explorar dados brutos do 23andMe contra bancos públicos](https://www.youtube.com/@nicksaraev), o assunto clicou. Eu tinha o arquivo. Os bancos de referência (ClinVar, PharmGKB) eram gratuitos. Só faltava uma ferramenta que não mandasse meu DNA pra algum serviço em nuvem pra ser processado.
 
-Entao construi uma. O que me surpreendeu nao foi a parte tecnica — foi a sobreposicao. Varias variantes que a ferramenta sinalizou bateram com condicoes que ja tinham sido confirmadas pelos meus medicos anos antes, as vezes pra coisas que eu nem tinha pensado em mencionar. Outros achados abriram perguntas que levei pra minha proxima consulta. O ponto nunca foi me auto-diagnosticar — foi parar de ser passageiro em conversas sobre o meu proprio corpo.
+Então construí uma. O que me surpreendeu não foi a parte técnica — foi a sobreposição. Várias variantes que a ferramenta sinalizou bateram com condições que já tinham sido confirmadas pelos meus médicos anos antes, às vezes pra coisas que eu nem tinha pensado em mencionar. Outros achados abriram perguntas que levei pra minha próxima consulta. O ponto nunca foi me auto-diagnosticar — foi parar de ser passageiro em conversas sobre o meu próprio corpo.
 
-Se voce tem um historico familiar parecido, ou so e curioso, essa ferramenta existe pra isso. Roda inteira na sua maquina, seu DNA nao sai dela, e os achados sao enquadrados como pontos de partida pra conversas com um profissional — nao respostas.
+Se você tem um histórico familiar parecido, ou só é curioso, essa ferramenta existe pra isso. Roda inteira na sua máquina, seu DNA não sai dela, e os achados são enquadrados como pontos de partida pra conversas com um profissional — não respostas.
 
 ---
 
-## O que este projeto e / nao e
+## O que este projeto é / não é
 
-| Este projeto E | Este projeto NAO E |
+| Este projeto É | Este projeto NÃO É |
 |---|---|
-| Uma ferramenta educacional de exploracao de dados brutos de DNA | Uma ferramenta de diagnostico ou dispositivo medico (SaMD) |
-| Uma forma de gerar topicos de discussao para seu medico | Um substituto para testes geneticos clinicos |
-| Um ponto de partida para curiosidade genomica pessoal | Um teste confirmatorio — resultado negativo nao exclui risco |
-| Software open-source com disclaimers eticos rigorosos | Um produto que garante precisao clinica |
+| Uma ferramenta educacional de exploração de dados brutos de DNA | Uma ferramenta de diagnóstico ou dispositivo médico (SaMD) |
+| Uma forma de gerar tópicos de discussão para seu médico | Um substituto para testes genéticos clínicos |
+| Um ponto de partida para curiosidade genômica pessoal | Um teste confirmatório — resultado negativo não exclui risco |
+| Software open-source com disclaimers éticos rigorosos | Um produto que garante precisão clínica |
 
 ---
 
 > [!WARNING]
-> **ESTE SOFTWARE NAO E UM DISPOSITIVO MEDICO (SaMD). NAO SE DESTINA A DIAGNOSTICAR, TRATAR, CURAR OU PREVENIR QUALQUER DOENCA. FINALIDADE EXCLUSIVAMENTE EDUCACIONAL E DE AUTOCONHECIMENTO.**
+> **ESTE SOFTWARE NÃO É UM DISPOSITIVO MÉDICO (SaMD). NÃO SE DESTINA A DIAGNOSTICAR, TRATAR, CURAR OU PREVENIR QUALQUER DOENÇA. FINALIDADE EXCLUSIVAMENTE EDUCACIONAL E DE AUTOCONHECIMENTO.**
 >
-> Testes de genotipagem de consumo (23andMe, Genera, AncestryDNA, etc.) possuem taxa de falso positivo de aproximadamente **40%** para variantes clinicamente significativas (Tandy-Connor et al., *Genetics in Medicine*, 2018). Isso significa que quase metade dos achados "patogenicos" de testes de consumo estao **errados** quando confirmados por sequenciamento clinico.
+> Testes de genotipagem de consumo (23andMe, Genera, AncestryDNA, etc.) possuem taxa de falso positivo de aproximadamente **40%** para variantes clinicamente significativas (Tandy-Connor et al., *Genetics in Medicine*, 2018). Isso significa que quase metade dos achados "patogênicos" de testes de consumo estão **errados** quando confirmados por sequenciamento clínico.
 >
-> **NUNCA altere medicamentos, dietas ou tratamentos baseado nestes resultados sem consultar um medico.** O autor/mantenedor **NAO se responsabiliza** por decisoes clinicas, sofrimento psicologico (ansiedade induzida por falsos positivos) ou quaisquer danos causados pelo uso deste software.
+> **NUNCA altere medicamentos, dietas ou tratamentos baseado nestes resultados sem consultar um médico.** O autor/mantenedor **NÃO se responsabiliza** por decisões clínicas, sofrimento psicológico (ansiedade induzida por falsos positivos) ou quaisquer danos causados pelo uso deste software.
 >
-> Aconselhamento genetico profissional: [findageneticcounselor.nsgc.org](https://findageneticcounselor.nsgc.org)
+> Aconselhamento genético profissional: [findageneticcounselor.nsgc.org](https://findageneticcounselor.nsgc.org)
 
 ---
 
 ## Funcionalidades
 
-- **Privacidade local-first** — Acesso padrao de rede do Python e bloqueado (`socket` substituido) durante analise. Projetado para que dados de DNA nao saiam da sua maquina. Arquivos enviados sao sobrescritos com dados aleatorios apos processamento.
-- **Dashboard interativo** — UI dark com visualizacoes ECharts (graficos, mapas de ancestralidade, tabelas de variantes), servido localmente em `127.0.0.1`. Zero dependencias de CDN.
-- **Farmacogenomica** — Interacoes droga-gene do PharmGKB/CPIC com niveis de evidencia 1A/1B/2A/2B e anotacao baseada em referencia por gene.
-- **Exploracao de variantes de doenca** — Classificacao de variantes do ClinVar (patogenica, provavelmente patogenica, fator de risco, protetora) com nivel de confianca (estrelas).
-- **Roteamento clinico por sexo** — Renderizacao inteligente de condicoes hereditarias (HBOC/BRCA, Lynch, Prostata, Trombofilia, Hemocromatose, HF, Alfa-1 AT) condicionada ao sexo biologico, seguindo a abordagem de relatorios de laboratorios de grau clinico. Foca em condicoes monogenicas de alta acao em vez de tracos poligenicos ruidosos.
-- **12 paineis de bem-estar** — Nutricao, fitness, pele, envelhecimento, percepcao sensorial, sono/cronobiologia, longevidade, saude mental, sensibilidades alimentares, tireoide, saude ocular e saude ossea.
-- **Ancestralidade** — Estimativa continental a partir de 22 marcadores informativos (AIMs) com mapa-mundi interativo.
-- **Fenotipo** — Predicao de cor dos olhos, cabelo, textura, sardas, alopecia androgenica (modelo HIrisPlex + loci GWAS). Cada predicao mostra sua base genetica (SNPs contribuintes).
-- **Exploracao de planejamento familiar** — Exploracao de status de portador, fatores de risco gestacional (MTHFR, F5, F2), condicoes X-linked, transmissao de variantes dominantes.
-- **Bilingue** — Interface completa em portugues (PT-BR) e ingles com traducao medica neural (Argos Translate).
-- **Visao humanizada + tecnica** — Resumos em linguagem simples para autoexploracao ao lado de apendice tecnico detalhado para revisao medica.
-- **IA local** — Interpretacao opcional de relatorios via Ollama (Llama, Gemma, etc.).
+- **Privacidade local-first** — O acesso padrão de rede do Python é bloqueado (`socket` substituído) durante a análise. Projetado para que dados de DNA não saiam da sua máquina. Arquivos enviados são sobrescritos com dados aleatórios após o processamento.
+- **Dashboard interativo** — UI dark com visualizações ECharts (gráficos, mapas de ancestralidade, tabelas de variantes), servido localmente em `127.0.0.1`. Zero dependências de CDN.
+- **Farmacogenômica** — Interações droga-gene do PharmGKB/CPIC com níveis de evidência 1A/1B/2A/2B e anotação baseada em referência por gene.
+- **Exploração de variantes de doença** — Classificação de variantes do ClinVar (patogênica, provavelmente patogênica, fator de risco, protetora) com nível de confiança (estrelas).
+- **Roteamento clínico por sexo** — Renderização inteligente de condições hereditárias (HBOC/BRCA, Lynch, Próstata, Trombofilia, Hemocromatose, HF, Alfa-1 AT) condicionada ao sexo biológico, seguindo a abordagem de relatórios de laboratórios de grau clínico. Foca em condições monogênicas de alta ação em vez de traços poligênicos ruidosos.
+- **12 painéis de bem-estar** — Nutrição, fitness, pele, envelhecimento, percepção sensorial, sono/cronobiologia, longevidade, saúde mental, sensibilidades alimentares, tireoide, saúde ocular e saúde óssea.
+- **Ancestralidade** — Estimativa continental a partir de 22 marcadores informativos (AIMs) com mapa-múndi interativo.
+- **Fenótipo** — Predição de cor dos olhos, cabelo, textura, sardas, alopecia androgênica (modelo HIrisPlex + loci GWAS). Cada predição mostra sua base genética (SNPs contribuintes).
+- **Exploração de planejamento familiar** — Exploração de status de portador, fatores de risco gestacional (MTHFR, F5, F2), condições X-linked, transmissão de variantes dominantes.
+- **Bilíngue** — Interface completa em português (PT-BR) e inglês com tradução médica neural (Argos Translate).
+- **Visão humanizada + técnica** — Resumos em linguagem simples para autoexploração ao lado de apêndice técnico detalhado para revisão médica.
+- **IA local** — Interpretação opcional de relatórios via Ollama (Llama, Gemma, etc.).
 
 ---
 
-## Inicio Rapido
+## Início Rápido
 
-### Pre-requisitos
+### Pré-requisitos
 
-- **Python 3.10, 3.11 ou 3.12** (3.13+ pode funcionar mas nao e coberto pelo CI)
-- ~500 MB de espaco em disco para bancos de dados de referencia
+- **Python 3.10, 3.11 ou 3.12** (3.13+ pode funcionar mas não é coberto pelo CI)
+- ~500 MB de espaço em disco para bancos de dados de referência
 
 ### 1. Clonar e instalar
 
@@ -76,19 +76,19 @@ Se voce tem um historico familiar parecido, ou so e curioso, essa ferramenta exi
 git clone https://github.com/dimas-amendes/gene-lens.git
 cd gene-lens
 
-# Crie um ambiente virtual isolado (obrigatorio em macOS/Linux modernos
-# porque o Python do sistema recusa instalacao global — PEP 668).
+# Crie um ambiente virtual isolado (obrigatório em macOS/Linux modernos
+# porque o Python do sistema recusa instalação global — PEP 668).
 python3 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 
 pip install -r requirements.txt
 ```
 
-> **Por que venv?** No macOS (Python via Homebrew) e na maioria das distros Linux, `pip install` fora de um venv falha com `externally-managed-environment`. Usar `.venv` isola as dependencias do projeto do seu Python de sistema.
+> **Por que venv?** No macOS (Python via Homebrew) e na maioria das distros Linux, `pip install` fora de um venv falha com `externally-managed-environment`. Usar `.venv` isola as dependências do projeto do seu Python de sistema.
 >
-> Para sair do venv depois: `deactivate`. Para reentrar em uma nova sessao: `source .venv/bin/activate`.
+> Para sair do venv depois: `deactivate`. Para reentrar em uma nova sessão: `source .venv/bin/activate`.
 
-### 2. Baixar bancos de dados (unica vez, requer internet)
+### 2. Baixar bancos de dados (única vez, requer internet)
 
 ```bash
 python main.py download
@@ -98,7 +98,7 @@ Isso baixa:
 - **ClinVar** (~120 MB comprimido) — gratuito, sem registro ([NCBI FTP](https://ftp.ncbi.nlm.nih.gov/pub/clinvar/))
 - **PharmGKB** — requer conta gratuita em [pharmgkb.org](https://www.pharmgkb.org/downloads). Baixe "Clinical Annotations" ZIP e extraia para `data/`.
 
-> **Esta e a unica etapa que requer internet.** Apos o download dos bancos, toda analise e projetada para execucao local-first, offline.
+> **Esta é a única etapa que requer internet.** Após o download dos bancos, toda análise é projetada para execução local-first, offline.
 
 ### 3. Iniciar o dashboard
 
@@ -110,24 +110,24 @@ python main.py web --port 8080   # Porta customizada
 
 Abra [http://127.0.0.1:5000](http://127.0.0.1:5000) no navegador.
 
-### 4. Testar com dados sinteticos
+### 4. Testar com dados sintéticos
 
-Um genoma sintetico esta incluido para teste (nao precisa de DNA real):
+Um genoma sintético está incluído para teste (não precisa de DNA real):
 
 ```bash
-# Via dashboard: faca upload de sample/sample_genome.csv na interface web
+# Via dashboard: faça upload de sample/sample_genome.csv na interface web
 # Via CLI:
 python main.py analyze sample/sample_genome.csv --name "Amostra"
 ```
 
-### Opcional: Traducao neural (PT-BR)
+### Opcional: Tradução neural (PT-BR)
 
 ```bash
 pip install argostranslate
 # O modelo (~100 MB) baixa automaticamente no primeiro uso
 ```
 
-### Opcional: Interpretacao por IA local
+### Opcional: Interpretação por IA local
 
 ```bash
 # Instalar Ollama: https://ollama.ai
@@ -137,112 +137,112 @@ python main.py analyze input/seu_dna.txt --ai
 
 ---
 
-## Como os achados sao priorizados
+## Como os achados são priorizados
 
-O sistema usa um modelo de evidencia em multiplas camadas para separar sinal de ruido:
+O sistema usa um modelo de evidência em múltiplas camadas para separar sinal de ruído:
 
 | Camada | Fonte | O que significa |
 |--------|-------|----------------|
-| **ClinVar Review Status** (0-4 estrelas) | Revisao por especialistas NCBI | 4 estrelas = diretriz de pratica; 1 estrela = submissor unico; 0 = sem criterios |
-| **Significancia Clinica** | Classificacao ClinVar | Patogenica > Provavelmente Patogenica > Fator de Risco > Incerta > Benigna |
-| **Evidencia PharmGKB/CPIC** | Ensaios clinicos | Nivel 1A/1B = diretriz de dosagem CPIC; Nivel 2A/2B = documentado mas sem diretriz formal |
-| **Matriz de Condicoes Hereditarias** | Regras curadas por condicao | Apenas condicoes monogenicas de alta acao com roteamento por sexo |
+| **ClinVar Review Status** (0-4 estrelas) | Revisão por especialistas NCBI | 4 estrelas = diretriz de prática; 1 estrela = submissor único; 0 = sem critérios |
+| **Significância Clínica** | Classificação ClinVar | Patogênica > Provavelmente Patogênica > Fator de Risco > Incerta > Benigna |
+| **Evidência PharmGKB/CPIC** | Ensaios clínicos | Nível 1A/1B = diretriz de dosagem CPIC; Nível 2A/2B = documentado mas sem diretriz formal |
+| **Matriz de Condições Hereditárias** | Regras curadas por condição | Apenas condições monogênicas de alta ação com roteamento por sexo |
 
-**Todos os achados notaveis requerem confirmacao clinica.** Um achado sinalizado aqui e um motivo para conversar com seu medico, nao um diagnostico.
+**Todos os achados notáveis requerem confirmação clínica.** Um achado sinalizado aqui é um motivo para conversar com seu médico, não um diagnóstico.
 
 ---
 
-## Limitacoes Conhecidas
+## Limitações Conhecidas
 
-1. **Genotipagem de consumo nao e sequenciamento clinico.** Chips de microarray testam ~600K-2M SNPs pre-selecionados; sequenciamento clinico de exoma/genoma cobre 20K+ genes de forma abrangente.
-2. **Cobertura incompleta de variantes raras.** A maioria das mutacoes patogenicas em genes como BRCA1/2 sao privadas de familias — chips podem perder completamente.
-3. **Doencas comuns sao poligenicas e multifatoriais.** Esta ferramenta nao calcula Polygenic Risk Scores (PRS). Condicoes como diabetes, hipertensao e depressao envolvem centenas de genes mais ambiente.
-4. **Ancestralidade e fenotipo sao estimativas.** Baseados em marcadores limitados (~22 AIMs, ~16 SNPs de pigmentacao) e modelos de frequencia populacional. A ancestralidade real e muito mais complexa.
-5. **Ausencia de variante nao exclui risco.** O arquivo pode simplesmente nao conter o SNP relevante. Um relatorio "limpo" nao significa risco genetico zero.
+1. **Genotipagem de consumo não é sequenciamento clínico.** Chips de microarray testam ~600K-2M SNPs pré-selecionados; o sequenciamento clínico de exoma/genoma cobre 20K+ genes de forma abrangente.
+2. **Cobertura incompleta de variantes raras.** A maioria das mutações patogênicas em genes como BRCA1/2 são privadas de famílias — chips podem perder completamente.
+3. **Doenças comuns são poligênicas e multifatoriais.** Esta ferramenta não calcula Polygenic Risk Scores (PRS). Condições como diabetes, hipertensão e depressão envolvem centenas de genes mais ambiente.
+4. **Ancestralidade e fenótipo são estimativas.** Baseados em marcadores limitados (~22 AIMs, ~16 SNPs de pigmentação) e modelos de frequência populacional. A ancestralidade real é muito mais complexa.
+5. **Ausência de variante não exclui risco.** O arquivo pode simplesmente não conter o SNP relevante. Um relatório "limpo" não significa risco genético zero.
 
 ---
 
 ## Estrutura do Projeto
 
 ```
-genetic-health-analyzer/
-├── run.py                  # Lancador rapido (double-click)
+gene-lens/
+├── run.py                  # Lançador rápido (double-click)
 ├── main.py                 # Ponto de entrada CLI
 ├── dashboard.py            # Dashboard web Flask
-├── download_databases.py   # Baixador de bancos (unico acesso a rede)
-├── config.py               # Configuracao e caminhos
-├── requirements.txt        # Dependencias Python
+├── download_databases.py   # Baixador de bancos (único acesso à rede)
+├── config.py               # Configuração e caminhos
+├── requirements.txt        # Dependências Python
 ├── LICENSE                 # MIT
 │
 ├── src/
-│   ├── analyzer.py         # Motor de analise
+│   ├── analyzer.py         # Motor de análise
 │   ├── ancestry.py         # Ancestralidade continental (22 AIMs)
 │   ├── consent.py          # Aceite de termos de uso
 │   ├── databases.py        # Carregadores ClinVar & PharmGKB
-│   ├── family_planning.py  # Exploracao de portador e riscos gestacionais
-│   ├── hereditary_conditions.py  # Matriz de roteamento clinico por sexo
-│   ├── i18n.py             # Internacionalizacao (PT-BR / EN)
-│   ├── local_ai.py         # Integracao Ollama (opcional)
+│   ├── family_planning.py  # Exploração de portador e riscos gestacionais
+│   ├── hereditary_conditions.py  # Matriz de roteamento clínico por sexo
+│   ├── i18n.py             # Internacionalização (PT-BR / EN)
+│   ├── local_ai.py         # Integração Ollama (opcional)
 │   ├── parsers.py          # Parsers de formato DNA
-│   ├── phenotype.py        # Predicao de aparencia (HIrisPlex + GWAS)
-│   ├── privacy.py          # NetworkBlocker, exclusao segura
-│   ├── reports.py          # Geracao de relatorios Markdown
-│   ├── sex_inference.py    # Inferencia de sexo biologico por cromossomo Y
+│   ├── phenotype.py        # Predição de aparência (HIrisPlex + GWAS)
+│   ├── privacy.py          # NetworkBlocker, exclusão segura
+│   ├── reports.py          # Geração de relatórios Markdown
+│   ├── sex_inference.py    # Inferência de sexo biológico por cromossomo Y
 │   ├── snp_database.py     # Base curada (~200 variantes)
-│   ├── translations.py     # Traducoes de termos medicos
-│   ├── translator.py       # Pipeline de traducao neural
-│   └── wellness_panels.py  # 12 paineis de bem-estar (~80 SNPs)
+│   ├── translations.py     # Traduções de termos médicos
+│   ├── translator.py       # Pipeline de tradução neural
+│   └── wellness_panels.py  # 12 painéis de bem-estar (~80 SNPs)
 │
 ├── templates/              # Templates Jinja2
 ├── static/                 # Assets locais (zero CDN)
-├── sample/                 # Dados sinteticos de teste
-├── data/                   # Bancos de referencia (gitignored)
-├── input/                  # Arquivos DNA do usuario (gitignored)
-└── output/                 # Relatorios gerados (gitignored)
+├── sample/                 # Dados sintéticos de teste
+├── data/                   # Bancos de referência (gitignored)
+├── input/                  # Arquivos DNA do usuário (gitignored)
+└── output/                 # Relatórios gerados (gitignored)
 ```
 
 ## Formatos Suportados
 
-| Servico | Formato | Auto-detectado |
+| Serviço | Formato | Auto-detectado |
 |---------|---------|:---:|
-| 23andMe | TSV 4 colunas (rsid, chr, pos, genotipo) | Sim |
+| 23andMe | TSV 4 colunas (rsid, chr, pos, genótipo) | Sim |
 | AncestryDNA | TSV 5 colunas (rsid, chr, pos, alelo1, alelo2) | Sim |
 | MyHeritage | CSV com RSID, CHROMOSOME, POSITION, RESULT | Sim |
 | Genera / MeuDNA | CSV com RSID, CHROMOSOME, POSITION, RESULT | Sim |
-| Generico | TSV ou CSV com colunas identificaveis de RSID, Cromossomo, Posicao e Genotipo/Resultado | Sim |
+| Genérico | TSV ou CSV com colunas identificáveis de RSID, Cromossomo, Posição e Genótipo/Resultado | Sim |
 
-Arquivos comprimidos (`.gz`) sao suportados transparentemente.
+Arquivos comprimidos (`.gz`) são suportados transparentemente.
 
 ---
 
 ## Arquitetura de Privacidade
 
-Projetado para analise local-first, offline apos o download inicial dos bancos de dados.
+Projetado para análise local-first, offline após o download inicial dos bancos de dados.
 
 **Protege contra:**
-- Upload acidental para nuvem durante analise (socket bloqueado)
+- Upload acidental para nuvem durante análise (socket bloqueado)
 - Vazamento de dados via CDN (todos os assets servidos localmente)
-- Telemetria ou rastreamento (zero requisicoes externas)
-- Chamadas de rede padrao do Python durante processamento
+- Telemetria ou rastreamento (zero requisições externas)
+- Chamadas de rede padrão do Python durante o processamento
 
-**Nao protege contra:**
-- Malware ja presente na maquina
-- Pastas sincronizadas em nuvem (Dropbox, OneDrive, iCloud) — garanta que o diretorio de trabalho nao esta sincronizado
-- Backups do sistema que podem capturar arquivos geneticos
+**Não protege contra:**
+- Malware já presente na máquina
+- Pastas sincronizadas em nuvem (Dropbox, OneDrive, iCloud) — garanta que o diretório de trabalho não está sincronizado
+- Backups do sistema que podem capturar arquivos genéticos
 - Subprocessos externos que contornam a camada de socket do Python
 
-**Medidas tecnicas:**
-1. **Bloqueio de Rede** — `socket.socket` e `socket.getaddrinfo` sao substituidos durante analise. Chamadas de rede padrao do Python geram `ConnectionError`.
-2. **Exclusao Segura** — Arquivos DNA enviados sao sobrescritos com dados aleatorios antes da exclusao.
-3. **Sem Metadados** — Relatorios nao contem informacoes do sistema (hostname, usuario, caminhos).
-4. **Apenas Local** — Flask escuta exclusivamente em `127.0.0.1`. Nao acessivel de outras maquinas.
-5. **Sem Telemetria** — Zero analytics, rastreamento ou requisicoes externas.
+**Medidas técnicas:**
+1. **Bloqueio de Rede** — `socket.socket` e `socket.getaddrinfo` são substituídos durante a análise. Chamadas de rede padrão do Python geram `ConnectionError`.
+2. **Exclusão Segura** — Arquivos DNA enviados são sobrescritos com dados aleatórios antes da exclusão.
+3. **Sem Metadados** — Relatórios não contêm informações do sistema (hostname, usuário, caminhos).
+4. **Apenas Local** — Flask escuta exclusivamente em `127.0.0.1`. Não acessível de outras máquinas.
+5. **Sem Telemetria** — Zero analytics, rastreamento ou requisições externas.
 
-Verifique sua configuracao: `python main.py privacy-check`
+Verifique sua configuração: `python main.py privacy-check`
 
 ---
 
-## Atribuicao de Dados
+## Atribuição de Dados
 
 - **ClinVar** — NCBI, National Library of Medicine. Landrum MJ, et al. *Nucleic Acids Research*, 2020. [ncbi.nlm.nih.gov/clinvar](https://www.ncbi.nlm.nih.gov/clinvar/)
 - **PharmGKB** — Stanford University, NIH/NIGMS. Whirl-Carrillo M, et al. *Clinical Pharmacology & Therapeutics*, 2021. [pharmgkb.org](https://www.pharmgkb.org/)
@@ -251,11 +251,11 @@ Verifique sua configuracao: `python main.py privacy-check`
 
 ---
 
-## Licenca
+## Licença
 
 Licenciado sob a **MIT License**.
 
-Voce pode usar, copiar, modificar, mesclar, publicar, distribuir, sublicenciar e vender copias deste software — inclusive para fins comerciais — desde que o aviso de copyright e a permissao sejam mantidos.
+Você pode usar, copiar, modificar, mesclar, publicar, distribuir, sublicenciar e vender cópias deste software — inclusive para fins comerciais — desde que o aviso de copyright e a permissão sejam mantidos.
 
 Veja [LICENSE](LICENSE) para o texto completo.
 
@@ -263,21 +263,21 @@ Veja [LICENSE](LICENSE) para o texto completo.
 
 ## Contribuindo
 
-Contribuicoes sao bem-vindas!
+Contribuições são bem-vindas!
 
-1. Faca um fork do repositorio
+1. Faça um fork do repositório
 2. Crie uma branch de feature (`git checkout -b feature/minha-feature`)
-3. **Certifique-se de que nenhum dado pessoal/genetico esta incluido** nos commits
+3. **Certifique-se de que nenhum dado pessoal/genético está incluído** nos commits
 4. Submeta um Pull Request
 
-Ao contribuir, voce concorda que suas contribuicoes serao licenciadas sob a MIT License.
+Ao contribuir, você concorda que suas contribuições serão licenciadas sob a MIT License.
 
 ---
 
 ## Agradecimentos
 
-Inspirado na abordagem de exploracao bioinformatica demonstrada por [Nick Saraev](https://www.youtube.com/@nicksaraev). Embora o conceito original tenha fornecido a faísca, este projeto foi inteiramente reescrito com foco em execucao local-first, licenciamento permissivo MIT, disclaimers eticos rigorosos, roteamento clinico por sexo e acessibilidade para usuarios nao-tecnicos.
+Inspirado na abordagem de exploração bioinformática demonstrada por [Nick Saraev](https://www.youtube.com/@nicksaraev). Embora o conceito original tenha fornecido a faísca, este projeto foi inteiramente reescrito com foco em execução local-first, licenciamento permissivo MIT, disclaimers éticos rigorosos, roteamento clínico por sexo e acessibilidade para usuários não-técnicos.
 
 ---
 
-*Construido com cuidado pela privacidade e rigor cientifico. Seu DNA e so seu.*
+*Construído com cuidado pela privacidade e rigor científico. Seu DNA é só seu.*

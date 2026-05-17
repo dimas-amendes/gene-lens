@@ -1290,10 +1290,8 @@ def _build_chat_context(active: dict, lang: str) -> str:
 
 @app.route("/api/chat/ask", methods=["POST"])
 def chat_ask():
-    """Send a question + chat history to Ollama and return the assistant reply."""
-    if not _csrf_check():
-        return {"ok": False, "error": "csrf"}, 403
-
+    """Send a question + chat history to Ollama and return the assistant reply.
+    CSRF is already enforced by the global before_request hook."""
     payload = request.get_json(silent=True) or {}
     question = (payload.get("question") or "").strip()
     if not question:

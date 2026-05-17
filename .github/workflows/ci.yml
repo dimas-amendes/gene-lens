@@ -27,90 +27,28 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install flake8
+          pip install pytest flake8
 
       - name: Lint - syntax errors and undefined names
         run: |
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=static,genetics-docs
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=static,genetics-docs,.venv
 
       - name: Lint - warnings (non-blocking)
         run: |
-          flake8 . --count --exit-zero --max-complexity=15 --max-line-length=150 --statistics --exclude=static,genetics-docs
+          flake8 . --count --exit-zero --max-complexity=15 --max-line-length=150 --statistics --exclude=static,genetics-docs,.venv
 
-      - name: Verify core imports
+      - name: Run pytest
         run: |
-          python -c "from src.parsers import load_genome"
-          python -c "from src.analyzer import analyze_lifestyle, analyze_disease_risk"
-          python -c "from src.wellness_panels import analyze_all_panels, ALL_PANELS"
-          python -c "from src.ancestry import analyze_ancestry"
-          python -c "from src.phenotype import analyze_phenotype"
-          python -c "from src.family_planning import analyze_family_planning"
-          python -c "from src.hereditary_conditions import analyze_hereditary_conditions"
-          python -c "from src.i18n import get_strings, STRINGS"
-          python -c "from src.privacy import NetworkBlocker"
-          python -c "from src.consent import is_consent_given"
-          python -c "from src.sex_inference import infer_sex"
+          pytest tests/ -v --tb=short
 
-      - name: Test sample genome parsing
-        run: |
-          python -c "
-          from src.parsers import load_genome
-          g, _, f = load_genome('sample/sample_genome.csv')
-          assert len(g) > 100, f'Expected >100 SNPs, got {len(g)}'
-          print(f'OK: {len(g)} SNPs loaded as {f}')
-          "
-
-      - name: Test wellness panels
-        run: |
-          python -c "
-          from src.parsers import load_genome
-          from src.wellness_panels import analyze_all_panels
-          g, _, _ = load_genome('sample/sample_genome.csv')
-          w = analyze_all_panels(g)
-          active = sum(1 for p in w.values() if p.get('findings'))
-          assert active >= 8, f'Expected >=8 panels, got {active}'
-          print(f'OK: {active} panels with findings')
-          "
-
-      - name: Test phenotype prediction
-        run: |
-          python -c "
-          from src.parsers import load_genome
-          from src.phenotype import analyze_phenotype
-          g, _, _ = load_genome('sample/sample_genome.csv')
-          p = analyze_phenotype(g)
-          assert p['markers_found'] > 5
-          assert 'baldness' in p
-          print(f'OK: {p[\"markers_found\"]} phenotype markers')
-          "
-
-      - name: Validate i18n completeness
+      - name: Validate i18n parity
         run: |
           python -c "
           from src.i18n import STRINGS
           pt = set(STRINGS['pt'].keys())
           en = set(STRINGS['en'].keys())
-          missing_en = pt - en
-          missing_pt = en - pt
-          if missing_en: print(f'PT keys missing in EN: {missing_en}')
-          if missing_pt: print(f'EN keys missing in PT: {missing_pt}')
-          assert len(missing_en) < 5, f'Too many missing EN keys: {missing_en}'
-          assert len(missing_pt) < 5, f'Too many missing PT keys: {missing_pt}'
-          print(f'OK: PT={len(pt)}, EN={len(en)} keys')
-          "
-
-      - name: Test NetworkBlocker
-        run: |
-          python -c "
-          from src.privacy import NetworkBlocker
-          import socket
-          with NetworkBlocker():
-              try:
-                  socket.socket()
-                  assert False, 'NetworkBlocker failed'
-              except (ConnectionError, OSError):
-                  pass
-          print('OK: NetworkBlocker working')
+          assert pt == en, f'i18n mismatch — PT only: {pt-en}, EN only: {en-pt}'
+          print(f'OK: PT={len(pt)} keys, EN={len(en)} keys, symmetric')
           "
 
   security-check:

@@ -171,42 +171,7 @@ def chat_about_analysis(
             "https://ollama.com and pull a model (e.g. `ollama pull llama3.1:8b`)."
         )
 
-    system_prompt = SYSTEM_PROMPT_PT if language == "pt" else SYSTEM_PROMPT_EN
-
-    # Bound the analysis context so it never blows past the typical 8 GB
-    # consumer model's effective context window (~6k tokens ≈ 24k chars).
-    # Reserve ~4k chars for system prompt + history + reply. Anything past
-    # this is truncated with a visible marker so the model knows it's seeing
-    # a subset and won't fabricate details about the cut content.
-    MAX_CONTEXT_CHARS = 20000
-    context = context.strip()
-    truncated_note = ""
-    if len(context) > MAX_CONTEXT_CHARS:
-        kept = context[:MAX_CONTEXT_CHARS]
-        truncated_note = (
-            f"\n\n[... analysis truncated: {len(context) - MAX_CONTEXT_CHARS} "
-            "characters omitted to fit the model's context window. "
-            "Ask about specific findings to get more detail.]"
-        )
-        context = kept + truncated_note
-
-    # Build a single prompt: system + analysis context + chat transcript + new question.
-    # Ollama CLI doesn't expose role-based messages, so we serialize manually with
-    # explicit ROLE: markers — small models follow this well enough for our use case.
-    transcript_lines = [
-        system_prompt,
-        "",
-        "---- USER'S ANALYSIS (read-only context) ----",
-        context,
-        "---- END OF ANALYSIS ----",
-        "",
-    ]
-    for turn in history[-8:]:  # keep last 8 turns so the prompt stays bounded
-        role = "USER" if turn.get("role") == "user" else "ASSISTANT"
-        transcript_lines.append(f"{role}: {turn.get('content', '').strip()}")
-    transcript_lines.append(f"USER: {question.strip()}")
-    transcript_lines.append("ASSISTANT:")
-    prompt = "\n".join(transcript_lines)
+    prompt = _build_chat_prompt(context, history, question, language)
 
     try:
         result = subprocess.run(
@@ -228,6 +193,106 @@ def chat_about_analysis(
     if not answer:
         return False, "The model produced an empty response. Try rephrasing your question."
     return True, answer
+
+
+def chat_about_analysis_stream(
+    context: str,
+    history: list[dict],
+    question: str,
+    model: str = "llama3.1:8b",
+    language: str = "pt",
+):
+    """Streaming counterpart of chat_about_analysis.
+
+    Yields plain-text chunks as Ollama produces them. The first yielded item
+    may be a sentinel dict {"event": "error", "message": ...} when the model
+    or service is unavailable; otherwise all yields are string chunks of the
+    assistant reply (in order, partial tokens allowed). Caller is responsible
+    for stitching them together.
+
+    Implementation note: uses subprocess.Popen + line iteration on stdout
+    instead of the Ollama HTTP API, so we don't introduce a new dependency
+    and the NetworkBlocker (when active for analysis) doesn't interfere.
+    """
+    if not is_ollama_available():
+        yield {"event": "error", "message": (
+            "Ollama is not available on this machine. Install it from "
+            "https://ollama.com and pull a model (e.g. `ollama pull llama3.1:8b`)."
+        )}
+        return
+
+    prompt = _build_chat_prompt(context, history, question, language)
+
+    try:
+        proc = subprocess.Popen(
+            ["ollama", "run", model],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,  # line buffered
+        )
+    except FileNotFoundError:
+        yield {"event": "error", "message": "Ollama binary not found. Install it from https://ollama.com."}
+        return
+
+    # Feed the full prompt then close stdin so Ollama starts generating.
+    try:
+        proc.stdin.write(prompt)
+        proc.stdin.close()
+    except BrokenPipeError:
+        # Process died before we could send the prompt — most likely the model isn't pulled.
+        stderr = (proc.stderr.read() or "") if proc.stderr else ""
+        yield {"event": "error", "message": _friendly_ollama_error(stderr, model)}
+        return
+
+    produced_any = False
+    try:
+        while True:
+            chunk = proc.stdout.read(64) if proc.stdout else ""
+            if not chunk:
+                break
+            produced_any = True
+            yield chunk
+    finally:
+        proc.wait(timeout=2)
+
+    if proc.returncode != 0:
+        stderr = (proc.stderr.read() or "") if proc.stderr else ""
+        # If we already streamed text the caller can ignore this — but we still
+        # surface the diagnostic so the UI can append a banner.
+        yield {"event": "error", "message": _friendly_ollama_error(stderr, model)}
+    elif not produced_any:
+        yield {"event": "error", "message": "The model produced an empty response. Try rephrasing your question."}
+
+
+def _build_chat_prompt(context: str, history: list, question: str, language: str) -> str:
+    """Shared prompt construction used by both blocking and streaming chat."""
+    system_prompt = SYSTEM_PROMPT_PT if language == "pt" else SYSTEM_PROMPT_EN
+
+    MAX_CONTEXT_CHARS = 20000
+    context = context.strip()
+    if len(context) > MAX_CONTEXT_CHARS:
+        context = context[:MAX_CONTEXT_CHARS] + (
+            f"\n\n[... analysis truncated: {len(context) - MAX_CONTEXT_CHARS} "
+            "characters omitted to fit the model's context window. "
+            "Ask about specific findings to get more detail.]"
+        )
+
+    transcript_lines = [
+        system_prompt,
+        "",
+        "---- USER'S ANALYSIS (read-only context) ----",
+        context,
+        "---- END OF ANALYSIS ----",
+        "",
+    ]
+    for turn in history[-8:]:
+        role = "USER" if turn.get("role") == "user" else "ASSISTANT"
+        transcript_lines.append(f"{role}: {turn.get('content', '').strip()}")
+    transcript_lines.append(f"USER: {question.strip()}")
+    transcript_lines.append("ASSISTANT:")
+    return "\n".join(transcript_lines)
 
 
 def _friendly_ollama_error(stderr: str, model: str) -> str:

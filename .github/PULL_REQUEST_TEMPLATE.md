@@ -19,7 +19,8 @@ Closes #
 - [ ] I tested locally with `sample/sample_genome.csv`
 - [ ] No real genetic data is included in this PR
 - [ ] No API keys, tokens, or credentials are included
-- [ ] I agree that my contributions are licensed under AGPLv3
+- [ ] I agree that my contributions are licensed under the MIT License
+- [ ] `pytest tests/` passes locally (or I've explained why the touched code isn't covered)
 
 ### Language & Scope
 - [ ] Does NOT introduce diagnostic wording ("you have", "you are at risk", "recommended dose", "you should take")
@@ -34,9 +35,10 @@ Closes #
 - [ ] Follows the sex-aware routing pattern if condition is sex-dependent
 
 ### Privacy
-- [ ] Does NOT modify `src/privacy.py` NetworkBlocker behavior
+- [ ] Does NOT modify `src/privacy.py` NetworkBlocker behavior (or the change was discussed in an Issue first)
 - [ ] Does NOT add external network calls during analysis
 - [ ] Does NOT log or transmit genetic data
+- [ ] If touching `src/chat_store.py` or `download_databases.py`, the threat model in SECURITY.md still holds
 
 ## How to Test
 Steps for the maintainer to verify:

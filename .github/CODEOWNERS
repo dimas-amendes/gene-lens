@@ -1,0 +1,18 @@
+# GitHub CODEOWNERS — see https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Until there are additional maintainers, the project owner is requested
+# automatically for review on every pull request.
+
+* @dimas-amendes
+
+# Privacy-critical surfaces — keep a separate line so reviewers see them
+# called out explicitly in the file blame.
+/src/privacy.py        @dimas-amendes
+/src/consent.py        @dimas-amendes
+/src/chat_store.py     @dimas-amendes
+/download_databases.py @dimas-amendes
+
+# Anything that ships or runs CI must be reviewed before merging.
+/.github/              @dimas-amendes
+/Dockerfile            @dimas-amendes
+/docker-compose.yml    @dimas-amendes

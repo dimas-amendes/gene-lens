@@ -83,6 +83,22 @@ python run.py
 - Reference the Issue number
 - Wait for CI to pass before requesting review
 
+### 5. Keeping your branch in sync (prefer rebase)
+
+When `main` advances while your PR is open, **rebase** your branch on top of `main` instead of merging `main` into it. This keeps the PR history linear and the diff focused on what you actually changed:
+
+```bash
+git fetch origin
+git rebase origin/main
+git push --force-with-lease
+```
+
+Avoid `git merge main` into a feature branch — it creates merge commits that pollute the PR diff with changes from `main` you didn't author.
+
+If you're collaborating with someone else on the same branch, coordinate before rebasing and always use `--force-with-lease` (never `--force`).
+
+PRs are squash-merged into `main`, so individual commits on your branch don't end up in `main` history — feel free to commit frequently while working.
+
 ## Wording Guidelines
 
 This project uses **exploratory language**, not clinical/diagnostic language:
@@ -155,6 +171,22 @@ Os seguintes itens serao rejeitados sem revisao:
 3. **Teste localmente** com `sample/sample_genome.csv`
 4. **Submeta um Pull Request** preenchendo o template completo
 5. **Aguarde o CI passar** antes de solicitar revisao
+
+### Mantendo sua branch em sincronia (prefira rebase)
+
+Quando a `main` avancar enquanto seu PR estiver aberto, **rebase** sua branch em cima da `main` em vez de mergear a `main` nela. Isso mantem o historico do PR linear e o diff focado no que voce efetivamente alterou:
+
+```bash
+git fetch origin
+git rebase origin/main
+git push --force-with-lease
+```
+
+Evite `git merge main` em uma branch de feature — cria merge commits que poluem o diff do PR com mudancas da `main` que voce nao fez.
+
+Se voce esta colaborando com outra pessoa na mesma branch, combine antes de rebasear e sempre use `--force-with-lease` (nunca `--force`).
+
+PRs sao mergeados via squash na `main`, entao commits individuais da sua branch nao vao parar no historico da `main` — pode commitar quantas vezes quiser enquanto trabalha.
 
 ## Diretrizes de Linguagem
 

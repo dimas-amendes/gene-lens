@@ -1227,7 +1227,10 @@ def run_dashboard(port: int = 5000, debug: bool = False):
     print("  ECharts + Tabler servidos localmente (sem CDN)")
     print("=" * 60)
     print()
-    app.run(host="127.0.0.1", port=port, debug=False)
+    # When debug=True is requested, also enable template auto-reload so
+    # developers can iterate on Jinja files without restarting Flask.
+    app.config["TEMPLATES_AUTO_RELOAD"] = debug
+    app.run(host="127.0.0.1", port=port, debug=debug)
 
 
 if __name__ == "__main__":

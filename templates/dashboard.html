@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ t.app_title }}</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/halfmoon.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tabler-icons.min.css') }}">
 <script src="{{ url_for('static', filename='js/echarts.min.js') }}"></script>
 <style>
 @font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-400.woff2') }}") format('woff2'); font-weight:400; font-display:swap; }
@@ -138,7 +139,7 @@ a { color: var(--accent); }
 
 <header class="site-header">
   <div class="container">
-    <div class="logo"><span class="logo-icon">&#9879;</span> {{ t.app_title }} <span class="priv-pill">&#128274; {{ t.privacy_badge|safe }}</span></div>
+    <div class="logo"><span class="logo-icon"><i class="ti ti-flask"></i></span> {{ t.app_title }} <span class="priv-pill"><i class="ti ti-lock"></i> {{ t.privacy_badge|safe }}</span></div>
     <div class="d-flex align-items-center gap-2">
       <div class="lang-sw"><a href="/lang/pt" class="{% if lang == 'pt' %}active{% endif %}">PT-BR</a> <a href="/lang/en" class="{% if lang == 'en' %}active{% endif %}">EN</a></div>
     </div>
@@ -155,7 +156,7 @@ a { color: var(--accent); }
   <p style="color:#a1a1aa;margin-bottom:24px;font-size:14px">{{ t.upload_desc }}</p>
   <form action="/analyze" method="post" enctype="multipart/form-data" id="uploadForm" autocomplete="off">
     <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
-      <div class="dropzone-icon">&#128300;</div>
+      <div class="dropzone-icon"><i class="ti ti-microscope"></i></div>
       <div class="dropzone-text">{{ t.upload_drag }}</div>
       <div class="dropzone-sub">{{ t.upload_or_click }}</div>
       <div class="dropzone-file" id="fileName" style="display:none"></div>
@@ -169,9 +170,9 @@ a { color: var(--accent); }
       <input type="number" name="height" class="fc" placeholder="{{ t.profile_height }}" min="100" max="250" autocomplete="off">
     </div>
     <div class="hint"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> {{ t.profile_optional }}</div>
-    <button type="submit" class="btn btn-primary" id="submitBtn" style="background:var(--accent);border:none;padding:14px 40px;font-weight:600;border-radius:10px;font-size:15px;cursor:pointer;transition:background .2s;display:inline-flex;align-items:center;gap:8px">&#9889; {{ t.upload_btn }}</button>
+    <button type="submit" class="btn btn-primary" id="submitBtn" style="background:var(--accent);border:none;padding:14px 40px;font-weight:600;border-radius:10px;font-size:15px;cursor:pointer;transition:background .2s;display:inline-flex;align-items:center;gap:8px"><i class="ti ti-bolt"></i> {{ t.upload_btn }}</button>
   </form>
-  <p style="color:#52525b;margin-top:20px;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px">&#128274; {{ t.upload_note }}</p>
+  <p style="color:#52525b;margin-top:20px;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-lock"></i> {{ t.upload_note }}</p>
 </div>
 {% if history %}
 <div class="gc" style="max-width:700px;margin:20px auto 0">
@@ -180,7 +181,7 @@ a { color: var(--accent); }
   {% for h in history %}<tr data-href="/history/load/{{ h.id }}">
     <td>{{ h.timestamp[:16].replace('T', ' ') }}</td><td class="fw6">{{ h.genome_info.get('subject_name') or t.history_anonymous }}</td>
     <td>{{ "{:,}".format(h.genome_info.get('snp_count', 0)) }}</td><td>{{ h.summary.get('analyzed_snps', 0) }} {{ t.history_analyzed }}</td><td>{{ h.elapsed }}s</td>
-    <td class="no-nav" onclick="event.stopPropagation()"><form action="/history/delete/{{ h.id }}" method="post" style="display:inline" onsubmit="event.stopPropagation();return confirm('{{ t.history_delete_confirm }}')"><button type="submit" onclick="event.stopPropagation()" style="padding:2px 8px;color:#71717a;background:transparent;border:1px solid #3f3f46;border-radius:4px;cursor:pointer">&#10005;</button></form></td>
+    <td class="no-nav" onclick="event.stopPropagation()"><form action="/history/delete/{{ h.id }}" method="post" style="display:inline" onsubmit="event.stopPropagation();return confirm('{{ t.history_delete_confirm }}')"><button type="submit" onclick="event.stopPropagation()" style="padding:2px 8px;color:#71717a;background:transparent;border:1px solid #3f3f46;border-radius:4px;cursor:pointer"><i class="ti ti-x"></i></button></form></td>
   </tr>{% endfor %}</tbody></table></div></div>
 {% endif %}
 <div class="db" style="max-width:700px;margin:24px auto 0;background:transparent;border:none;text-align:center"><strong>{{ t.warning_label }}:</strong> {{ t.upload_disclaimer }}</div>
@@ -192,7 +193,7 @@ a { color: var(--accent); }
 <form action="/clear" method="post"><button type="submit" style="color:#71717a;background:#18181b;border:1px solid #3f3f46;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer">{{ t.new_analysis }}</button></form></div>
 
 <div class="med-banner">
-  <div class="med-icon">&#9888;&#65039;</div>
+  <div class="med-icon"><i class="ti ti-alert-triangle"></i></div>
   <div>
     <div class="med-title">{{ t.medical_banner_short }}</div>
     <div class="med-text">{{ t.medical_banner|safe }}</div>
@@ -230,8 +231,8 @@ a { color: var(--accent); }
     <div class="gc"><div class="gc-b"><div class="cw" id="chart-drugs"></div></div></div>
     <div class="gc"><div class="gc-b"><div class="cw" id="chart-disease"></div></div></div>
   </div>
-  {% if human.get('overview') %}<div class="hc"><h4>&#9989; {{ t.human_overview }}</h4><ul>{% for c in human.overview %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
-  {% if conclusions.get('overview') %}<details class="gc acc" style="margin-bottom:16px"><summary style="font-size:13px;color:#71717a">{{ t.technical_details }}</summary><div class="acc-body"><div class="cc" style="margin:0"><h4>&#128203; {{ t.conclusion_overview }}</h4><ul>{% for c in conclusions.overview %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div></div></details>{% endif %}
+  {% if human.get('overview') %}<div class="hc"><h4><i class="ti ti-circle-check"></i> {{ t.human_overview }}</h4><ul>{% for c in human.overview %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+  {% if conclusions.get('overview') %}<details class="gc acc" style="margin-bottom:16px"><summary style="font-size:13px;color:#71717a">{{ t.technical_details }}</summary><div class="acc-body"><div class="cc" style="margin:0"><h4><i class="ti ti-clipboard-text"></i> {{ t.conclusion_overview }}</h4><ul>{% for c in conclusions.overview %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div></div></details>{% endif %}
   {% set high = results.findings|selectattr('magnitude','ge',3)|list %}
   {% if high %}<div class="gc"><div class="gc-h"><h3 class="tr">{{ t.high_mag_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_category }}</th><th>{{ t.col_magnitude }}</th><th>{{ t.col_details }}</th></tr></thead><tbody>
   {% for f in high %}<tr><td class="fw6">{{ f.gene }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.genotype }}</code></td><td>{{ CAT_PT.get(f.category, f.category) }}</td><td><span class="bs br">{{ f.magnitude }}/6</span></td><td>{{ f.description[:90] }}</td></tr>{% endfor %}
@@ -242,14 +243,14 @@ a { color: var(--accent); }
 <div class="tp" id="tab-health">
   <div class="ctx ctx-warn"><h4>{{ t.tab_health_risks }}</h4>{{ t.ctx_health }}</div>
 
-  {% if human.get('health') %}<div class="hc"><h4>&#9989; {{ t.human_health }}</h4><ul>{% for c in human.health %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+  {% if human.get('health') %}<div class="hc"><h4><i class="ti ti-circle-check"></i> {{ t.human_health }}</h4><ul>{% for c in human.health %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
 
   <!-- Accordion: Lifestyle -->
   <div class="gc acc">
     <details>
       <summary>{{ t.acc_lifestyle }} <span class="badge-count bg">{{ results.summary.analyzed_snps }} {{ t.acc_findings }}</span></summary>
       <div class="acc-body">
-        {% if conclusions.get('lifestyle') %}<div class="cc"><h4>&#128203; {{ t.conclusion_lifestyle }}</h4><ul>{% for c in conclusions.lifestyle %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+        {% if conclusions.get('lifestyle') %}<div class="cc"><h4><i class="ti ti-clipboard-text"></i> {{ t.conclusion_lifestyle }}</h4><ul>{% for c in conclusions.lifestyle %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
         {% for cat, findings in results.by_category.items() %}
         <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ CAT_PT.get(cat, cat) }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_status }}</th><th>{{ t.col_magnitude }}</th><th>{{ t.col_details }}</th></tr></thead><tbody>
         {% for f in findings|sort(attribute='magnitude',reverse=True) %}<tr><td class="fw6">{{ f.gene }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.genotype }}</code></td><td>{{ f.status.replace('_',' ').title() }}</td><td>{% if f.magnitude>=3 %}<span class="bs br">{{ f.magnitude }}/6</span>{% elif f.magnitude>=2 %}<span class="bs by">{{ f.magnitude }}/6</span>{% else %}<span class="bs bg">{{ f.magnitude }}/6</span>{% endif %}</td><td>{{ f.description[:100] }}</td></tr>{% endfor %}
@@ -264,7 +265,7 @@ a { color: var(--accent); }
       <summary>{{ t.acc_disease }} {% if disease %}<span class="badge-count br">{{ (disease.pathogenic|length + disease.likely_pathogenic|length) }} {{ t.acc_variants }}</span>{% endif %}</summary>
       <div class="acc-body">
         {% if disease %}
-        {% if conclusions.get('disease') %}<div class="cc"><h4>&#128203; {{ t.conclusion_disease }}</h4><ul>{% for c in conclusions.disease %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+        {% if conclusions.get('disease') %}<div class="cc"><h4><i class="ti ti-clipboard-text"></i> {{ t.conclusion_disease }}</h4><ul>{% for c in conclusions.disease %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
         {% if conclusions.get('disease_technical') %}<div class="tn">{% for n in conclusions.disease_technical %}<p style="margin:0">{{ n|bold|safe }}</p>{% endfor %}</div>{% endif %}
         {% set patho = disease.pathogenic + disease.likely_pathogenic %}
         {% if patho %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.pathogenic_variants_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_zygosity }}</th><th>{{ t.col_confidence }}</th><th>{{ t.col_condition }}</th></tr></thead><tbody>
@@ -316,7 +317,7 @@ a { color: var(--accent); }
       <summary>{{ t.acc_protocol }}</summary>
       <div class="acc-body">
         <div class="tn" style="border-color:rgba(234,179,8,.2);margin-bottom:16px"><strong>{{ t.warning_label }}:</strong> {{ t.protocol_disclaimer }}</div>
-        {% if conclusions.get('protocol') %}<div class="cc"><h4>&#128203; {{ t.conclusion_protocol }}</h4><ul>{% for c in conclusions.protocol %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+        {% if conclusions.get('protocol') %}<div class="cc"><h4><i class="ti ti-clipboard-text"></i> {{ t.conclusion_protocol }}</h4><ul>{% for c in conclusions.protocol %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
         {% if protocol %}
         {% if protocol.affected %}<div class="gc" style="border-color:rgba(239,68,68,.3);margin-bottom:12px"><div class="gc-h"><h3 class="tr">{{ t.pathogenic_confirm_title }}</h3></div><div class="gc-b"><p class="nt">{{ t.pathogenic_fp_short }}</p>{% for f in protocol.affected %}<p style="margin-bottom:6px"><strong>{{ f.gene or '---' }}:</strong> {{ (f.traits or '?').split(';')[0] }} <span class="tm">({{ f.gold_stars }}/4 {{ t.stars }})</span></p>{% endfor %}</div></div>{% endif %}
         {% if protocol.supplements %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.supplements_title }}</h3></div><p class="nt" style="padding:0 20px;margin-top:8px">{{ t.not_prescriptions_short }}</p><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_supplement }}</th><th>{{ t.col_dose }}</th><th>{{ t.col_reason }}</th></tr></thead><tbody>{% for s in protocol.supplements %}<tr><td>{{ s.name }}</td><td>{{ s.dose }}</td><td>{{ s.reason }}</td></tr>{% endfor %}</tbody></table></div></div>{% endif %}
@@ -332,8 +333,8 @@ a { color: var(--accent); }
 <!-- ═══ TAB 3: MEDICATIONS ═══ -->
 <div class="tp" id="tab-drugs">
   <div class="ctx ctx-danger"><h4>{{ t.tab_drugs }}</h4>{{ t.ctx_drugs }}</div>
-  {% if human.get('drugs') %}<div class="hc"><h4>&#9989; {{ t.human_drugs }}</h4><ul>{% for c in human.drugs %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
-  {% if conclusions.get('drugs') %}<details class="gc acc" style="margin-bottom:16px"><summary style="font-size:13px;color:#71717a">{{ t.technical_details }}</summary><div class="acc-body"><div class="cc" style="margin:0"><h4>&#128203; {{ t.conclusion_drugs }}</h4><ul>{% for c in conclusions.drugs %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div></div></details>{% endif %}
+  {% if human.get('drugs') %}<div class="hc"><h4><i class="ti ti-circle-check"></i> {{ t.human_drugs }}</h4><ul>{% for c in human.drugs %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+  {% if conclusions.get('drugs') %}<details class="gc acc" style="margin-bottom:16px"><summary style="font-size:13px;color:#71717a">{{ t.technical_details }}</summary><div class="acc-body"><div class="cc" style="margin:0"><h4><i class="ti ti-clipboard-text"></i> {{ t.conclusion_drugs }}</h4><ul>{% for c in conclusions.drugs %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div></div></details>{% endif %}
   {% if results.pharmgkb_findings %}
   {% set l1 = results.pharmgkb_findings|selectattr('level','in',['1A','1B'])|list %}
   {% set l2 = results.pharmgkb_findings|selectattr('level','in',['2A','2B'])|list %}
@@ -368,7 +369,7 @@ a { color: var(--accent); }
 <!-- ═══ TAB 4: WELLNESS (Nutri + Fit + Skin + Aging) ═══ -->
 <div class="tp" id="tab-wellness">
   <div class="ctx"><h4>{{ t.tab_wellness }}</h4>{{ t.ctx_wellness }}</div>
-  {% if human.get('wellness') %}<div class="hc"><h4>&#9989; {{ t.human_wellness }}</h4><ul>{% for c in human.wellness %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+  {% if human.get('wellness') %}<div class="hc"><h4><i class="ti ti-circle-check"></i> {{ t.human_wellness }}</h4><ul>{% for c in human.wellness %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
   {% if wellness %}
   {% for pk, pn, acc_key in [('nutri', t.panel_nutri, 'acc_nutri'), ('fit', t.panel_fit, 'acc_fit'), ('skin', t.panel_skin, 'acc_skin'), ('aging', t.panel_aging, 'acc_aging')] %}
   {% set panel = wellness.get(pk, {}) %}
@@ -382,7 +383,7 @@ a { color: var(--accent); }
           <div class="si"><div class="sn tg">{{ panel.summary.normal }}</div><div class="sl">{{ t.normal_favorable }}</div></div>
           <div class="si"><div class="sn {% if panel.summary.alerta > 0 %}tr{% else %}ty{% endif %}">{{ panel.summary.atencao + panel.summary.alerta }}</div><div class="sl">{{ t.require_attention }}</div></div>
         </div>
-        {% if panel.conclusions %}<div class="cc"><h4>&#128203; {{ pn }}</h4><ul>{% for c in panel.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+        {% if panel.conclusions %}<div class="cc"><h4><i class="ti ti-clipboard-text"></i> {{ pn }}</h4><ul>{% for c in panel.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
         <table class="tb"><thead><tr><th>{{ t.col_marker }}</th><th>{{ t.col_gene }}</th><th>rsID</th><th>{{ t.col_genotype }}</th><th>{{ t.col_result }}</th><th>{{ t.col_interpretation }}</th></tr></thead><tbody>
         {% for f in panel.findings %}<tr><td class="fw6">{{ f.trait }}</td><td>{{ f.gene }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.genotype }}</code></td><td><span class="bs bg-{{ f.color }}">{{ f.label }}</span></td><td style="font-size:12px;max-width:400px;line-height:1.6">{{ f.text|bold|safe }}</td></tr>{% endfor %}
         </tbody></table>
@@ -412,7 +413,7 @@ a { color: var(--accent); }
         </div>
         {% if pk == 'mental' %}<div class="tn" style="border-color:rgba(234,179,8,.2)"><strong>{{ t.warning_label }}:</strong> {{ t.mental_disclaimer }}</div>{% endif %}
         {% if pk == 'autoimmune' %}<div class="tn" style="border-color:rgba(234,179,8,.2)"><strong>{{ t.warning_label }}:</strong> {{ t.autoimmune_disclaimer }}</div>{% endif %}
-        {% if panel.conclusions %}<div class="cc"><h4>&#128203; {{ pn }}</h4><ul>{% for c in panel.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+        {% if panel.conclusions %}<div class="cc"><h4><i class="ti ti-clipboard-text"></i> {{ pn }}</h4><ul>{% for c in panel.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
         <table class="tb"><thead><tr><th>{{ t.col_marker }}</th><th>{{ t.col_gene }}</th><th>rsID</th><th>{{ t.col_genotype }}</th><th>{{ t.col_result }}</th><th>{{ t.col_interpretation }}</th></tr></thead><tbody>
         {% for f in panel.findings %}<tr><td class="fw6">{{ f.trait }}</td><td>{{ f.gene }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.genotype }}</code></td><td><span class="bs bg-{{ f.color }}">{{ f.label }}</span></td><td style="font-size:12px;max-width:400px;line-height:1.6">{{ f.text|bold|safe }}</td></tr>{% endfor %}
         </tbody></table>
@@ -435,7 +436,7 @@ a { color: var(--accent); }
       <summary>{{ t.acc_ancestry }} <span class="badge-count bg">{{ ancestry.markers_used }} {{ t.acc_markers }}</span></summary>
       <div class="acc-body" id="ancestry-acc-body">
         {% if ancestry.conclusions %}
-        <div class="cc"><h4>&#128203; {{ t.acc_ancestry }}</h4><ul>{% for c in ancestry.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>
+        <div class="cc"><h4><i class="ti ti-clipboard-text"></i> {{ t.acc_ancestry }}</h4><ul>{% for c in ancestry.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>
         {% endif %}
         <div class="cg">
           <div class="gc"><div class="gc-b"><div class="cw" id="chart-ancestry-donut"></div></div></div>
@@ -459,8 +460,8 @@ a { color: var(--accent); }
     <details>
       <summary>{{ t.acc_family }} <span class="badge-count by">{{ family.summary.total_relevant }} {{ t.acc_variants }}</span></summary>
       <div class="acc-body">
-        {% if human.get('family') %}<div class="hc"><h4>&#9989; {{ t.human_family }}</h4><ul>{% for c in human.family %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
-        {% if family.conclusions %}<details class="gc acc" style="margin-bottom:16px"><summary style="font-size:13px;color:#71717a">{{ t.technical_details }}</summary><div class="acc-body"><div class="cc" style="margin:0"><h4>&#128203; {{ t.family_conclusion_title }}</h4><ul>{% for c in family.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div></div></details>{% endif %}
+        {% if human.get('family') %}<div class="hc"><h4><i class="ti ti-circle-check"></i> {{ t.human_family }}</h4><ul>{% for c in human.family %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+        {% if family.conclusions %}<details class="gc acc" style="margin-bottom:16px"><summary style="font-size:13px;color:#71717a">{{ t.technical_details }}</summary><div class="acc-body"><div class="cc" style="margin:0"><h4><i class="ti ti-clipboard-text"></i> {{ t.family_conclusion_title }}</h4><ul>{% for c in family.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div></div></details>{% endif %}
         {% if family.dominant_findings %}
         <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.family_dominant_title }}</h3></div><div class="gc-b">
           {% for f in family.dominant_findings %}
@@ -481,7 +482,7 @@ a { color: var(--accent); }
           </div>{% endfor %}
         </div></div>{% endif %}
         {% if family.gestational_risks %}
-        <div class="gc" style="margin-bottom:12px;border-color:rgba(234,179,8,.3)"><div class="gc-h"><h3 class="ty">&#9888;&#65039; {{ t.family_gestational_title }}</h3></div><div class="gc-b">
+        <div class="gc" style="margin-bottom:12px;border-color:rgba(234,179,8,.3)"><div class="gc-h"><h3 class="ty"><i class="ti ti-alert-triangle"></i> {{ t.family_gestational_title }}</h3></div><div class="gc-b">
           <p class="nt">{{ t.family_gestational_note }}</p>
           {% for f in family.gestational_risks %}
           <div style="padding:14px 0;border-bottom:1px solid #27272a">
@@ -492,7 +493,7 @@ a { color: var(--accent); }
           </div>{% endfor %}
         </div></div>{% endif %}
         {% if family.x_linked_findings %}
-        <div class="gc" style="margin-bottom:12px;border-color:rgba(168,85,247,.3)"><div class="gc-h"><h3 style="color:var(--purple)">&#9893; {{ t.family_xlinked_title }}</h3></div><div class="gc-b">
+        <div class="gc" style="margin-bottom:12px;border-color:rgba(168,85,247,.3)"><div class="gc-h"><h3 style="color:var(--purple)"><i class="ti ti-dna"></i> {{ t.family_xlinked_title }}</h3></div><div class="gc-b">
           <p class="nt">{{ t.family_xlinked_note }}</p>
           {% for f in family.x_linked_findings %}
           <div style="padding:14px 0;border-bottom:1px solid #27272a">
@@ -504,7 +505,7 @@ a { color: var(--accent); }
         </div></div>{% endif %}
         {% if family.recommendations %}
         <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.family_recs_title }}</h3></div><div class="gc-b">
-          {% for r in family.recommendations %}<p style="font-size:13px;line-height:1.7;margin-bottom:8px;padding-left:16px;position:relative;color:#d4d4d8"><span style="position:absolute;left:0;color:var(--accent)">&#10148;</span> {{ r|bold|safe }}</p>{% endfor %}
+          {% for r in family.recommendations %}<p style="font-size:13px;line-height:1.7;margin-bottom:8px;padding-left:16px;position:relative;color:#d4d4d8"><span style="position:absolute;left:0;color:var(--accent)"><i class="ti ti-chevron-right"></i></span> {{ r|bold|safe }}</p>{% endfor %}
         </div></div>{% endif %}
       </div>
     </details>
@@ -607,14 +608,14 @@ if (form) form.addEventListener('submit', function(e) {
     e.stopPropagation();
     // Show error on dropzone
     const dz=document.getElementById('dropzone');
-    if(dz){dz.style.borderColor='var(--red)';dz.style.background='rgba(239,68,68,.06)';dz.querySelector('.dropzone-text').textContent='{{ t.upload_no_file }}';dz.querySelector('.dropzone-icon').textContent='\u26A0\uFE0F';}
+    if(dz){dz.style.borderColor='var(--red)';dz.style.background='rgba(239,68,68,.06)';dz.querySelector('.dropzone-text').textContent='{{ t.upload_no_file }}';dz.querySelector('.dropzone-icon').innerHTML='<i class="ti ti-alert-triangle"></i>';}
     // Show toast above form
     let toast=document.getElementById('noFileToast');
     if(!toast){toast=document.createElement('div');toast.id='noFileToast';toast.style.cssText='background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#fca5a5;padding:12px 20px;border-radius:10px;font-size:13px;text-align:center;margin-bottom:16px;';toast.textContent='{{ t.upload_no_file }}';form.parentNode.insertBefore(toast,form);}
-    setTimeout(function(){if(dz){dz.style.borderColor='#3f3f46';dz.style.background='';dz.querySelector('.dropzone-text').textContent='{{ t.upload_drag }}';dz.querySelector('.dropzone-icon').textContent='\uD83D\uDD2C';}if(toast)toast.remove();},4000);
+    setTimeout(function(){if(dz){dz.style.borderColor='#3f3f46';dz.style.background='';dz.querySelector('.dropzone-text').textContent='{{ t.upload_drag }}';dz.querySelector('.dropzone-icon').innerHTML='<i class="ti ti-microscope"></i>';}if(toast)toast.remove();},4000);
     return false;
   }
-  const b=document.getElementById('submitBtn'); b.innerHTML='&#9889; {{ t.analyzing }}'; b.disabled=true; b.style.opacity='.7';
+  const b=document.getElementById('submitBtn'); b.innerHTML='<i class="ti ti-bolt"></i> {{ t.analyzing }}'; b.disabled=true; b.style.opacity='.7';
 });
 // Drag and drop
 const dz = document.getElementById('dropzone');

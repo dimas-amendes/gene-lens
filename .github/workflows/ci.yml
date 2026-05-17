@@ -2,9 +2,9 @@ name: Genetic Health Analyzer CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, development]
   pull_request:
-    branches: [main]
+    branches: [main, development]
 
 jobs:
   build-and-test:

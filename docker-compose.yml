@@ -1,0 +1,33 @@
+# Gene Lens — one-command local dashboard.
+#
+# Usage:
+#   docker compose up               # start the dashboard at http://127.0.0.1:5000
+#   docker compose run --rm web python download_databases.py   # one-time DB download
+#   docker compose down             # stop
+#
+# All persistent state lives in named volumes mounted into the container,
+# so removing the container (docker compose down) doesn't wipe your
+# reference databases or analysis history. The web port is bound to
+# 127.0.0.1 only — the dashboard is not reachable from other machines on
+# your network even though the container's Flask binds to 0.0.0.0.
+
+services:
+  web:
+    build: .
+    image: gene-lens:local
+    ports:
+      - "127.0.0.1:5000:5000"
+    volumes:
+      # Reference databases (ClinVar, PharmGKB) — heavy, persist across runs.
+      - ./data:/app/data
+      # Uploaded DNA files. Gitignored locally; never bake into the image.
+      - ./input:/app/input
+      # Generated Markdown reports.
+      - ./output:/app/output
+      # Per-analysis JSON history (and chat transcripts).
+      - ./history:/app/history
+    environment:
+      # Set GENE_LENS_DEBUG=1 to enable Flask auto-reload on .py + template
+      # changes — only useful when you've also mounted the source directory.
+      GENE_LENS_DEBUG: "0"
+    restart: "no"

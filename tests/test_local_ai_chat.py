@@ -14,6 +14,8 @@ from src.local_ai import (
     _friendly_ollama_error,
     chat_about_analysis,
     chat_about_analysis_stream,
+    estimate_prompt_tokens,
+    estimate_tokens,
 )
 
 
@@ -292,3 +294,37 @@ class TestChatStream:
         assert len(chunks) == 1
         assert chunks[0]["event"] == "error"
         assert "empty" in chunks[0]["message"].lower()
+
+
+# ── token estimates ─────────────────────────────────────────────────────────
+
+class TestTokenEstimates:
+    def test_empty_text_is_zero_tokens(self):
+        assert estimate_tokens("") == 0
+
+    def test_short_text_is_at_least_one_token(self):
+        assert estimate_tokens("hi") >= 1
+
+    def test_estimate_scales_roughly_linear(self):
+        small = estimate_tokens("x" * 100)
+        big = estimate_tokens("x" * 10000)
+        # 100x more chars should produce ~100x more tokens (within rounding).
+        assert 80 <= big / small <= 120
+
+    def test_prompt_breakdown_includes_all_sections(self):
+        b = estimate_prompt_tokens(
+            context="rs1 finding " * 50,
+            history=[{"role": "user", "content": "earlier"}],
+            question="What about rs1?",
+            language="en",
+        )
+        assert {"system", "context", "history", "question", "total"} <= set(b.keys())
+        assert b["total"] >= b["context"] + b["question"]
+        assert b["context"] > 0
+        assert b["system"] > 0
+
+    def test_history_estimate_only_counts_last_eight(self):
+        many = [{"role": "user", "content": "x" * 10000} for _ in range(20)]
+        b = estimate_prompt_tokens(context="", history=many, question="", language="en")
+        # last 8 turns of 10k chars each ≈ 8 * 2500 = 20k tokens
+        assert b["history"] < 25000  # should never count all 20 turns

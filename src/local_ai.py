@@ -266,6 +266,33 @@ def chat_about_analysis_stream(
         yield {"event": "error", "message": "The model produced an empty response. Try rephrasing your question."}
 
 
+def estimate_tokens(text: str) -> int:
+    """Rough token count for sizing prompts vs. context window.
+
+    Uses the conventional rule of thumb (~4 chars per token for English/PT
+    on Llama-family tokenizers). This is an estimate — exact counts depend
+    on the tokenizer and the script. Good enough for "will this fit" UI hints.
+    """
+    if not text:
+        return 0
+    return max(1, len(text) // 4)
+
+
+def estimate_prompt_tokens(context: str, history: list, question: str, language: str = "pt") -> dict:
+    """Token estimate broken down by section, so the UI can show what's
+    eating the budget."""
+    sys_prompt = SYSTEM_PROMPT_PT if language == "pt" else SYSTEM_PROMPT_EN
+    history_text = "\n".join(t.get("content", "") for t in history[-8:])
+    return {
+        "system": estimate_tokens(sys_prompt),
+        "context": estimate_tokens(context),
+        "history": estimate_tokens(history_text),
+        "question": estimate_tokens(question),
+        "total": estimate_tokens(sys_prompt) + estimate_tokens(context)
+                 + estimate_tokens(history_text) + estimate_tokens(question),
+    }
+
+
 def _build_chat_prompt(context: str, history: list, question: str, language: str) -> str:
     """Shared prompt construction used by both blocking and streaming chat."""
     system_prompt = SYSTEM_PROMPT_PT if language == "pt" else SYSTEM_PROMPT_EN

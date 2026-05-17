@@ -61,17 +61,26 @@ Este sistema nasceu de uma necessidade pessoal: eu queria uma forma privada, off
 
 ### Pre-requisitos
 
-- **Python 3.10+**
-- **pip**
+- **Python 3.10, 3.11 ou 3.12** (3.13+ pode funcionar mas nao e coberto pelo CI)
 - ~500 MB de espaco em disco para bancos de dados de referencia
 
 ### 1. Clonar e instalar
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/genetic-health-analyzer.git
-cd genetic-health-analyzer
+git clone https://github.com/dimas-amendes/gene-lens.git
+cd gene-lens
+
+# Crie um ambiente virtual isolado (obrigatorio em macOS/Linux modernos
+# porque o Python do sistema recusa instalacao global — PEP 668).
+python3 -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+
 pip install -r requirements.txt
 ```
+
+> **Por que venv?** No macOS (Python via Homebrew) e na maioria das distros Linux, `pip install` fora de um venv falha com `externally-managed-environment`. Usar `.venv` isola as dependencias do projeto do seu Python de sistema.
+>
+> Para sair do venv depois: `deactivate`. Para reentrar em uma nova sessao: `source .venv/bin/activate`.
 
 ### 2. Baixar bancos de dados (unica vez, requer internet)
 

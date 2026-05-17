@@ -61,17 +61,26 @@ This project started from a personal need: I wanted a private, offline, and reli
 
 ### Prerequisites
 
-- **Python 3.10+**
-- **pip**
+- **Python 3.10, 3.11, or 3.12** (3.13+ may work but isn't covered by CI)
 - ~500 MB disk space for reference databases
 
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/genetic-health-analyzer.git
-cd genetic-health-analyzer
+git clone https://github.com/dimas-amendes/gene-lens.git
+cd gene-lens
+
+# Create an isolated virtual environment (required on modern macOS/Linux
+# because system Python refuses global installs — PEP 668).
+python3 -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+
 pip install -r requirements.txt
 ```
+
+> **Why a venv?** On macOS (Homebrew Python) and most Linux distros, `pip install` outside a venv fails with `externally-managed-environment`. Using `.venv` isolates the project's dependencies from your system Python.
+>
+> To leave the venv later: `deactivate`. To re-enter on a new shell session: `source .venv/bin/activate`.
 
 ### 2. Download reference databases (one-time, requires internet)
 

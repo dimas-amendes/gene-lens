@@ -170,6 +170,35 @@ a { color: var(--accent); }
 .ctx-danger { border-color: rgba(239,68,68,.15); background: linear-gradient(135deg, rgba(239,68,68,.04), rgba(239,68,68,.01)); }
 .badge-count { font-size: 11px; padding: 3px 10px; border-radius: 10px; font-weight: 600; }
 .stars { color: #eab308; letter-spacing: 1px; }
+
+/* Coverage report */
+.cov-card { margin-top: 16px; }
+.cov-intro { font-size: 13px; color: #a1a1aa; margin: 0 0 14px; line-height: 1.5; }
+.cov-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+.cov-stat { background: #0a0a0c; border: 1px solid #27272a; border-radius: 8px; padding: 12px; text-align: center; }
+.cov-stat-n { font-size: 20px; font-weight: 700; color: #fafafa; font-family: 'Geist Mono', monospace; }
+.cov-stat-l { font-size: 11px; color: #71717a; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.cov-stat-ok .cov-stat-n { color: #22c55e; }
+.cov-stat-mid .cov-stat-n { color: #eab308; }
+.cov-stat-low .cov-stat-n { color: #ef4444; }
+.cov-details > summary { cursor: pointer; font-size: 13px; color: #d4d4d8; padding: 8px 0; user-select: none; }
+.cov-details > summary:hover { color: var(--accent); }
+.cov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-top: 12px; }
+.cov-panel { background: #0a0a0c; border: 1px solid #27272a; border-radius: 8px; padding: 10px 12px; }
+.cov-panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.cov-panel-name { font-size: 12px; font-weight: 600; color: #fafafa; }
+.cov-panel-ratio { font-size: 11px; color: #a1a1aa; font-family: 'Geist Mono', monospace; }
+.cov-bar { height: 4px; background: #27272a; border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
+.cov-bar-fill { height: 100%; transition: width 0.3s; }
+.cov-high .cov-bar-fill { background: #22c55e; }
+.cov-partial .cov-bar-fill { background: #eab308; }
+.cov-low .cov-bar-fill { background: #ef4444; }
+.cov-panel-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 10px; }
+.cov-badge { padding: 1px 6px; border-radius: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+.cov-badge-high { color: #22c55e; background: rgba(34,197,94,.1); }
+.cov-badge-partial { color: #eab308; background: rgba(234,179,8,.1); }
+.cov-badge-low { color: #ef4444; background: rgba(239,68,68,.1); }
+.cov-missing { color: #71717a; font-family: 'Geist Mono', monospace; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
 </style>
 </head>
 <body>
@@ -275,6 +304,41 @@ a { color: var(--accent); }
   {% if high %}<div class="gc"><div class="gc-h"><h3 class="tr">{{ t.high_mag_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_category }}</th><th>{{ t.col_magnitude }}</th><th>{{ t.col_details }}</th></tr></thead><tbody>
   {% for f in high %}<tr><td class="fw6">{{ f.gene }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.genotype }}</code></td><td>{{ CAT_PT.get(f.category, f.category) }}</td><td><span class="bs br">{{ f.magnitude }}/6</span></td><td>{{ f.description[:90] }}</td></tr>{% endfor %}
   </tbody></table></div></div>{% else %}<div class="gc"><div class="gc-b tg">{{ t.high_mag_none|safe }}</div></div>{% endif %}
+
+  {% if coverage and coverage.panels %}
+  <div class="gc cov-card">
+    <div class="gc-h"><h3><i class="ti ti-target-arrow"></i> {{ t.coverage_title }}</h3></div>
+    <div class="gc-b">
+      <p class="cov-intro">{{ t.coverage_intro }}</p>
+      <div class="cov-summary">
+        <div class="cov-stat"><div class="cov-stat-n">{{ coverage.summary.markers_present }}/{{ coverage.summary.markers_total }}</div><div class="cov-stat-l">{{ t.coverage_markers }}</div></div>
+        <div class="cov-stat cov-stat-ok"><div class="cov-stat-n">{{ coverage.summary.panels_high }}</div><div class="cov-stat-l">{{ t.coverage_high }}</div></div>
+        <div class="cov-stat cov-stat-mid"><div class="cov-stat-n">{{ coverage.summary.panels_partial }}</div><div class="cov-stat-l">{{ t.coverage_partial }}</div></div>
+        <div class="cov-stat cov-stat-low"><div class="cov-stat-n">{{ coverage.summary.panels_low }}</div><div class="cov-stat-l">{{ t.coverage_low }}</div></div>
+      </div>
+      <details class="cov-details">
+        <summary>{{ t.coverage_breakdown }}</summary>
+        <div class="cov-grid">
+          {% for p in coverage.panels %}
+          <div class="cov-panel cov-{{ p.confidence }}">
+            <div class="cov-panel-head">
+              <span class="cov-panel-name">{{ p.name_pt if lang == 'pt' else p.name_en }}</span>
+              <span class="cov-panel-ratio">{{ p.present }}/{{ p.total }}</span>
+            </div>
+            <div class="cov-bar"><div class="cov-bar-fill" style="width: {{ (p.ratio * 100)|round|int }}%"></div></div>
+            <div class="cov-panel-meta">
+              <span class="cov-badge cov-badge-{{ p.confidence }}">{{ t['coverage_band_' ~ p.confidence] }}</span>
+              {% if p.missing and p.confidence != 'high' %}
+              <span class="cov-missing" title="{{ p.missing|join(', ') }}">{{ t.coverage_missing }}: {{ p.missing[:3]|join(', ') }}{% if p.missing|length > 3 %}…{% endif %}</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </details>
+    </div>
+  </div>
+  {% endif %}
 </div>
 
 <!-- ═══ TAB 2: HEALTH & RISKS (Accordion: Lifestyle + Disease + Protocol) ═══ -->

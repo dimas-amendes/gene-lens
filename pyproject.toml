@@ -25,7 +25,7 @@ classifiers = [
 dependencies = [
     "flask==3.0.3",
     "tqdm==4.66.5",
-    "requests==2.32.3",
+    "requests==2.34.2",
 ]
 
 [project.optional-dependencies]

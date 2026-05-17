@@ -9,6 +9,10 @@ updates:
       - "dependencies"
     commit-message:
       prefix: "deps"
+    ignore:
+      # Optional extras — bump manually when actually using these
+      - dependency-name: "ollama"
+      - dependency-name: "argostranslate"
 
   - package-ecosystem: "github-actions"
     directory: "/"

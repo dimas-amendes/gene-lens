@@ -173,6 +173,23 @@ def chat_about_analysis(
 
     system_prompt = SYSTEM_PROMPT_PT if language == "pt" else SYSTEM_PROMPT_EN
 
+    # Bound the analysis context so it never blows past the typical 8 GB
+    # consumer model's effective context window (~6k tokens ≈ 24k chars).
+    # Reserve ~4k chars for system prompt + history + reply. Anything past
+    # this is truncated with a visible marker so the model knows it's seeing
+    # a subset and won't fabricate details about the cut content.
+    MAX_CONTEXT_CHARS = 20000
+    context = context.strip()
+    truncated_note = ""
+    if len(context) > MAX_CONTEXT_CHARS:
+        kept = context[:MAX_CONTEXT_CHARS]
+        truncated_note = (
+            f"\n\n[... analysis truncated: {len(context) - MAX_CONTEXT_CHARS} "
+            "characters omitted to fit the model's context window. "
+            "Ask about specific findings to get more detail.]"
+        )
+        context = kept + truncated_note
+
     # Build a single prompt: system + analysis context + chat transcript + new question.
     # Ollama CLI doesn't expose role-based messages, so we serialize manually with
     # explicit ROLE: markers — small models follow this well enough for our use case.
@@ -180,7 +197,7 @@ def chat_about_analysis(
         system_prompt,
         "",
         "---- USER'S ANALYSIS (read-only context) ----",
-        context.strip(),
+        context,
         "---- END OF ANALYSIS ----",
         "",
     ]

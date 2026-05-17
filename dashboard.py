@@ -1050,6 +1050,15 @@ def index():
             except Exception:
                 pass
 
+    # Detect Ollama once per page load so the AI chat button can be enabled.
+    try:
+        from src.local_ai import is_ollama_available, list_models
+        ollama_ready = is_ollama_available()
+        ollama_models = list_models() if ollama_ready else []
+    except Exception:
+        ollama_ready = False
+        ollama_models = []
+
     return render_template(
         "dashboard.html",
         results=active.get("health") if active else None,
@@ -1068,6 +1077,8 @@ def index():
         history=history,
         t=t,
         lang=_current_lang,
+        ollama_ready=ollama_ready,
+        ollama_models=ollama_models,
     )
 
 
@@ -1213,6 +1224,99 @@ def clear():
     _jobs.pop("active_result", None)
     flash("Resultados limpos.")
     return redirect(url_for("index"))
+
+
+def _build_chat_context(active: dict, lang: str) -> str:
+    """Serialize the active analysis into a compact text the LLM can read."""
+    if not active:
+        return "No analysis is loaded."
+
+    lines = []
+    info = active.get("genome_info") or {}
+    if info:
+        lines.append(f"Total SNPs: {info.get('total_snps', '?')}, format: {info.get('format', '?')}")
+        profile = info.get("profile") or {}
+        if profile:
+            bits = []
+            for key in ("sex", "age", "weight", "height"):
+                if profile.get(key):
+                    bits.append(f"{key}={profile[key]}")
+            if bits:
+                lines.append("Profile: " + ", ".join(bits))
+
+    health_findings = (active.get("health") or {}).get("findings") or []
+    if health_findings:
+        lines.append("")
+        lines.append(f"Lifestyle / pharmacogenomics findings ({len(health_findings)} total — showing top 20):")
+        for f in health_findings[:20]:
+            lines.append(
+                f"- {f.get('rsid')} ({f.get('gene','?')}, {f.get('category','?')}): "
+                f"{f.get('genotype','?')} — {f.get('description','')[:160]}"
+            )
+
+    disease = active.get("disease") or {}
+    disease_findings = disease.get("findings") if isinstance(disease, dict) else []
+    if disease_findings:
+        lines.append("")
+        lines.append(f"Disease-associated variants ({len(disease_findings)} total — showing top 15):")
+        for f in disease_findings[:15]:
+            lines.append(
+                f"- {f.get('rsid')} ({f.get('gene','?')}): {f.get('clinical_significance','?')} "
+                f"— {(f.get('phenotype') or f.get('description') or '')[:160]}"
+            )
+
+    wellness = active.get("wellness") or {}
+    active_panels = [(k, v) for k, v in wellness.items() if v.get("findings")]
+    if active_panels:
+        lines.append("")
+        lines.append(f"Active wellness panels ({len(active_panels)}):")
+        for name, panel in active_panels[:10]:
+            findings_count = len(panel.get("findings", []))
+            lines.append(f"- {name}: {findings_count} findings")
+
+    ancestry = active.get("ancestry") or {}
+    if ancestry.get("region_scores"):
+        top = sorted(ancestry["region_scores"].items(), key=lambda kv: kv[1], reverse=True)[:5]
+        lines.append("")
+        lines.append("Top ancestry regions: " + ", ".join(f"{r} ({s:.0%})" for r, s in top))
+
+    family = active.get("family") or {}
+    if family.get("phenotype"):
+        lines.append("")
+        lines.append("Phenotype: " + ", ".join(f"{k}={v}" for k, v in family["phenotype"].items() if v))
+
+    return "\n".join(lines) if lines else "Analysis loaded but no notable findings."
+
+
+@app.route("/api/chat/ask", methods=["POST"])
+def chat_ask():
+    """Send a question + chat history to Ollama and return the assistant reply."""
+    if not _csrf_check():
+        return {"ok": False, "error": "csrf"}, 403
+
+    payload = request.get_json(silent=True) or {}
+    question = (payload.get("question") or "").strip()
+    if not question:
+        return {"ok": False, "error": "empty question"}, 400
+
+    history = payload.get("history") or []
+    model = payload.get("model") or "llama3.1:8b"
+    lang = _get_lang()
+
+    active = _jobs.get("active_result")
+    context = _build_chat_context(active, lang)
+
+    from src.local_ai import chat_about_analysis
+    ok, reply = chat_about_analysis(
+        context=context,
+        history=history,
+        question=question,
+        model=model,
+        language=lang,
+    )
+    if not ok:
+        return {"ok": False, "error": reply}, 503
+    return {"ok": True, "reply": reply}
 
 
 @app.route("/settings")

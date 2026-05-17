@@ -130,6 +130,89 @@ IMPORTANT RULES:
         return "[AI Error] Ollama not found. Install from https://ollama.ai"
 
 
+SYSTEM_PROMPT_PT = """Voce e um educador em genetica conversando com alguem que rodou uma analise local de DNA com a ferramenta Gene Lens. O usuario fara perguntas sobre a propria analise.
+
+REGRAS ABSOLUTAS:
+- NUNCA diga "voce tem", "voce esta em risco" ou "voce deve" — use "este achado sugere conversar com um medico sobre X"
+- NUNCA prescreva suplementos, doses, dietas ou medicamentos — sempre encaminhe ao profissional
+- NUNCA afirme diagnostico — testes de consumo tem ~40% de falso positivo para variantes clinicamente significativas
+- SEMPRE lembre que doencas comuns sao poligenicas e nao podem ser previstas por SNPs isolados
+- SE a pergunta for sobre topico ausente nos dados, diga claramente "isso nao aparece na sua analise"
+- Responda em portugues brasileiro, conciso (3-6 paragrafos no maximo)
+"""
+
+SYSTEM_PROMPT_EN = """You are a genetics educator chatting with someone who ran a local DNA analysis using Gene Lens. The user will ask questions about their own analysis.
+
+ABSOLUTE RULES:
+- NEVER say "you have", "you are at risk for", or "you should" — instead "this finding suggests discussing X with your doctor"
+- NEVER prescribe supplements, doses, diets, or medications — always defer to a healthcare professional
+- NEVER state a diagnosis — consumer genotyping has a ~40% false-positive rate for clinically significant variants
+- ALWAYS remind that common diseases are polygenic and cannot be predicted by individual SNPs
+- IF the question is about a topic absent from the data, clearly say "that does not appear in your analysis"
+- Respond in English, concise (3-6 short paragraphs max)
+"""
+
+
+def chat_about_analysis(
+    context: str,
+    history: list[dict],
+    question: str,
+    model: str = "llama3.1:8b",
+    language: str = "pt",
+    timeout: int = 120,
+) -> tuple[bool, str]:
+    """Ask a question about a previously generated analysis.
+
+    Returns (ok, text). On failure, text holds a user-facing error message.
+    """
+    if not is_ollama_available():
+        return False, (
+            "Ollama is not available on this machine. Install it from "
+            "https://ollama.com and pull a model (e.g. `ollama pull llama3.1:8b`)."
+        )
+
+    system_prompt = SYSTEM_PROMPT_PT if language == "pt" else SYSTEM_PROMPT_EN
+
+    # Build a single prompt: system + analysis context + chat transcript + new question.
+    # Ollama CLI doesn't expose role-based messages, so we serialize manually with
+    # explicit ROLE: markers — small models follow this well enough for our use case.
+    transcript_lines = [
+        system_prompt,
+        "",
+        "---- USER'S ANALYSIS (read-only context) ----",
+        context.strip(),
+        "---- END OF ANALYSIS ----",
+        "",
+    ]
+    for turn in history[-8:]:  # keep last 8 turns so the prompt stays bounded
+        role = "USER" if turn.get("role") == "user" else "ASSISTANT"
+        transcript_lines.append(f"{role}: {turn.get('content', '').strip()}")
+    transcript_lines.append(f"USER: {question.strip()}")
+    transcript_lines.append("ASSISTANT:")
+    prompt = "\n".join(transcript_lines)
+
+    try:
+        result = subprocess.run(
+            ["ollama", "run", model],
+            input=prompt,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return False, "Ollama took too long to respond. Try a smaller model (e.g. gemma2:2b)."
+    except FileNotFoundError:
+        return False, "Ollama binary not found. Install it from https://ollama.com."
+
+    if result.returncode != 0:
+        return False, (result.stderr or "Ollama returned a non-zero exit code.").strip()
+
+    answer = result.stdout.strip()
+    if not answer:
+        return False, "The model produced an empty response. Try rephrasing your question."
+    return True, answer
+
+
 def save_interpretation(interpretation: str, output_path: Path):
     """Save AI interpretation to a separate file."""
     with open(output_path, "w", encoding="utf-8") as f:

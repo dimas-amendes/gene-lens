@@ -4,6 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-green.svg)](https://python.org)
+[![CI](https://github.com/dimas-amendes/gene-lens/actions/workflows/ci.yml/badge.svg)](https://github.com/dimas-amendes/gene-lens/actions/workflows/ci.yml)
 [![Local First](https://img.shields.io/badge/Privacy-Local_First-brightgreen.svg)](#privacy-architecture)
 
 **Local-first genetic exploration dashboard.** Designed for offline analysis of raw DNA data from consumer genotyping services (23andMe, AncestryDNA, MyHeritage, Genera/MeuDNA) against public reference databases (ClinVar, PharmGKB) — blocks standard Python network access during analysis and processes everything on your machine.

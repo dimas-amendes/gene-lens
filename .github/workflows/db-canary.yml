@@ -14,7 +14,7 @@ jobs:
   check-clinvar:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: HEAD request — ClinVar variant_summary
         id: head

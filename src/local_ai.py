@@ -205,12 +205,38 @@ def chat_about_analysis(
         return False, "Ollama binary not found. Install it from https://ollama.com."
 
     if result.returncode != 0:
-        return False, (result.stderr or "Ollama returned a non-zero exit code.").strip()
+        return False, _friendly_ollama_error(result.stderr or "", model)
 
     answer = result.stdout.strip()
     if not answer:
         return False, "The model produced an empty response. Try rephrasing your question."
     return True, answer
+
+
+def _friendly_ollama_error(stderr: str, model: str) -> str:
+    """Translate raw Ollama stderr into actionable messages for the UI."""
+    low = stderr.lower()
+    if "model" in low and ("not found" in low or "manifest" in low or "pulling manifest" in low):
+        return (
+            f"The model `{model}` isn't downloaded yet. Open a terminal and run:\n\n"
+            f"`ollama pull {model}`\n\n"
+            f"It's a one-time download (typically 2–8 GB). After it finishes, ask again."
+        )
+    if "connection refused" in low or "could not connect" in low:
+        return (
+            "Ollama is installed but the background service isn't running. "
+            "Start it with `ollama serve` in a terminal, or just launch the Ollama app."
+        )
+    if "out of memory" in low or "cuda out of memory" in low:
+        return (
+            f"Your machine ran out of memory loading `{model}`. Try a smaller model "
+            "(e.g. `ollama pull gemma2:2b`) and select it from the dropdown."
+        )
+    # Fall back to the raw stderr, trimmed.
+    cleaned = stderr.strip()
+    if cleaned:
+        return cleaned[:600]
+    return "Ollama returned a non-zero exit code without details."
 
 
 def save_interpretation(interpretation: str, output_path: Path):

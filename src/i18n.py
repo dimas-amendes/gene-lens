@@ -150,6 +150,7 @@ STRINGS = {
         "loading_step_db": "Carregando bancos de dados",
         "loading_step_read": "Lendo arquivo de DNA",
         "loading_step_analyze": "Analisando variantes",
+        "loading_step_wellness": "Analisando painéis de bem-estar",
         "loading_step_translate": "Traduzindo anotações clínicas",
         "loading_step_conclude": "Gerando conclusões",
         "loading_done": "Concluído! Redirecionando...",
@@ -331,6 +332,26 @@ STRINGS = {
         "settings_ai_chat_disable": "Desativar chat",
         "settings_ai_chat_needs_ollama": "Instale o Ollama acima antes de ativar o chat.",
 
+        # Coverage report (per-panel marker availability)
+        "coverage_title": "Cobertura da análise",
+        "coverage_intro": "Chips de DNA não genotipam todos os marcadores. Esta seção mostra quantos dos SNPs-chave de cada análise realmente apareceram no seu arquivo — quanto menor a cobertura, menos confiável o resultado daquele painel.",
+        "coverage_markers": "marcadores presentes",
+        "coverage_high": "painéis confiáveis",
+        "coverage_partial": "parciais",
+        "coverage_low": "baixa cobertura",
+        "coverage_breakdown": "Ver cobertura por painel",
+        "coverage_missing": "faltam",
+        "coverage_band_high": "alta",
+        "coverage_band_partial": "parcial",
+        "coverage_band_low": "baixa",
+
+        # Hereditary cancer chip-limitation warning (BRCA framing)
+        "hcw_title": "Sobre câncer hereditário (BRCA1/2 e outros)",
+        "hcw_body": "Chips de DNA de consumo (23andMe, AncestryDNA, MyHeritage, Genera) cobrem apenas uma fração mínima das variantes patogênicas de BRCA1, BRCA2, PALB2, MLH1 e outros genes de câncer hereditário. A maioria das mutações de risco real NÃO aparece nesta análise — mesmo que nenhum achado seja listado abaixo, isso NÃO significa que você está livre de risco hereditário.",
+        "hcw_cta": "Se você tem histórico familiar de câncer (mama, ovário, próstata, cólon, pâncreas) em parentes de primeiro grau ou diagnóstico antes dos 50 anos, procure um oncogeneticista para teste clínico (Invitae, Myriad ou laboratório local) — é a única forma confiável de avaliar esses genes.",
+        "hcw_empty_title": "Nenhum achado hereditário não significa ausência de risco",
+        "hcw_empty_body": "A análise não encontrou variantes hereditárias relevantes nos dados do seu chip — mas chips de consumo cobrem pouquíssimas variantes patogênicas de BRCA1/2, Lynch e outros painéis hereditários. Histórico familiar continua sendo o melhor indicador de risco. Discuta com seu médico se houver casos de câncer precoce na família.",
+
         # AI chat drawer
         "ai_button": "Perguntar à IA",
         "ai_title": "Pergunte sobre sua análise",
@@ -472,6 +493,7 @@ STRINGS = {
         "loading_step_db": "Loading databases",
         "loading_step_read": "Reading DNA file",
         "loading_step_analyze": "Analyzing variants",
+        "loading_step_wellness": "Analyzing wellness panels",
         "loading_step_translate": "Translating clinical annotations",
         "loading_step_conclude": "Generating conclusions",
         "loading_done": "Done! Redirecting...",
@@ -642,6 +664,26 @@ STRINGS = {
         "settings_ai_chat_enable": "Enable chat",
         "settings_ai_chat_disable": "Disable chat",
         "settings_ai_chat_needs_ollama": "Install Ollama above before enabling the chat.",
+
+        # Coverage report (per-panel marker availability)
+        "coverage_title": "Analysis coverage",
+        "coverage_intro": "DNA chips don't genotype every marker. This section shows how many of the key SNPs each analysis depends on actually appeared in your file — the lower the coverage, the less reliable that panel's result.",
+        "coverage_markers": "markers present",
+        "coverage_high": "reliable panels",
+        "coverage_partial": "partial",
+        "coverage_low": "low coverage",
+        "coverage_breakdown": "See per-panel coverage",
+        "coverage_missing": "missing",
+        "coverage_band_high": "high",
+        "coverage_band_partial": "partial",
+        "coverage_band_low": "low",
+
+        # Hereditary cancer chip-limitation warning (BRCA framing)
+        "hcw_title": "About hereditary cancer (BRCA1/2 and others)",
+        "hcw_body": "Consumer DNA chips (23andMe, AncestryDNA, MyHeritage, Genera) cover only a tiny fraction of pathogenic variants in BRCA1, BRCA2, PALB2, MLH1 and other hereditary cancer genes. Most real risk mutations do NOT show up in this analysis — so even if nothing is listed below, that does NOT mean you're free of hereditary risk.",
+        "hcw_cta": "If you have a family history of cancer (breast, ovarian, prostate, colon, pancreatic) in first-degree relatives or diagnoses before age 50, see a cancer geneticist for clinical testing (Invitae, Myriad, or a local lab) — it's the only reliable way to evaluate these genes.",
+        "hcw_empty_title": "No hereditary findings doesn't mean no risk",
+        "hcw_empty_body": "The analysis found no relevant hereditary variants in your chip data — but consumer chips cover very few pathogenic variants of BRCA1/2, Lynch, and other hereditary panels. Family history remains the strongest indicator of risk. Discuss this with your doctor if there are cases of early-onset cancer in your family.",
 
         # AI chat drawer
         "ai_button": "Ask AI",

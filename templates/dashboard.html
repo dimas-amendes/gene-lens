@@ -60,6 +60,20 @@ a { color: var(--accent); }
 .ai-msg { max-width: 88%; padding: 10px 14px; border-radius: 12px; font-size: 13.5px; line-height: 1.55; word-wrap: break-word; white-space: pre-wrap; }
 .ai-msg.user { background: var(--accent-soft); color: #cbd5e1; align-self: flex-end; border: 1px solid rgba(59,130,246,.25); }
 .ai-msg.assistant { background: #18181b; color: #e4e4e7; align-self: flex-start; border: 1px solid #27272a; }
+.ai-msg.assistant p { margin: 0 0 8px; }
+.ai-msg.assistant p:last-child { margin-bottom: 0; }
+.ai-msg.assistant ul, .ai-msg.assistant ol { margin: 6px 0 8px; padding-left: 22px; }
+.ai-msg.assistant li { margin-bottom: 3px; }
+.ai-msg.assistant h2, .ai-msg.assistant h3, .ai-msg.assistant h4 { font-size: 14px; font-weight: 600; margin: 10px 0 4px; color: #fafafa; }
+.ai-msg.assistant code { background: #0a0a0c; border: 1px solid #27272a; border-radius: 4px; padding: 1px 5px; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--accent); }
+.ai-msg.assistant pre { background: #0a0a0c; border: 1px solid #27272a; border-radius: 6px; padding: 10px 12px; overflow-x: auto; margin: 6px 0; }
+.ai-msg.assistant pre code { background: transparent; border: none; padding: 0; color: #d4d4d8; }
+.ai-msg.assistant strong { color: #fafafa; font-weight: 600; }
+.ai-msg.assistant em { color: #d4d4d8; font-style: italic; }
+.ai-msg.assistant .rsid-chip { background: var(--accent-soft); border: 1px solid rgba(59,130,246,.3); color: var(--accent); font-family: 'Geist Mono', monospace; font-size: 12px; padding: 1px 6px; border-radius: 4px; cursor: pointer; transition: background .15s; }
+.ai-msg.assistant .rsid-chip:hover { background: rgba(59,130,246,.18); }
+.rsid-flash { animation: rsid-flash .9s ease-out; }
+@keyframes rsid-flash { 0% { background: rgba(59,130,246,.4); } 100% { background: transparent; } }
 .ai-msg.error { background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.3); color: #fecaca; align-self: stretch; max-width: 100%; }
 .ai-msg.empty { color: #71717a; text-align: center; align-self: stretch; max-width: 100%; padding: 24px; font-style: normal; }
 .ai-msg.empty > div:first-child { font-style: italic; margin-bottom: 14px; }
@@ -216,6 +230,36 @@ a { color: var(--accent); }
 .hcw-empty { border-color: rgba(234,179,8,.25); background: rgba(234,179,8,.04); margin-top: 12px; }
 .hcw-empty-title { font-size: 13px; color: var(--yellow); margin: 0 0 6px; display: flex; align-items: center; gap: 6px; font-weight: 600; }
 .hcw-empty-body { font-size: 12px; line-height: 1.6; color: #a1a1aa; margin: 0; }
+.mb-actions { display: inline-flex; gap: 8px; align-items: center; }
+.btn-export { background: var(--accent); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; }
+.btn-export:hover { filter: brightness(1.1); }
+.btn-clear { color: #71717a; background: #18181b; border: 1px solid #3f3f46; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; }
+.print-only { display: none; }
+
+/* Print stylesheet: user already views in a browser, so "Save as PDF" from
+   the OS print dialog gives a no-dependency, privacy-preserving export. */
+@media print {
+  @page { size: A4; margin: 16mm 14mm; }
+  body { background: #fff !important; color: #111 !important; font-size: 11pt; }
+  .site-header, .ai-fab, .ai-drawer, .ai-backdrop, .mb-actions, .tabs, .lang-toggle, form, button { display: none !important; }
+  .print-only { display: block !important; }
+  .tp { display: block !important; page-break-before: always; }
+  .tp:first-of-type { page-break-before: avoid; }
+  details, details > summary { display: block !important; }
+  details > summary::-webkit-details-marker { display: none; }
+  details summary { font-weight: 600; margin-bottom: 8px; }
+  details > *:not(summary) { display: block !important; }
+  .cw, .cg { display: none !important; }
+  .gc, .cc, .hc, .tn, .ctx, .med-banner, .hcw-card, .hcw-empty, .cov-card, .cov-stat, .cov-panel { background: #fff !important; color: #111 !important; border: 1px solid #ccc !important; box-shadow: none !important; }
+  table.tb { font-size: 9pt; page-break-inside: auto; }
+  table.tb tr { page-break-inside: avoid; }
+  h1, h2, h3, h4 { color: #111 !important; page-break-after: avoid; }
+  a { color: #1d4ed8; text-decoration: underline; }
+  code { background: #f4f4f5; color: #111; }
+  .print-header { display: flex !important; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #111; padding-bottom: 6px; margin-bottom: 12px; }
+  .print-header strong { font-size: 14pt; }
+  .print-footer { display: block !important; margin-top: 16px; font-size: 8pt; color: #555; text-align: center; }
+}
 </style>
 </head>
 <body>
@@ -273,6 +317,10 @@ a { color: var(--accent); }
 {% else %}
 <!-- RESULTS -->
 {% set prof = genome_info.get('profile', {}) %}
+<div class="print-only print-header">
+  <strong>Gene Lens — {{ t.coverage_title if t.coverage_title else 'Report' }}</strong>
+  <span>{{ genome_info.filename }}{% if genome_info.subject_name %} · {{ genome_info.subject_name }}{% endif %}</span>
+</div>
 <div class="mb"><span><strong style="color:#fafafa">{{ genome_info.filename }}</strong> &middot; {{ genome_info.format }} &middot; {{ "{:,}".format(genome_info.snp_count) }} SNPs &middot; {{ elapsed }}s{% if genome_info.subject_name %} &middot; <strong style="color:#fafafa">{{ genome_info.subject_name }}</strong>{% endif %}{% if prof %} &middot; <span class="tm">{% if prof.sex %}{{ prof.sex }}{% endif %}{% if prof.age %} {{ prof.age }}{{ t.profile_years }}{% endif %}{% if prof.bmi %} IMC {{ prof.bmi }}{% endif %}</span>{% endif %}</span>
 <div class="mb-actions">
   <button type="button" onclick="exportPdf()" class="btn-export" title="{{ t.export_pdf_tooltip }}"><i class="ti ti-file-download"></i> {{ t.export_pdf }}</button>
@@ -736,6 +784,20 @@ function showTab(n, el) {
   }, 50);
 }
 document.querySelectorAll('tr[data-href]').forEach(r => { r.addEventListener('click', function(e) { if(!e.target.closest('.no-nav')) window.location=this.dataset.href; }); });
+
+// Export to PDF via the OS print dialog. Before printing, open every
+// <details> so accordions render in full on paper, then restore the
+// original state afterwards so the on-screen view isn't disturbed.
+function exportPdf() {
+  const wasOpen = [];
+  document.querySelectorAll('details').forEach((d, i) => { wasOpen[i] = d.open; d.open = true; });
+  const cleanup = () => {
+    document.querySelectorAll('details').forEach((d, i) => { d.open = wasOpen[i]; });
+    window.removeEventListener('afterprint', cleanup);
+  };
+  window.addEventListener('afterprint', cleanup);
+  window.print();
+}
 // Init ancestry charts when accordion expands
 const ancBody = document.getElementById('ancestry-acc-body');
 if (ancBody) { ancBody.closest('details').addEventListener('toggle', function() { if(this.open && typeof initAnc==='function') setTimeout(initAnc, 100); }); }

@@ -46,3 +46,13 @@ py-modules = ["dashboard", "main", "config", "run", "download_databases"]
 
 [tool.setuptools.packages.find]
 include = ["src*"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --tb=short"
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning:flask.*",
+    "ignore::DeprecationWarning:werkzeug.*",
+]

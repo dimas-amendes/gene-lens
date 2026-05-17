@@ -1,0 +1,42 @@
+# Personal/sensitive data — must never be baked into the image.
+input/
+output/
+history/
+*.log
+.genetics_consent
+data/*.tsv
+data/*.gz
+data/*.zip
+data/*.gff
+data/*.vcf
+data/cache/
+
+# Python bytecode and venvs.
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Git metadata — image doesn't need it.
+.git/
+.gitignore
+.github/
+
+# Local IDE config and OS junk.
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Legacy / private docs.
+genetics-docs/
+.claude/
+
+# Test artifacts.
+.pytest_cache/
+.coverage
+htmlcov/

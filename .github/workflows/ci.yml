@@ -1,0 +1,148 @@
+name: Genetic Health Analyzer CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8
+
+      - name: Lint - syntax errors and undefined names
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=static,genetics-docs
+
+      - name: Lint - warnings (non-blocking)
+        run: |
+          flake8 . --count --exit-zero --max-complexity=15 --max-line-length=150 --statistics --exclude=static,genetics-docs
+
+      - name: Verify core imports
+        run: |
+          python -c "from src.parsers import load_genome"
+          python -c "from src.analyzer import analyze_lifestyle, analyze_disease_risk"
+          python -c "from src.wellness_panels import analyze_all_panels, ALL_PANELS"
+          python -c "from src.ancestry import analyze_ancestry"
+          python -c "from src.phenotype import analyze_phenotype"
+          python -c "from src.family_planning import analyze_family_planning"
+          python -c "from src.hereditary_conditions import analyze_hereditary_conditions"
+          python -c "from src.i18n import get_strings, STRINGS"
+          python -c "from src.privacy import NetworkBlocker"
+          python -c "from src.consent import is_consent_given"
+          python -c "from src.sex_inference import infer_sex"
+
+      - name: Test sample genome parsing
+        run: |
+          python -c "
+          from src.parsers import load_genome
+          g, _, f = load_genome('sample/sample_genome.csv')
+          assert len(g) > 100, f'Expected >100 SNPs, got {len(g)}'
+          print(f'OK: {len(g)} SNPs loaded as {f}')
+          "
+
+      - name: Test wellness panels
+        run: |
+          python -c "
+          from src.parsers import load_genome
+          from src.wellness_panels import analyze_all_panels
+          g, _, _ = load_genome('sample/sample_genome.csv')
+          w = analyze_all_panels(g)
+          active = sum(1 for p in w.values() if p.get('findings'))
+          assert active >= 8, f'Expected >=8 panels, got {active}'
+          print(f'OK: {active} panels with findings')
+          "
+
+      - name: Test phenotype prediction
+        run: |
+          python -c "
+          from src.parsers import load_genome
+          from src.phenotype import analyze_phenotype
+          g, _, _ = load_genome('sample/sample_genome.csv')
+          p = analyze_phenotype(g)
+          assert p['markers_found'] > 5
+          assert 'baldness' in p
+          print(f'OK: {p[\"markers_found\"]} phenotype markers')
+          "
+
+      - name: Validate i18n completeness
+        run: |
+          python -c "
+          from src.i18n import STRINGS
+          pt = set(STRINGS['pt'].keys())
+          en = set(STRINGS['en'].keys())
+          missing_en = pt - en
+          missing_pt = en - pt
+          if missing_en: print(f'PT keys missing in EN: {missing_en}')
+          if missing_pt: print(f'EN keys missing in PT: {missing_pt}')
+          assert len(missing_en) < 5, f'Too many missing EN keys: {missing_en}'
+          assert len(missing_pt) < 5, f'Too many missing PT keys: {missing_pt}'
+          print(f'OK: PT={len(pt)}, EN={len(en)} keys')
+          "
+
+      - name: Test NetworkBlocker
+        run: |
+          python -c "
+          from src.privacy import NetworkBlocker
+          import socket
+          with NetworkBlocker():
+              try:
+                  socket.socket()
+                  assert False, 'NetworkBlocker failed'
+              except (ConnectionError, OSError):
+                  pass
+          print('OK: NetworkBlocker working')
+          "
+
+  security-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for sensitive data patterns
+        run: |
+          echo "Checking for real genetic data in tracked files outside sample/..."
+          # Find SNP-shaped lines (rsNNN\t<chr>\t...) in tracked files, excluding sample/ fixtures.
+          MATCHES=$(git ls-files \
+            | grep -v '^sample/' \
+            | grep -v '^genetics-docs/' \
+            | xargs -I{} grep -l -E "^rs[0-9]+	[0-9XYMT]+	[0-9]+" {} 2>/dev/null || true)
+          if [ -n "$MATCHES" ]; then
+            echo "ERROR: SNP data found in non-sample files:"
+            echo "$MATCHES"
+            exit 1
+          fi
+          echo "OK: No real genetic data found in tracked files"
+
+      - name: Scan for secrets (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify .gitignore coverage
+        run: |
+          python3 -c "
+          gi = open('.gitignore').read()
+          for r in ['input/', 'output/', 'history/', '*.log', 'data/*.tsv']:
+              assert r in gi, f'Missing: {r}'
+          print('OK: .gitignore covers sensitive dirs')
+          "

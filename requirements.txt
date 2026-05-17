@@ -1,0 +1,10 @@
+# Core (pinned for reproducibility — bump via dependabot)
+flask==3.0.3
+tqdm==4.66.5
+requests==2.32.3
+
+# Translation (optional — install for PT-BR neural translation)
+# argostranslate==1.9.6
+
+# Local AI interpretation (optional — requires Ollama installed)
+# ollama==0.3.3

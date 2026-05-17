@@ -1,0 +1,118 @@
+name: Database URL Canary
+
+# Weekly check that public database URLs (ClinVar, PharmGKB) still work
+# and the schema hasn't shifted. Opens an issue automatically on failure.
+#
+# Runs Sundays at 03:00 UTC. Manual trigger also available.
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+
+jobs:
+  check-clinvar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: HEAD request — ClinVar variant_summary
+        id: head
+        run: |
+          URL="https://ftp.ncbi.nlm.nih.gov/pub/clinvar/tab_delimited/variant_summary.txt.gz"
+          echo "Checking $URL"
+          STATUS=$(curl -sI -o /dev/null -w "%{http_code}" "$URL")
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::ClinVar URL returned HTTP $STATUS"
+            exit 1
+          fi
+
+      - name: Verify ClinVar header schema
+        run: |
+          URL="https://ftp.ncbi.nlm.nih.gov/pub/clinvar/tab_delimited/variant_summary.txt.gz"
+          # Pull only the first ~64KB and gunzip to read the header line
+          HEADER=$(curl -s --range 0-65535 "$URL" | gunzip 2>/dev/null | head -n 1 || true)
+          echo "Header: $HEADER"
+          REQUIRED="#AlleleID Type GeneSymbol ClinicalSignificance Chromosome Start Stop ReferenceAllele AlternateAllele ReviewStatus Assembly PhenotypeList RCVaccession Origin VariationID LastEvaluated"
+          MISSING=""
+          for col in $REQUIRED; do
+            if ! echo "$HEADER" | grep -q "$(echo "$col" | sed 's/[[]/\\[/g; s/[]]/\\]/g')"; then
+              MISSING="$MISSING $col"
+            fi
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::error::Missing ClinVar columns:$MISSING"
+            exit 1
+          fi
+          echo "OK: all required ClinVar columns present"
+
+      - name: Open issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `[canary] ClinVar URL/schema check failed (${new Date().toISOString().slice(0,10)})`;
+            const body = [
+              `The weekly ClinVar canary failed.`,
+              ``,
+              `**Run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              ``,
+              `Likely cause: NCBI moved/renamed the FTP file, or ClinVar changed the column header layout.`,
+              ``,
+              `Action items:`,
+              `- Visit https://ftp.ncbi.nlm.nih.gov/pub/clinvar/tab_delimited/ and confirm the current filename`,
+              `- Update \`download_databases.py\` URL and \`col_map\` if columns changed`,
+              `- Re-run this workflow to confirm fix`,
+            ].join('\n');
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'canary,clinvar',
+            });
+            if (existing.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['canary', 'clinvar', 'bug'],
+              });
+            }
+
+  check-pharmgkb:
+    runs-on: ubuntu-latest
+    steps:
+      - name: HEAD request — PharmGKB downloads page
+        run: |
+          URL="https://www.pharmgkb.org/downloads"
+          STATUS=$(curl -sI -L -o /dev/null -w "%{http_code}" "$URL")
+          echo "PharmGKB downloads page status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::PharmGKB downloads page returned HTTP $STATUS"
+            exit 1
+          fi
+
+      - name: Open issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `[canary] PharmGKB downloads page unreachable (${new Date().toISOString().slice(0,10)})`;
+            const body = `PharmGKB downloads page is unreachable. Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'canary,pharmgkb',
+            });
+            if (existing.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['canary', 'pharmgkb', 'bug'],
+              });
+            }

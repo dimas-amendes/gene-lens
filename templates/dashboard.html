@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-bs-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ t.app_title }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/halfmoon.min.css') }}">
+<script src="{{ url_for('static', filename='js/echarts.min.js') }}"></script>
+<style>
+@font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-400.woff2') }}") format('woff2'); font-weight:400; font-display:swap; }
+@font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-500.woff2') }}") format('woff2'); font-weight:500; font-display:swap; }
+@font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-600.woff2') }}") format('woff2'); font-weight:600; font-display:swap; }
+@font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-700.woff2') }}") format('woff2'); font-weight:700; font-display:swap; }
+@font-face { font-family:'Geist Mono'; src:url("{{ url_for('static', filename='fonts/geist-mono-400.woff2') }}") format('woff2'); font-weight:400; font-display:swap; }
+
+:root,[data-bs-theme="dark"] {
+  --bs-body-font-family: 'Geist', -apple-system, system-ui, sans-serif;
+  --bs-body-bg: #09090b; --bs-tertiary-bg: #18181b; --bs-secondary-bg: #27272a; --bs-border-color: #27272a;
+  --accent: #3b82f6; --accent-soft: rgba(59,130,246,.12);
+  --green: #22c55e; --green-soft: rgba(34,197,94,.12);
+  --yellow: #eab308; --yellow-soft: rgba(234,179,8,.12);
+  --red: #ef4444; --red-soft: rgba(239,68,68,.12);
+  --purple: #a855f7; --purple-soft: rgba(168,85,247,.12);
+}
+body { font-family: var(--bs-body-font-family); background: var(--bs-body-bg); color: #fafafa; -webkit-font-smoothing: antialiased; }
+code { font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--accent); background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; }
+a { color: var(--accent); }
+.site-header { background: #09090b; border-bottom: 1px solid #27272a; padding: 16px 0; }
+.site-header .container { display: flex; justify-content: space-between; align-items: center; }
+.logo { font-size: 18px; font-weight: 600; color: #fafafa; display: flex; align-items: center; gap: 10px; }
+.logo-icon { color: var(--accent); font-size: 22px; }
+.lang-sw a { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none; color: #a1a1aa; transition: color .2s; }
+.lang-sw a:hover { color: #d4d4d8; }
+.lang-sw a.active { background: var(--accent-soft); color: var(--accent); }
+.priv-pill { font-size: 11px; color: var(--green); background: var(--green-soft); padding: 4px 12px; border-radius: 20px; font-weight: 500; margin-left: 12px; }
+.gc { background: #18181b; border: 1px solid #27272a; border-radius: 12px; }
+.gc.acc { overflow: visible; }
+.gc-h { padding: 16px 20px; border-bottom: 1px solid #27272a; }
+.gc-h h3 { font-size: 14px; font-weight: 600; margin: 0; color: #e4e4e7; }
+.gc-b { padding: 20px; }
+.gc-b.np { padding: 0; }
+.gc + .gc { margin-top: 16px; }
+.sr { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.si { background: #18181b; border: 1px solid #27272a; border-radius: 10px; padding: 18px 16px; text-align: center; }
+.sn { font-size: 28px; font-weight: 700; line-height: 1; letter-spacing: -1px; }
+.sl { font-size: 11px; color: #a1a1aa; text-transform: uppercase; letter-spacing: .5px; margin-top: 6px; font-weight: 500; }
+.uz { background: #18181b; border: 2px dashed #3f3f46; border-radius: 16px; padding: 60px 40px; text-align: center; max-width: 560px; margin: 60px auto 20px; transition: border-color .3s, background .3s; }
+.uz:hover { border-color: var(--accent); }
+.uz.drag-over { border-color: var(--accent); background: rgba(59,130,246,.06); }
+.uz h2 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+.uz .fc { background: #27272a; border: 1px solid #3f3f46; color: #fafafa; border-radius: 8px; padding: 10px 14px; width: 100%; }
+.uz .fc:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,.2); }
+.uz select.fc { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2371717a' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+.dropzone { cursor: pointer; padding: 28px 20px; margin-bottom: 16px; border: 2px dashed #3f3f46; border-radius: 12px; transition: border-color .2s, background .2s; position: relative; }
+.dropzone:hover { border-color: var(--accent); background: rgba(59,130,246,.04); }
+.dropzone.has-file { border-color: var(--green); border-style: solid; background: rgba(34,197,94,.04); }
+.dropzone-icon { font-size: 36px; margin-bottom: 8px; opacity: .6; }
+.dropzone-text { font-size: 14px; color: #a1a1aa; margin-bottom: 4px; }
+.dropzone-sub { font-size: 12px; color: #52525b; }
+.dropzone-file { font-size: 13px; color: var(--green); font-weight: 600; margin-top: 6px; }
+.profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 420px; margin: 0 auto 12px; }
+.profile-grid .full { grid-column: 1 / -1; }
+.flash-ok { border-color: rgba(34,197,94,.3) !important; }
+.flash-ok .gc-b { color: var(--green) !important; }
+.flash-info { border-color: rgba(59,130,246,.3) !important; }
+.flash-info .gc-b { color: var(--accent) !important; }
+.hint { font-size: 12px; color: #71717a; margin-bottom: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.hint svg { flex-shrink: 0; }
+.gt { display: flex; gap: 2px; border-bottom: 1px solid #27272a; margin-bottom: 20px; overflow-x: auto; overflow-y: hidden; flex-wrap: nowrap; scrollbar-width: thin; scrollbar-color: #3f3f46 transparent; -ms-overflow-style: none; }
+.gt::-webkit-scrollbar { height: 3px; }
+.gt::-webkit-scrollbar-track { background: transparent; }
+.gt::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+.gt button { padding: 8px 12px; font-size: 12px; font-weight: 500; color: #a1a1aa; cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; flex-shrink: 0; transition: all .2s; }
+.gt button:hover { color: #fafafa; background: rgba(59,130,246,.06); }
+.gt button.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tp { display: none; }
+.tp.active { display: block; }
+.tb { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tb thead th { background: #111113; color: #71717a; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; padding: 10px 14px; text-align: left; border-bottom: 1px solid #27272a; }
+.tb tbody td { padding: 10px 14px; border-bottom: 1px solid rgba(39,39,42,.5); color: #d4d4d8; vertical-align: top; }
+.tb tbody tr:hover { background: rgba(59,130,246,.04); }
+.tb tbody tr[data-href] { cursor: pointer; }
+.bs { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+.br { background: var(--red-soft); color: var(--red); }
+.by { background: var(--yellow-soft); color: var(--yellow); }
+.bg { background: var(--green-soft); color: var(--green); }
+.bn { background: rgba(161,161,170,.12); color: #a1a1aa; }
+.hc { background: linear-gradient(135deg, rgba(34,197,94,.06), rgba(34,197,94,.02)); border: 1px solid rgba(34,197,94,.15); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+.hc h4 { font-size: 14px; font-weight: 600; color: var(--green); margin-bottom: 12px; }
+.hc ul { list-style: none; padding: 0; margin: 0; }
+.hc li { padding: 12px 0 12px 18px; position: relative; font-size: 14px; line-height: 1.9; color: #e4e4e7; border-bottom: 1px solid rgba(34,197,94,.06); margin-bottom: 2px; }
+.hc li:last-child { border: none; }
+.hc li::before { content: "\2714"; position: absolute; left: 0; color: var(--green); font-size: 12px; top: 12px; }
+.cc { background: linear-gradient(135deg, rgba(59,130,246,.06), rgba(168,85,247,.04)); border: 1px solid rgba(59,130,246,.15); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+.cc h4 { font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 12px; }
+.cc ul { list-style: none; padding: 0; margin: 0; }
+.cc li { padding: 12px 0 12px 18px; position: relative; font-size: 13px; line-height: 1.8; color: #d4d4d8; border-bottom: 1px solid rgba(59,130,246,.06); margin-bottom: 2px; }
+.cc li:last-child { border: none; }
+.cc li::before { content: "\25B8"; position: absolute; left: 0; color: var(--accent); font-size: 11px; top: 10px; }
+.tc-toggle { font-size: 12px; color: #71717a; cursor: pointer; background: none; border: 1px solid #3f3f46; padding: 4px 12px; border-radius: 6px; margin-bottom: 12px; }
+.tc-toggle:hover { color: #a1a1aa; border-color: #52525b; }
+.med-banner { background: linear-gradient(135deg, rgba(239,68,68,.08), rgba(239,68,68,.03)); border: 1px solid rgba(239,68,68,.25); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 14px; }
+.med-banner .med-icon { font-size: 28px; flex-shrink: 0; line-height: 1; }
+.med-banner .med-title { font-size: 13px; font-weight: 700; color: var(--red); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .5px; }
+.med-banner .med-text { font-size: 13px; line-height: 1.7; color: #d4d4d8; }
+.tn { background: #111113; border: 1px solid #27272a; border-radius: 8px; padding: 14px 18px; font-size: 12px; color: #71717a; margin-bottom: 16px; }
+.db { background: #111113; border-top: 1px solid #27272a; padding: 16px 0; margin-top: 40px; font-size: 12px; color: #52525b; line-height: 1.7; }
+.db strong { color: var(--red); }
+.cg { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; margin-bottom: 20px; }
+.cw { min-height: 320px; }
+.mb { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #a1a1aa; margin-bottom: 16px; }
+.pb { height: 10px; background: #27272a; border-radius: 5px; overflow: hidden; margin-bottom: 4px; }
+.pf { height: 100%; border-radius: 5px; }
+.nt { font-size: 12px; color: #71717a; margin-bottom: 14px; }
+.tr { color: var(--red); }
+.tg { color: var(--green); }
+.ty { color: var(--yellow); }
+.ta { color: var(--accent); cursor: pointer; }
+.tm { color: #71717a; }
+.fw6 { font-weight: 600; }
+.acc { margin-bottom: 12px; }
+.acc summary { padding: 16px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 600; color: #e4e4e7; list-style: none; border-bottom: 1px solid transparent; transition: background .2s; }
+.acc summary:hover { background: rgba(59,130,246,.04); }
+.acc summary::-webkit-details-marker { display: none; }
+.acc summary::after { content: "+"; font-size: 18px; color: #71717a; font-weight: 400; }
+.acc[open] summary { border-bottom-color: #27272a; }
+.acc[open] summary::after { content: "\2212"; }
+.acc-body { padding: 20px; }
+.ctx { background: linear-gradient(135deg, rgba(59,130,246,.06), rgba(59,130,246,.02)); border: 1px solid rgba(59,130,246,.12); border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; font-size: 13px; line-height: 1.7; color: #a1a1aa; }
+.ctx h4 { font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
+.ctx-warn { border-color: rgba(234,179,8,.2); background: linear-gradient(135deg, rgba(234,179,8,.04), rgba(234,179,8,.01)); }
+.ctx-danger { border-color: rgba(239,68,68,.15); background: linear-gradient(135deg, rgba(239,68,68,.04), rgba(239,68,68,.01)); }
+.badge-count { font-size: 11px; padding: 3px 10px; border-radius: 10px; font-weight: 600; }
+.stars { color: #eab308; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <div class="logo"><span class="logo-icon">&#9879;</span> {{ t.app_title }} <span class="priv-pill">&#128274; {{ t.privacy_badge|safe }}</span></div>
+    <div class="d-flex align-items-center gap-2">
+      <div class="lang-sw"><a href="/lang/pt" class="{% if lang == 'pt' %}active{% endif %}">PT-BR</a> <a href="/lang/en" class="{% if lang == 'en' %}active{% endif %}">EN</a></div>
+    </div>
+  </div>
+</header>
+
+<div class="container" style="padding-top:24px;padding-bottom:40px">
+
+{% with messages = get_flashed_messages() %}{% if messages %}{% for msg in messages %}<div class="gc {% if 'aceito' in msg|lower or 'accepted' in msg|lower or 'limpo' in msg|lower or 'removid' in msg|lower %}flash-ok{% else %}flash-info{% endif %}" style="margin-bottom:12px"><div class="gc-b" style="padding:12px 20px;font-size:13px">{{ msg }}</div></div>{% endfor %}{% endif %}{% endwith %}
+
+{% if not results %}
+<div class="uz" id="uploadZone">
+  <h2>{{ t.upload_title }}</h2>
+  <p style="color:#a1a1aa;margin-bottom:24px;font-size:14px">{{ t.upload_desc }}</p>
+  <form action="/analyze" method="post" enctype="multipart/form-data" id="uploadForm" autocomplete="off">
+    <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+      <div class="dropzone-icon">&#128300;</div>
+      <div class="dropzone-text">{{ t.upload_drag }}</div>
+      <div class="dropzone-sub">{{ t.upload_or_click }}</div>
+      <div class="dropzone-file" id="fileName" style="display:none"></div>
+      <input type="file" name="genome_file" id="fileInput" accept=".txt,.csv,.tsv,.gz" style="display:none">
+    </div>
+    <div class="profile-grid">
+      <input type="text" name="subject_name" class="fc full" placeholder="{{ t.upload_name }}" autocomplete="off">
+      <select name="sex" class="fc" autocomplete="off"><option value="">{{ t.profile_sex_default }}</option><option value="M">{{ t.profile_male }}</option><option value="F">{{ t.profile_female }}</option></select>
+      <input type="number" name="age" class="fc" placeholder="{{ t.profile_age }}" min="1" max="120" autocomplete="off">
+      <input type="number" name="weight" class="fc" placeholder="{{ t.profile_weight }}" min="20" max="300" step="0.1" autocomplete="off">
+      <input type="number" name="height" class="fc" placeholder="{{ t.profile_height }}" min="100" max="250" autocomplete="off">
+    </div>
+    <div class="hint"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> {{ t.profile_optional }}</div>
+    <button type="submit" class="btn btn-primary" id="submitBtn" style="background:var(--accent);border:none;padding:14px 40px;font-weight:600;border-radius:10px;font-size:15px;cursor:pointer;transition:background .2s;display:inline-flex;align-items:center;gap:8px">&#9889; {{ t.upload_btn }}</button>
+  </form>
+  <p style="color:#52525b;margin-top:20px;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px">&#128274; {{ t.upload_note }}</p>
+</div>
+{% if history %}
+<div class="gc" style="max-width:700px;margin:20px auto 0">
+  <div class="gc-h"><h3>{{ t.history_title }}</h3></div>
+  <div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.history_col_date }}</th><th>{{ t.history_col_subject }}</th><th>SNPs</th><th>{{ t.history_col_findings }}</th><th>{{ t.history_col_time }}</th><th></th></tr></thead><tbody>
+  {% for h in history %}<tr data-href="/history/load/{{ h.id }}">
+    <td>{{ h.timestamp[:16].replace('T', ' ') }}</td><td class="fw6">{{ h.genome_info.get('subject_name') or t.history_anonymous }}</td>
+    <td>{{ "{:,}".format(h.genome_info.get('snp_count', 0)) }}</td><td>{{ h.summary.get('analyzed_snps', 0) }} {{ t.history_analyzed }}</td><td>{{ h.elapsed }}s</td>
+    <td class="no-nav" onclick="event.stopPropagation()"><form action="/history/delete/{{ h.id }}" method="post" style="display:inline" onsubmit="event.stopPropagation();return confirm('{{ t.history_delete_confirm }}')"><button type="submit" onclick="event.stopPropagation()" style="padding:2px 8px;color:#71717a;background:transparent;border:1px solid #3f3f46;border-radius:4px;cursor:pointer">&#10005;</button></form></td>
+  </tr>{% endfor %}</tbody></table></div></div>
+{% endif %}
+<div class="db" style="max-width:700px;margin:24px auto 0;background:transparent;border:none;text-align:center"><strong>{{ t.warning_label }}:</strong> {{ t.upload_disclaimer }}</div>
+
+{% else %}
+<!-- RESULTS -->
+{% set prof = genome_info.get('profile', {}) %}
+<div class="mb"><span><strong style="color:#fafafa">{{ genome_info.filename }}</strong> &middot; {{ genome_info.format }} &middot; {{ "{:,}".format(genome_info.snp_count) }} SNPs &middot; {{ elapsed }}s{% if genome_info.subject_name %} &middot; <strong style="color:#fafafa">{{ genome_info.subject_name }}</strong>{% endif %}{% if prof %} &middot; <span class="tm">{% if prof.sex %}{{ prof.sex }}{% endif %}{% if prof.age %} {{ prof.age }}{{ t.profile_years }}{% endif %}{% if prof.bmi %} IMC {{ prof.bmi }}{% endif %}</span>{% endif %}</span>
+<form action="/clear" method="post"><button type="submit" style="color:#71717a;background:#18181b;border:1px solid #3f3f46;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer">{{ t.new_analysis }}</button></form></div>
+
+<div class="med-banner">
+  <div class="med-icon">&#9888;&#65039;</div>
+  <div>
+    <div class="med-title">{{ t.medical_banner_short }}</div>
+    <div class="med-text">{{ t.medical_banner|safe }}</div>
+  </div>
+</div>
+
+{% if human.get('profile_notes') %}
+<div class="ctx" style="margin-bottom:20px"><h4>{{ t.profile_context_title }}</h4><ul style="list-style:none;padding:0;margin:0">{% for n in human.profile_notes %}<li style="padding:6px 0;font-size:13px;line-height:1.7;border-bottom:1px solid rgba(59,130,246,.06)">{{ n|bold|safe }}</li>{% endfor %}</ul></div>
+{% endif %}
+
+<div class="sr">
+  <div class="si"><div class="sn" style="color:#fafafa">{{ "{:,}".format(results.summary.total_snps) }}</div><div class="sl">{{ t.stat_snps }}</div></div>
+  <div class="si"><div class="sn" style="color:#fafafa">{{ results.summary.analyzed_snps }}</div><div class="sl">{{ t.stat_analyzed }}</div></div>
+  <div class="si"><div class="sn tr">{{ results.summary.high_impact }}</div><div class="sl">{{ t.stat_high }}</div></div>
+  <div class="si"><div class="sn ty">{{ results.summary.moderate_impact }}</div><div class="sl">{{ t.stat_moderate }}</div></div>
+  <div class="si"><div class="sn tg">{{ results.pharmgkb_findings|length }}</div><div class="sl">{{ t.stat_drug }}</div></div>
+  {% if disease %}<div class="si"><div class="sn" style="color:var(--purple)">{{ disease_stats.pathogenic_count + disease_stats.likely_pathogenic_count }}</div><div class="sl">{{ t.stat_pathogenic }}</div></div>{% endif %}
+</div>
+
+<div class="gt" id="mainTabs">
+  <button class="active" onclick="showTab('overview',this)">{{ t.tab_overview }}</button>
+  <button onclick="showTab('health',this)">{{ t.tab_health_risks }}</button>
+  <button onclick="showTab('drugs',this)">{{ t.tab_drugs }}</button>
+  <button onclick="showTab('wellness',this)">{{ t.tab_wellness }}</button>
+  <button onclick="showTab('advanced',this)">{{ t.tab_advanced }}</button>
+  <button onclick="showTab('heritage',this)">{{ t.tab_heritage }}</button>
+</div>
+
+<!-- ═══ TAB 1: OVERVIEW ═══ -->
+<div class="tp active" id="tab-overview">
+  <div class="ctx"><h4>{{ t.tab_overview }}</h4>{{ t.ctx_overview }}</div>
+  <div class="cg">
+    <div class="gc"><div class="gc-b"><div class="cw" id="chart-categories"></div></div></div>
+    <div class="gc"><div class="gc-b"><div class="cw" id="chart-magnitude"></div></div></div>
+    <div class="gc"><div class="gc-b"><div class="cw" id="chart-drugs"></div></div></div>
+    <div class="gc"><div class="gc-b"><div class="cw" id="chart-disease"></div></div></div>
+  </div>
+  {% if human.get('overview') %}<div class="hc"><h4>&#9989; {{ t.human_overview }}</h4><ul>{% for c in human.overview %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+  {% if conclusions.get('overview') %}<details class="gc acc" style="margin-bottom:16px"><summary style="font-size:13px;color:#71717a">{{ t.technical_details }}</summary><div class="acc-body"><div class="cc" style="margin:0"><h4>&#128203; {{ t.conclusion_overview }}</h4><ul>{% for c in conclusions.overview %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div></div></details>{% endif %}
+  {% set high = results.findings|selectattr('magnitude','ge',3)|list %}
+  {% if high %}<div class="gc"><div class="gc-h"><h3 class="tr">{{ t.high_mag_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_category }}</th><th>{{ t.col_magnitude }}</th><th>{{ t.col_details }}</th></tr></thead><tbody>
+  {% for f in high %}<tr><td class="fw6">{{ f.gene }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.genotype }}</code></td><td>{{ CAT_PT.get(f.category, f.category) }}</td><td><span class="bs br">{{ f.magnitude }}/6</span></td><td>{{ f.description[:90] }}</td></tr>{% endfor %}
+  </tbody></table></div></div>{% else %}<div class="gc"><div class="gc-b tg">{{ t.high_mag_none|safe }}</div></div>{% endif %}
+</div>
+
+<!-- ═══ TAB 2: HEALTH & RISKS (Accordion: Lifestyle + Disease + Protocol) ═══ -->
+<div class="tp" id="tab-health">
+  <div class="ctx ctx-warn"><h4>{{ t.tab_health_risks }}</h4>{{ t.ctx_health }}</div>
+
+  {% if human.get('health') %}<div class="hc"><h4>&#9989; {{ t.human_health }}</h4><ul>{% for c in human.health %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+
+  <!-- Accordion: Lifestyle -->
+  <div class="gc acc">
+    <details>
+      <summary>{{ t.acc_lifestyle }} <span class="badge-count bg">{{ results.summary.analyzed_snps }} {{ t.acc_findings }}</span></summary>
+      <div class="acc-body">
+        {% if conclusions.get('lifestyle') %}<div class="cc"><h4>&#128203; {{ t.conclusion_lifestyle }}</h4><ul>{% for c in conclusions.lifestyle %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+        {% for cat, findings in results.by_category.items() %}
+        <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ CAT_PT.get(cat, cat) }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_status }}</th><th>{{ t.col_magnitude }}</th><th>{{ t.col_details }}</th></tr></thead><tbody>
+        {% for f in findings|sort(attribute='magnitude',reverse=True) %}<tr><td class="fw6">{{ f.gene }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.genotype }}</code></td><td>{{ f.status.replace('_',' ').title() }}</td><td>{% if f.magnitude>=3 %}<span class="bs br">{{ f.magnitude }}/6</span>{% elif f.magnitude>=2 %}<span class="bs by">{{ f.magnitude }}/6</span>{% else %}<span class="bs bg">{{ f.magnitude }}/6</span>{% endif %}</td><td>{{ f.description[:100] }}</td></tr>{% endfor %}
+        </tbody></table></div></div>{% endfor %}
+      </div>
+    </details>
+  </div>
+
+  <!-- Accordion: Disease -->
+  <div class="gc acc">
+    <details>
+      <summary>{{ t.acc_disease }} {% if disease %}<span class="badge-count br">{{ (disease.pathogenic|length + disease.likely_pathogenic|length) }} {{ t.acc_variants }}</span>{% endif %}</summary>
+      <div class="acc-body">
+        {% if disease %}
+        {% if conclusions.get('disease') %}<div class="cc"><h4>&#128203; {{ t.conclusion_disease }}</h4><ul>{% for c in conclusions.disease %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+        {% if conclusions.get('disease_technical') %}<div class="tn">{% for n in conclusions.disease_technical %}<p style="margin:0">{{ n|bold|safe }}</p>{% endfor %}</div>{% endif %}
+        {% set patho = disease.pathogenic + disease.likely_pathogenic %}
+        {% if patho %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.pathogenic_variants_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_zygosity }}</th><th>{{ t.col_confidence }}</th><th>{{ t.col_condition }}</th></tr></thead><tbody>
+        {% for f in patho %}<tr><td class="fw6">{{ f.gene or '---' }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.user_genotype }}</code></td><td><span class="bs {% if f.zygosity_status=='AFFECTED' %}br{% elif f.zygosity_status=='CARRIER' %}by{% else %}bn{% endif %}">{{ ZYG_PT.get(f.zygosity_status, f.zygosity_status) }}</span></td><td><span class="stars">{{ ("★" * f.gold_stars ~ "☆" * (4 - f.gold_stars))|safe }}</span> <span class="tm" style="font-size:11px">{{ f.gold_stars }}/4</span></td><td>{{ translate_traits(f.traits) }}</td></tr>{% endfor %}
+        </tbody></table></div></div>{% endif %}
+        {% if disease.risk_factor %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.risk_factors_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_confidence }}</th><th>{{ t.col_condition }}</th></tr></thead><tbody>
+        {% for f in disease.risk_factor[:40] %}<tr><td class="fw6">{{ f.gene or '---' }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.user_genotype }}</code></td><td><span class="stars">{{ ("★" * f.gold_stars ~ "☆" * (4 - f.gold_stars))|safe }}</span> <span class="tm" style="font-size:11px">{{ f.gold_stars }}/4</span></td><td>{{ translate_traits(f.traits) }}</td></tr>{% endfor %}
+        </tbody></table></div></div>{% endif %}
+        {% if disease.protective %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3 class="tg">{{ t.protective_variants_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_protective_effect }}</th></tr></thead><tbody>
+        {% for f in disease.protective %}<tr><td class="fw6">{{ f.gene or '---' }}</td><td><code>{{ f.rsid }}</code></td><td>{{ (f.traits or 'Protetor').split(';')[0][:70] }}</td></tr>{% endfor %}
+        </tbody></table></div></div>{% endif %}
+        {% else %}<p class="tm">{{ t.clinvar_not_loaded }}</p>{% endif %}
+      </div>
+    </details>
+  </div>
+
+  <!-- Accordion: Hereditary Conditions (sex-aware) -->
+  {% if hereditary and hereditary.conditions %}
+  <div class="gc acc">
+    <details>
+      <summary>{{ t.acc_hereditary }} <span class="badge-count br">{{ hereditary.conditions|length }} {{ t.acc_findings }}</span>{% if hereditary.sex %} <span class="tm" style="font-size:11px;margin-left:8px">{% if hereditary.sex_inferred %}{{ t.sex_inferred }}{% endif %} {{ hereditary.sex }}</span>{% endif %}</summary>
+      <div class="acc-body">
+        <div class="tn" style="border-color:rgba(239,68,68,.2);margin-bottom:16px"><strong>{{ t.warning_label }}:</strong> {{ t.hereditary_disclaimer }}</div>
+        {% for cond in hereditary.conditions %}
+        <div class="gc" style="margin-bottom:12px;border-color:{% if cond.priority <= 1 %}rgba(239,68,68,.3){% elif cond.priority <= 2 %}rgba(234,179,8,.3){% else %}#27272a{% endif %}">
+          <div class="gc-h"><h3>{{ cond.name }} <span class="tm" style="font-size:11px;font-weight:400">{{ cond.genes_found|join(', ') }} &middot; {{ cond.max_stars }}/4 {{ t.stars }}</span></h3></div>
+          <div class="gc-b">
+            <p style="font-size:13px;line-height:1.8;color:#d4d4d8;margin-bottom:12px">{{ cond.text|bold|safe }}</p>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+              <div style="flex:1;min-width:250px;background:#111113;border:1px solid #27272a;border-radius:8px;padding:12px"><p class="tm" style="font-size:11px;text-transform:uppercase;margin-bottom:4px">{{ t.hereditary_evidence }}</p><p style="font-size:12px;color:#d4d4d8;margin:0">{{ cond.evidence }}</p></div>
+              <div style="flex:1;min-width:250px;background:#111113;border:1px solid #27272a;border-radius:8px;padding:12px"><p class="tm" style="font-size:11px;text-transform:uppercase;margin-bottom:4px">{{ t.hereditary_confirm }}</p><p style="font-size:12px;color:#d4d4d8;margin:0">{{ cond.confirm }}</p></div>
+            </div>
+            {% if cond.gene_details %}
+            <table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>rsID</th><th>{{ t.col_genotype }}</th><th>{{ t.col_confidence }}</th><th>{{ t.col_zygosity }}</th><th>{{ t.col_condition }}</th></tr></thead><tbody>
+            {% for d in cond.gene_details %}<tr><td class="fw6">{{ d.gene }}</td><td><code>{{ d.rsid }}</code></td><td><code>{{ d.genotype }}</code></td><td><span class="stars">{{ ("★" * d.stars ~ "☆" * (4 - d.stars))|safe }}</span> <span class="tm" style="font-size:11px">{{ d.stars }}/4</span></td><td>{{ d.zygosity }}</td><td style="font-size:12px">{{ d.traits }}</td></tr>{% endfor %}
+            </tbody></table>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+  </div>
+  {% endif %}
+
+  <!-- Accordion: Protocol -->
+  <div class="gc acc">
+    <details>
+      <summary>{{ t.acc_protocol }}</summary>
+      <div class="acc-body">
+        <div class="tn" style="border-color:rgba(234,179,8,.2);margin-bottom:16px"><strong>{{ t.warning_label }}:</strong> {{ t.protocol_disclaimer }}</div>
+        {% if conclusions.get('protocol') %}<div class="cc"><h4>&#128203; {{ t.conclusion_protocol }}</h4><ul>{% for c in conclusions.protocol %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+        {% if protocol %}
+        {% if protocol.affected %}<div class="gc" style="border-color:rgba(239,68,68,.3);margin-bottom:12px"><div class="gc-h"><h3 class="tr">{{ t.pathogenic_confirm_title }}</h3></div><div class="gc-b"><p class="nt">{{ t.pathogenic_fp_short }}</p>{% for f in protocol.affected %}<p style="margin-bottom:6px"><strong>{{ f.gene or '---' }}:</strong> {{ (f.traits or '?').split(';')[0] }} <span class="tm">({{ f.gold_stars }}/4 {{ t.stars }})</span></p>{% endfor %}</div></div>{% endif %}
+        {% if protocol.supplements %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.supplements_title }}</h3></div><p class="nt" style="padding:0 20px;margin-top:8px">{{ t.not_prescriptions_short }}</p><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_supplement }}</th><th>{{ t.col_dose }}</th><th>{{ t.col_reason }}</th></tr></thead><tbody>{% for s in protocol.supplements %}<tr><td>{{ s.name }}</td><td>{{ s.dose }}</td><td>{{ s.reason }}</td></tr>{% endfor %}</tbody></table></div></div>{% endif %}
+        {% if protocol.diet %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.diet_title }}</h3></div><div class="gc-b">{% for r in protocol.diet %}<p style="font-size:13px;line-height:1.7;margin-bottom:8px">{{ r|bold|safe }}</p>{% endfor %}</div></div>{% endif %}
+        {% if protocol.exercise %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.exercise_title }}</h3></div><div class="gc-b">{% for r in protocol.exercise %}<p style="font-size:13px;line-height:1.7;margin-bottom:8px">{{ r|bold|safe }}</p>{% endfor %}</div></div>{% endif %}
+        {% if protocol.monitoring %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.monitoring_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_test }}</th><th>{{ t.col_frequency }}</th><th>{{ t.col_genetic_basis }}</th></tr></thead><tbody>{% for m in protocol.monitoring %}<tr><td>{{ m.test }}</td><td>{{ m.freq }}</td><td>{{ m.reason }}</td></tr>{% endfor %}</tbody></table></div></div>{% endif %}
+        {% endif %}
+      </div>
+    </details>
+  </div>
+</div>
+
+<!-- ═══ TAB 3: MEDICATIONS ═══ -->
+<div class="tp" id="tab-drugs">
+  <div class="ctx ctx-danger"><h4>{{ t.tab_drugs }}</h4>{{ t.ctx_drugs }}</div>
+  {% if human.get('drugs') %}<div class="hc"><h4>&#9989; {{ t.human_drugs }}</h4><ul>{% for c in human.drugs %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+  {% if conclusions.get('drugs') %}<details class="gc acc" style="margin-bottom:16px"><summary style="font-size:13px;color:#71717a">{{ t.technical_details }}</summary><div class="acc-body"><div class="cc" style="margin:0"><h4>&#128203; {{ t.conclusion_drugs }}</h4><ul>{% for c in conclusions.drugs %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div></div></details>{% endif %}
+  {% if results.pharmgkb_findings %}
+  {% set l1 = results.pharmgkb_findings|selectattr('level','in',['1A','1B'])|list %}
+  {% set l2 = results.pharmgkb_findings|selectattr('level','in',['2A','2B'])|list %}
+  {% if l1 %}<div class="gc acc" style="margin-bottom:12px">
+    <details>
+      <summary>{{ t.level1_title }} <span class="badge-count br">{{ l1|length }}</span></summary>
+      <div class="acc-body">
+        <p class="nt">CPIC = Clinical Pharmacogenetics Implementation Consortium</p>
+        <table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_level }}</th><th>{{ t.col_drugs }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_annotation }}</th></tr></thead><tbody>
+  {% for f in l1 %}<tr><td class="fw6">{{ f.gene }}</td><td><span class="bs br">{{ f.level }}</span></td><td>{{ f.drugs[:60] }}</td><td><code>{{ f.genotype }}</code></td>
+  <td style="font-size:12px;max-width:450px">{% if f.annotation|length > 120 %}<span>{{ f.annotation[:120] }}... </span><a href="#" class="ta" style="font-size:11px" onclick="this.previousElementSibling.style.display='none';this.nextElementSibling.style.display='inline';this.style.display='none';return false">{{ t.see_more }}</a><span style="display:none">{{ f.annotation }}{% if f.annotation_original %}<br><small class="tm" style="display:block;border-top:1px solid #27272a;padding-top:4px;margin-top:4px"><em>Original: {{ f.annotation_original[:200] }}</em></small>{% endif %} <a href="#" class="tm" style="font-size:11px" onclick="this.parentElement.style.display='none';this.parentElement.previousElementSibling.style.display='inline';this.parentElement.previousElementSibling.previousElementSibling.style.display='inline';return false">{{ t.see_less }}</a></span>{% else %}{{ f.annotation }}{% endif %}</td>
+  </tr>{% endfor %}
+  </tbody></table>
+      </div>
+    </details>
+  </div>{% endif %}
+  {% if l2 %}<div class="gc acc" style="margin-bottom:12px">
+    <details>
+      <summary>{{ t.level2_title }} <span class="badge-count by">{{ l2|length }}</span></summary>
+      <div class="acc-body">
+        <table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_level }}</th><th>{{ t.col_drugs }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_annotation }}</th></tr></thead><tbody>
+  {% for f in l2[:25] %}<tr><td class="fw6">{{ f.gene }}</td><td><span class="bs by">{{ f.level }}</span></td><td>{{ f.drugs[:60] }}</td><td><code>{{ f.genotype }}</code></td>
+  <td style="font-size:12px;max-width:450px">{% if f.annotation|length > 120 %}<span>{{ f.annotation[:120] }}... </span><a href="#" class="ta" style="font-size:11px" onclick="this.previousElementSibling.style.display='none';this.nextElementSibling.style.display='inline';this.style.display='none';return false">{{ t.see_more }}</a><span style="display:none">{{ f.annotation }}{% if f.annotation_original %}<br><small class="tm" style="display:block;border-top:1px solid #27272a;padding-top:4px;margin-top:4px"><em>Original: {{ f.annotation_original[:200] }}</em></small>{% endif %} <a href="#" class="tm" style="font-size:11px" onclick="this.parentElement.style.display='none';this.parentElement.previousElementSibling.style.display='inline';this.parentElement.previousElementSibling.previousElementSibling.style.display='inline';return false">{{ t.see_less }}</a></span>{% else %}{{ f.annotation }}{% endif %}</td>
+  </tr>{% endfor %}
+  </tbody></table>
+      </div>
+    </details>
+  </div>{% endif %}
+  {% else %}<div class="gc"><div class="gc-b tm">{{ t.no_drug_gene }}</div></div>{% endif %}
+</div>
+
+<!-- ═══ TAB 4: WELLNESS (Nutri + Fit + Skin + Aging) ═══ -->
+<div class="tp" id="tab-wellness">
+  <div class="ctx"><h4>{{ t.tab_wellness }}</h4>{{ t.ctx_wellness }}</div>
+  {% if human.get('wellness') %}<div class="hc"><h4>&#9989; {{ t.human_wellness }}</h4><ul>{% for c in human.wellness %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+  {% if wellness %}
+  {% for pk, pn, acc_key in [('nutri', t.panel_nutri, 'acc_nutri'), ('fit', t.panel_fit, 'acc_fit'), ('skin', t.panel_skin, 'acc_skin'), ('aging', t.panel_aging, 'acc_aging')] %}
+  {% set panel = wellness.get(pk, {}) %}
+  {% if panel and panel.findings %}
+  <div class="gc acc">
+    <details>
+      <summary>{{ t[acc_key] }} <span class="badge-count {% if panel.summary.alerta > 0 %}br{% else %}bg{% endif %}">{{ panel.summary.total }} {{ t.acc_markers }}</span></summary>
+      <div class="acc-body">
+        <div class="sr" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+          <div class="si"><div class="sn" style="color:#fafafa">{{ panel.summary.total }}</div><div class="sl">{{ t.markers_analyzed }}</div></div>
+          <div class="si"><div class="sn tg">{{ panel.summary.normal }}</div><div class="sl">{{ t.normal_favorable }}</div></div>
+          <div class="si"><div class="sn {% if panel.summary.alerta > 0 %}tr{% else %}ty{% endif %}">{{ panel.summary.atencao + panel.summary.alerta }}</div><div class="sl">{{ t.require_attention }}</div></div>
+        </div>
+        {% if panel.conclusions %}<div class="cc"><h4>&#128203; {{ pn }}</h4><ul>{% for c in panel.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+        <table class="tb"><thead><tr><th>{{ t.col_marker }}</th><th>{{ t.col_gene }}</th><th>rsID</th><th>{{ t.col_genotype }}</th><th>{{ t.col_result }}</th><th>{{ t.col_interpretation }}</th></tr></thead><tbody>
+        {% for f in panel.findings %}<tr><td class="fw6">{{ f.trait }}</td><td>{{ f.gene }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.genotype }}</code></td><td><span class="bs bg-{{ f.color }}">{{ f.label }}</span></td><td style="font-size:12px;max-width:400px;line-height:1.6">{{ f.text|bold|safe }}</td></tr>{% endfor %}
+        </tbody></table>
+      </div>
+    </details>
+  </div>
+  {% endif %}
+  {% endfor %}
+  {% else %}<div class="gc"><div class="gc-b tm">{{ t.insufficient_data }}</div></div>{% endif %}
+</div>
+
+<!-- ═══ TAB 4B: ADVANCED HEALTH (Sensory + Sleep + Longevity + Mental + Food + Thyroid + Eyes + Bones) ═══ -->
+<div class="tp" id="tab-advanced">
+  <div class="ctx"><h4>{{ t.tab_advanced }}</h4>{{ t.ctx_advanced }}</div>
+  {% if wellness %}
+  {% for pk, pn, acc_key in [('sensory', t.panel_sensory, 'acc_sensory'), ('sleep', t.panel_sleep, 'acc_sleep'), ('longevity', t.panel_longevity, 'acc_longevity'), ('mental', t.panel_mental, 'acc_mental'), ('food', t.panel_food, 'acc_food'), ('thyroid', t.panel_thyroid, 'acc_thyroid'), ('eyes', t.panel_eyes, 'acc_eyes'), ('bones', t.panel_bones, 'acc_bones'), ('allergy', t.panel_allergy, 'acc_allergy'), ('autoimmune', t.panel_autoimmune, 'acc_autoimmune')] %}
+  {% set panel = wellness.get(pk, {}) %}
+  {% if panel and panel.findings %}
+  <div class="gc acc">
+    <details>
+      <summary>{{ t[acc_key] }} <span class="badge-count {% if panel.summary.alerta > 0 %}br{% else %}bg{% endif %}">{{ panel.summary.total }} {{ t.acc_markers }}</span></summary>
+      <div class="acc-body">
+        <div class="sr" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+          <div class="si"><div class="sn" style="color:#fafafa">{{ panel.summary.total }}</div><div class="sl">{{ t.markers_analyzed }}</div></div>
+          <div class="si"><div class="sn tg">{{ panel.summary.normal }}</div><div class="sl">{{ t.normal_favorable }}</div></div>
+          <div class="si"><div class="sn {% if panel.summary.alerta > 0 %}tr{% else %}ty{% endif %}">{{ panel.summary.atencao + panel.summary.alerta }}</div><div class="sl">{{ t.require_attention }}</div></div>
+        </div>
+        {% if pk == 'mental' %}<div class="tn" style="border-color:rgba(234,179,8,.2)"><strong>{{ t.warning_label }}:</strong> {{ t.mental_disclaimer }}</div>{% endif %}
+        {% if pk == 'autoimmune' %}<div class="tn" style="border-color:rgba(234,179,8,.2)"><strong>{{ t.warning_label }}:</strong> {{ t.autoimmune_disclaimer }}</div>{% endif %}
+        {% if panel.conclusions %}<div class="cc"><h4>&#128203; {{ pn }}</h4><ul>{% for c in panel.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+        <table class="tb"><thead><tr><th>{{ t.col_marker }}</th><th>{{ t.col_gene }}</th><th>rsID</th><th>{{ t.col_genotype }}</th><th>{{ t.col_result }}</th><th>{{ t.col_interpretation }}</th></tr></thead><tbody>
+        {% for f in panel.findings %}<tr><td class="fw6">{{ f.trait }}</td><td>{{ f.gene }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.genotype }}</code></td><td><span class="bs bg-{{ f.color }}">{{ f.label }}</span></td><td style="font-size:12px;max-width:400px;line-height:1.6">{{ f.text|bold|safe }}</td></tr>{% endfor %}
+        </tbody></table>
+      </div>
+    </details>
+  </div>
+  {% endif %}
+  {% endfor %}
+  {% else %}<div class="gc"><div class="gc-b tm">{{ t.insufficient_data }}</div></div>{% endif %}
+</div>
+
+<!-- ═══ TAB 5: HERITAGE (Accordion: Ancestry + Family + Phenotype) ═══ -->
+<div class="tp" id="tab-heritage">
+  <div class="ctx"><h4>{{ t.tab_heritage }}</h4>{{ t.ctx_heritage }}</div>
+
+  <!-- Accordion: Ancestry (first) -->
+  {% if ancestry and ancestry.percentages %}
+  <div class="gc acc">
+    <details>
+      <summary>{{ t.acc_ancestry }} <span class="badge-count bg">{{ ancestry.markers_used }} {{ t.acc_markers }}</span></summary>
+      <div class="acc-body" id="ancestry-acc-body">
+        {% if ancestry.conclusions %}
+        <div class="cc"><h4>&#128203; {{ t.acc_ancestry }}</h4><ul>{% for c in ancestry.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>
+        {% endif %}
+        <div class="cg">
+          <div class="gc"><div class="gc-b"><div class="cw" id="chart-ancestry-donut"></div></div></div>
+          <div class="gc"><div class="gc-b"><div class="cw" id="chart-ancestry-map"></div></div></div>
+        </div>
+        <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.continental_composition }}</h3></div><div class="gc-b">
+        {% for pop, pct in ancestry.percentages.items()|sort(attribute='1', reverse=True) %}<div style="margin-bottom:14px"><div class="d-flex justify-content-between" style="margin-bottom:4px"><span class="fw6" style="font-size:13px">{{ ancestry.labels.get(pop, pop) }}</span><span style="font-size:13px">{{ pct }}%</span></div><div class="pb"><div class="pf" style="width:{{ pct }}%;background:{{ ancestry.colors.get(pop, '#666') }}"></div></div></div>{% endfor %}
+        </div></div>
+        <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.markers_used }} ({{ ancestry.markers_used }}/{{ ancestry.markers_total }})</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>rsID</th><th>{{ t.col_gene }}</th><th>{{ t.col_trait }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_eur }}</th><th>{{ t.col_afr }}</th><th>{{ t.col_amr }}</th><th>{{ t.col_eas }}</th></tr></thead><tbody>
+        {% for m in ancestry.marker_details %}<tr><td><code>{{ m.rsid }}</code></td><td>{{ m.gene }}</td><td>{{ m.trait }}</td><td><code>{{ m.genotype }}</code></td><td>{{ m.freqs.EUR }}</td><td>{{ m.freqs.AFR }}</td><td>{{ m.freqs.AMR }}</td><td>{{ m.freqs.EAS }}</td></tr>{% endfor %}
+        </tbody></table></div></div>
+        <div class="tn"><strong>{{ t.warning_label }}:</strong> {{ t.ancestry_disclaimer }}</div>
+      </div>
+    </details>
+  </div>
+  {% endif %}
+
+  <!-- Accordion: Family Planning -->
+  {% if family and family.summary.total_relevant > 0 %}
+  <div class="gc acc">
+    <details>
+      <summary>{{ t.acc_family }} <span class="badge-count by">{{ family.summary.total_relevant }} {{ t.acc_variants }}</span></summary>
+      <div class="acc-body">
+        {% if human.get('family') %}<div class="hc"><h4>&#9989; {{ t.human_family }}</h4><ul>{% for c in human.family %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+        {% if family.conclusions %}<details class="gc acc" style="margin-bottom:16px"><summary style="font-size:13px;color:#71717a">{{ t.technical_details }}</summary><div class="acc-body"><div class="cc" style="margin:0"><h4>&#128203; {{ t.family_conclusion_title }}</h4><ul>{% for c in family.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div></div></details>{% endif %}
+        {% if family.dominant_findings %}
+        <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.family_dominant_title }}</h3></div><div class="gc-b">
+          {% for f in family.dominant_findings %}
+          <div style="padding:14px 0;border-bottom:1px solid #27272a">
+            <div style="display:flex;justify-content:space-between"><div><strong>{{ f.gene }}</strong> <code>{{ f.rsid }}</code> <span class="bs by">{{ f.inheritance }}</span></div><span class="bs br">{{ f.severity }}</span></div>
+            <p class="tm" style="margin:6px 0 0;font-size:13px">{{ f.condition_pt }}</p>
+            <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:#d4d4d8">{{ f.carrier_risk|bold|safe }}</p>
+            <p class="tm" style="margin:4px 0 0;font-size:12px"><strong>{{ t.family_partner }}:</strong> {{ f.partner_test }}</p>
+          </div>{% endfor %}
+        </div></div>{% endif %}
+        {% if family.carrier_findings %}
+        <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.family_carrier_title }}</h3></div><div class="gc-b"><p class="nt">{{ t.family_carrier_note }}</p>
+          {% for f in family.carrier_findings %}
+          <div style="padding:14px 0;border-bottom:1px solid #27272a">
+            <div style="display:flex;justify-content:space-between"><div><strong>{{ f.gene }}</strong> <code>{{ f.rsid }}</code> <span class="bs bg">{{ t.family_carrier_label }}</span></div><span class="bs by">{{ f.severity }}</span></div>
+            <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:#d4d4d8">{{ f.carrier_risk|bold|safe }}</p>
+            <p style="margin:4px 0 0;font-size:12px;color:var(--accent)"><strong>{{ t.family_partner_test }}:</strong> {{ f.partner_test }}</p>
+          </div>{% endfor %}
+        </div></div>{% endif %}
+        {% if family.gestational_risks %}
+        <div class="gc" style="margin-bottom:12px;border-color:rgba(234,179,8,.3)"><div class="gc-h"><h3 class="ty">&#9888;&#65039; {{ t.family_gestational_title }}</h3></div><div class="gc-b">
+          <p class="nt">{{ t.family_gestational_note }}</p>
+          {% for f in family.gestational_risks %}
+          <div style="padding:14px 0;border-bottom:1px solid #27272a">
+            <div><strong>{{ f.gene }}</strong> <code>{{ f.rsid }}</code> <code>{{ f.genotype }}</code></div>
+            <p style="margin:6px 0 0;font-size:13px;font-weight:600;color:var(--yellow)">{{ f.risk_pt }}</p>
+            <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:#d4d4d8">{{ f.detail|bold|safe }}</p>
+            <p style="margin:6px 0 0;font-size:13px;color:var(--green)"><strong>{{ t.family_action }}:</strong> {{ f.action }}</p>
+          </div>{% endfor %}
+        </div></div>{% endif %}
+        {% if family.x_linked_findings %}
+        <div class="gc" style="margin-bottom:12px;border-color:rgba(168,85,247,.3)"><div class="gc-h"><h3 style="color:var(--purple)">&#9893; {{ t.family_xlinked_title }}</h3></div><div class="gc-b">
+          <p class="nt">{{ t.family_xlinked_note }}</p>
+          {% for f in family.x_linked_findings %}
+          <div style="padding:14px 0;border-bottom:1px solid #27272a">
+            <div style="display:flex;justify-content:space-between"><div><strong>{{ f.gene }}</strong> <code>{{ f.rsid }}</code></div><span class="bs by">{{ f.severity }}</span></div>
+            <p style="margin:6px 0 0;font-size:13px;font-weight:600;color:var(--purple)">{{ f.condition_pt }}</p>
+            <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:#d4d4d8">{{ f.detail|bold|safe }}</p>
+            <p class="tm" style="margin:4px 0 0;font-size:12px">{{ t.family_prevalence }}: {{ f.prevalence }}</p>
+          </div>{% endfor %}
+        </div></div>{% endif %}
+        {% if family.recommendations %}
+        <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.family_recs_title }}</h3></div><div class="gc-b">
+          {% for r in family.recommendations %}<p style="font-size:13px;line-height:1.7;margin-bottom:8px;padding-left:16px;position:relative;color:#d4d4d8"><span style="position:absolute;left:0;color:var(--accent)">&#10148;</span> {{ r|bold|safe }}</p>{% endfor %}
+        </div></div>{% endif %}
+      </div>
+    </details>
+  </div>
+  {% endif %}
+
+  <!-- Accordion: Phenotype -->
+  {% if family and family.phenotype %}
+  {% set pheno = family.phenotype %}
+  <div class="gc acc">
+    <details>
+      <summary>{{ t.acc_phenotype }} <span class="badge-count bg">{{ pheno.markers_found }} {{ t.acc_markers }}</span></summary>
+      <div class="acc-body">
+        <p class="nt">{{ t.phenotype_note.format(found=pheno.markers_found, total=pheno.markers_total) }}</p>
+
+        <!-- Eye color -->
+        <h4 style="font-size:14px;margin-bottom:12px;color:#e4e4e7">{{ t.phenotype_eye }}</h4>
+        <div style="display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap">
+          {% for color, pct in pheno.eye_color.predictions.items()|sort(attribute='1', reverse=True) %}
+          {% set meta = pheno.eye_colors_meta.get(color, {}) %}
+          <div style="flex:1;min-width:120px;background:#111113;border:1px solid #27272a;border-radius:10px;padding:16px;text-align:center">
+            <div style="width:40px;height:40px;border-radius:50%;background:{{ meta.get('hex','#666') }};margin:0 auto 8px;border:2px solid #3f3f46"></div>
+            <div style="font-size:22px;font-weight:700;color:#fafafa">{{ pct }}%</div>
+            <div class="tm" style="font-size:12px;margin-top:2px">{{ meta.get(lang, color) }}</div>
+          </div>{% endfor %}
+        </div>
+        {% if pheno.eye_color.details %}<details style="margin-bottom:20px"><summary style="font-size:12px;color:#52525b;cursor:pointer;padding:6px 0">{{ t.phenotype_basis }} ({{ pheno.eye_color.details|length }} SNPs)</summary><div style="margin-top:8px">{% for d in pheno.eye_color.details %}<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(39,39,42,.3)"><code style="min-width:90px">{{ d.rsid }}</code><span class="tm" style="min-width:80px">{{ d.gene }}</span><code>{{ d.genotype }}</code><span style="color:#a1a1aa;flex:1">{{ d.desc }}</span></div>{% endfor %}</div></details>{% endif %}
+
+        <!-- Hair color -->
+        <h4 style="font-size:14px;margin-bottom:12px;color:#e4e4e7">{{ t.phenotype_hair }}</h4>
+        <div style="display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap">
+          {% for color, pct in pheno.hair_color.predictions.items()|sort(attribute='1', reverse=True) %}
+          {% set meta = pheno.hair_colors_meta.get(color, {}) %}
+          <div style="flex:1;min-width:100px;background:#111113;border:1px solid #27272a;border-radius:10px;padding:16px;text-align:center">
+            <div style="width:40px;height:40px;border-radius:50%;background:{{ meta.get('hex','#666') }};margin:0 auto 8px;border:2px solid #3f3f46"></div>
+            <div style="font-size:22px;font-weight:700;color:#fafafa">{{ pct }}%</div>
+            <div class="tm" style="font-size:12px;margin-top:2px">{{ meta.get(lang, color) }}</div>
+          </div>{% endfor %}
+        </div>
+        {% if pheno.hair_color.details %}<details style="margin-bottom:20px"><summary style="font-size:12px;color:#52525b;cursor:pointer;padding:6px 0">{{ t.phenotype_basis }} ({{ pheno.hair_color.details|length }} SNPs)</summary><div style="margin-top:8px">{% for d in pheno.hair_color.details %}<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(39,39,42,.3)"><code style="min-width:90px">{{ d.rsid }}</code><span class="tm" style="min-width:80px">{{ d.gene }}</span><code>{{ d.genotype }}</code><span style="color:#a1a1aa;flex:1">{{ d.desc }}</span></div>{% endfor %}</div></details>{% endif %}
+
+        <!-- Texture + Freckles -->
+        <div style="display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px;background:#111113;border:1px solid #27272a;border-radius:10px;padding:16px"><h4 style="font-size:13px;color:#e4e4e7;margin-bottom:6px">{{ t.phenotype_texture }}</h4><p style="font-size:13px;color:#d4d4d8;margin:0">{{ pheno.hair_texture.description }}</p></div>
+          <div style="flex:1;min-width:200px;background:#111113;border:1px solid #27272a;border-radius:10px;padding:16px"><h4 style="font-size:13px;color:#e4e4e7;margin-bottom:6px">{{ t.phenotype_freckles }}</h4><p style="font-size:13px;color:#d4d4d8;margin:0">{{ pheno.freckling.tendency }}</p></div>
+        </div>
+        {% set tex_frk = (pheno.hair_texture.details or []) + (pheno.freckling.details or []) %}
+        {% if tex_frk %}<details style="margin-bottom:20px"><summary style="font-size:12px;color:#52525b;cursor:pointer;padding:6px 0">{{ t.phenotype_basis }} ({{ tex_frk|length }} SNPs)</summary><div style="margin-top:8px">{% for d in tex_frk %}<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(39,39,42,.3)"><code style="min-width:90px">{{ d.rsid }}</code><span class="tm" style="min-width:80px">{{ d.gene }}</span><code>{{ d.genotype }}</code><span style="color:#a1a1aa;flex:1">{{ d.desc }}</span></div>{% endfor %}</div></details>{% endif %}
+
+        <!-- Baldness -->
+        {% if pheno.baldness and pheno.baldness.details %}
+        <h4 style="font-size:14px;margin-bottom:12px;color:#e4e4e7">{{ t.phenotype_baldness }}</h4>
+        <div style="display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap;align-items:stretch">
+          <div style="flex:1;min-width:180px;max-width:220px;background:#111113;border:1px solid {% if pheno.baldness.risk_pct >= 60 %}rgba(239,68,68,.3){% elif pheno.baldness.risk_pct >= 35 %}rgba(234,179,8,.3){% else %}#27272a{% endif %};border-radius:10px;padding:20px;text-align:center">
+            <div style="font-size:32px;font-weight:700;{% if pheno.baldness.risk_pct >= 60 %}color:var(--red){% elif pheno.baldness.risk_pct >= 35 %}color:var(--yellow){% else %}color:var(--green){% endif %}">{{ pheno.baldness.risk_pct }}%</div>
+            <div class="tm" style="font-size:12px;margin-top:4px">{{ t.phenotype_baldness_risk }}</div>
+            <div style="font-size:13px;margin-top:8px;color:#d4d4d8">{{ pheno.baldness.risk }}</div>
+          </div>
+          <div style="flex:2;min-width:280px">
+            {% if pheno.baldness.ar_note %}<p style="font-size:12px;color:var(--accent);margin:0 0 10px;line-height:1.6;background:#111113;border:1px solid rgba(59,130,246,.15);border-radius:8px;padding:10px 14px">{{ pheno.baldness.ar_note }}</p>{% endif %}
+          </div>
+        </div>
+        <details style="margin-bottom:20px"><summary style="font-size:12px;color:#52525b;cursor:pointer;padding:6px 0">{{ t.phenotype_basis }} ({{ pheno.baldness.details|length }} SNPs)</summary><div style="margin-top:8px">{% for d in pheno.baldness.details %}<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(39,39,42,.3)"><code style="min-width:90px">{{ d.rsid }}</code><span class="tm" style="min-width:100px">{{ d.gene }}</span><code>{{ d.genotype }}</code><span class="bs {% if d.impact == 'alto' %}by{% else %}bn{% endif %}" style="font-size:10px">{{ d.impact }}</span><span style="color:#a1a1aa;flex:1;margin-left:8px">{{ d.desc }}</span></div>{% endfor %}</div></details>
+        {% endif %}
+
+        <p class="nt">{{ t.phenotype_children_note }}</p>
+      </div>
+    </details>
+  </div>
+  {% endif %}
+
+  <div class="tn"><strong>{{ t.warning_label }}:</strong> {{ t.family_disclaimer }}</div>
+</div>
+
+<!-- DISCLAIMER -->
+<div class="db"><div class="container"><strong>{{ t.warning_label }}:</strong> {{ t.disclaimer }} <strong>{{ t.confirm_findings }}</strong> <a href="https://findageneticcounselor.nsgc.org" target="_blank">{{ t.find_counselor }}</a>. <br><em>{{ t.generated_locally }}</em></div></div>
+{% endif %}
+</div>
+
+<script>
+function showTab(n, el) {
+  document.querySelectorAll('.tp').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.gt button').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + n).classList.add('active');
+  el.classList.add('active');
+  setTimeout(() => {
+    document.querySelectorAll('.cw').forEach(el => { const i = echarts.getInstanceByDom(el); if(i) i.resize(); });
+    if (n === 'heritage' && typeof initAnc === 'function') setTimeout(initAnc, 100);
+  }, 50);
+}
+document.querySelectorAll('tr[data-href]').forEach(r => { r.addEventListener('click', function(e) { if(!e.target.closest('.no-nav')) window.location=this.dataset.href; }); });
+// Init ancestry charts when accordion expands
+const ancBody = document.getElementById('ancestry-acc-body');
+if (ancBody) { ancBody.closest('details').addEventListener('toggle', function() { if(this.open && typeof initAnc==='function') setTimeout(initAnc, 100); }); }
+const form = document.getElementById('uploadForm');
+if (form) form.addEventListener('submit', function(e) {
+  const fi=document.getElementById('fileInput');
+  if (!fi || !fi.files || fi.files.length===0) {
+    e.preventDefault();
+    e.stopPropagation();
+    // Show error on dropzone
+    const dz=document.getElementById('dropzone');
+    if(dz){dz.style.borderColor='var(--red)';dz.style.background='rgba(239,68,68,.06)';dz.querySelector('.dropzone-text').textContent='{{ t.upload_no_file }}';dz.querySelector('.dropzone-icon').textContent='\u26A0\uFE0F';}
+    // Show toast above form
+    let toast=document.getElementById('noFileToast');
+    if(!toast){toast=document.createElement('div');toast.id='noFileToast';toast.style.cssText='background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#fca5a5;padding:12px 20px;border-radius:10px;font-size:13px;text-align:center;margin-bottom:16px;';toast.textContent='{{ t.upload_no_file }}';form.parentNode.insertBefore(toast,form);}
+    setTimeout(function(){if(dz){dz.style.borderColor='#3f3f46';dz.style.background='';dz.querySelector('.dropzone-text').textContent='{{ t.upload_drag }}';dz.querySelector('.dropzone-icon').textContent='\uD83D\uDD2C';}if(toast)toast.remove();},4000);
+    return false;
+  }
+  const b=document.getElementById('submitBtn'); b.innerHTML='&#9889; {{ t.analyzing }}'; b.disabled=true; b.style.opacity='.7';
+});
+// Drag and drop
+const dz = document.getElementById('dropzone');
+const fi = document.getElementById('fileInput');
+const fn = document.getElementById('fileName');
+const uz = document.getElementById('uploadZone');
+if (dz && fi) {
+  fi.addEventListener('change', function() { if(fi.files.length){fn.textContent=fi.files[0].name;fn.style.display='block';dz.classList.add('has-file');} });
+  ['dragenter','dragover'].forEach(e => { dz.addEventListener(e, function(ev){ev.preventDefault();ev.stopPropagation();dz.classList.add('has-file');if(uz)uz.classList.add('drag-over');}); });
+  ['dragleave','drop'].forEach(e => { dz.addEventListener(e, function(ev){ev.preventDefault();ev.stopPropagation();if(uz)uz.classList.remove('drag-over');}); });
+  dz.addEventListener('drop', function(ev) { ev.preventDefault(); if(ev.dataTransfer.files.length){fi.files=ev.dataTransfer.files;fn.textContent=ev.dataTransfer.files[0].name;fn.style.display='block';dz.classList.add('has-file');} });
+}
+window.addEventListener('resize', () => { document.querySelectorAll('.cw').forEach(el => { const i=echarts.getInstanceByDom(el); if(i) i.resize(); }); });
+
+{% if results %}
+const CD = {{ charts_json|safe }};
+const P = ['#3b82f6','#ef4444','#a855f7','#f97316','#22c55e','#eab308','#06b6d4','#ec4899','#84cc16','#14b8a6'];
+const TX = '#a1a1aa';
+if (CD.categories) { const c=echarts.init(document.getElementById('chart-categories')); c.setOption({title:{text:'{{ t.chart_categories }}',textStyle:{color:'#fafafa',fontSize:14,fontFamily:'Geist'}},tooltip:{trigger:'axis'},grid:{left:'40%',right:'8%',top:40,bottom:10},xAxis:{type:'value',axisLabel:{color:TX}},yAxis:{type:'category',data:CD.categories.labels.slice().reverse(),axisLabel:{color:TX,fontSize:11,fontFamily:'Geist'}},series:[{type:'bar',data:CD.categories.values.slice().reverse(),itemStyle:{borderRadius:[0,4,4,0]},colorBy:'data',color:P}]}); }
+if (CD.magnitude&&CD.magnitude.length) { const c=echarts.init(document.getElementById('chart-magnitude')); c.setOption({title:{text:'{{ t.chart_magnitude }}',left:'center',textStyle:{color:'#fafafa',fontSize:14,fontFamily:'Geist'}},tooltip:{trigger:'item',formatter:'{b}: {c} ({d}%)'},color:['#22c55e','#eab308','#ef4444'],series:[{type:'pie',radius:['40%','70%'],center:['50%','55%'],data:CD.magnitude,label:{color:TX,fontSize:12,fontFamily:'Geist'},emphasis:{itemStyle:{shadowBlur:10}}}]}); }
+if (CD.drug_levels) { const c=echarts.init(document.getElementById('chart-drugs')); c.setOption({title:{text:'{{ t.chart_drug_levels }}',textStyle:{color:'#fafafa',fontSize:14,fontFamily:'Geist'}},tooltip:{trigger:'axis'},grid:{left:'15%',right:'10%',top:40,bottom:30},xAxis:{type:'category',data:CD.drug_levels.labels,axisLabel:{color:TX}},yAxis:{type:'value',axisLabel:{color:TX}},series:[{type:'bar',data:CD.drug_levels.values,itemStyle:{borderRadius:[4,4,0,0]},color:'#3b82f6'}]}); } else { document.getElementById('chart-drugs').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#52525b">{{ t.chart_no_drug }}</div>'; }
+if (CD.disease&&CD.disease.length) { const c=echarts.init(document.getElementById('chart-disease')); c.setOption({title:{text:'{{ t.chart_disease }}',left:'center',textStyle:{color:'#fafafa',fontSize:14,fontFamily:'Geist'}},tooltip:{trigger:'item',formatter:'{b}: {c} ({d}%)'},color:P,series:[{type:'pie',radius:['40%','70%'],center:['50%','55%'],data:CD.disease,label:{color:TX,fontSize:11,fontFamily:'Geist'},emphasis:{itemStyle:{shadowBlur:10}}}]}); } else { document.getElementById('chart-disease').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#52525b">{{ t.chart_no_clinvar }}</div>'; }
+
+{% if ancestry and ancestry.percentages %}
+let ancI=false; function initAnc(){if(ancI)return;ancI=true;const a={{ ancestry|tojson }};
+const de=document.getElementById('chart-ancestry-donut');if(de){const c=echarts.init(de);c.setOption({title:{text:'{{ t.ancestry_donut_title }}',left:'center',textStyle:{color:'#fafafa',fontSize:16,fontFamily:'Geist'}},tooltip:{trigger:'item',formatter:'{b}: {c}% ({d}%)'},color:Object.values(a.colors),series:[{type:'pie',radius:['35%','65%'],center:['50%','55%'],data:Object.entries(a.percentages).filter(([k,v])=>v>0.5).map(([k,v])=>({name:a.labels[k]||k,value:v})),label:{color:TX,fontSize:13,fontFamily:'Geist',formatter:'{b}\n{c}%'},emphasis:{itemStyle:{shadowBlur:10}}}]});}
+const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/world.json').then(r=>r.json()).then(w=>{echarts.registerMap('world',w);const c=echarts.init(me);const co={{ POP_COUNTRIES|tojson }};const d=[];for(const[p,cl]of Object.entries(co)){const pc=a.percentages[p]||0;if(pc<0.5)continue;for(const cn of cl)d.push({name:cn,value:pc,pop:p,itemStyle:{areaColor:a.colors[p]}});}c.setOption({tooltip:{trigger:'item',formatter:p=>p.data&&p.data.pop?a.labels[p.data.pop]+': '+p.data.value+'%':p.name},visualMap:{show:false},series:[{type:'map',map:'world',roam:true,emphasis:{label:{show:true,color:'#fff'},itemStyle:{areaColor:'#3b82f6'}},itemStyle:{areaColor:'#18181b',borderColor:'#27272a',borderWidth:.5},data:d}]});});}}
+{% endif %}
+{% endif %}
+</script>
+</body>
+</html>

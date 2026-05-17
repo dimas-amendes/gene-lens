@@ -1,0 +1,43 @@
+# Sensitive genetic data - NEVER commit
+input/
+output/
+data/*.tsv
+data/*.gz
+data/*.zip
+data/*.gff
+data/*.vcf
+data/cache/
+
+# Analysis history (contains full genetic data)
+history/
+
+# Logs
+*.log
+
+# Consent flag (user-specific)
+# Note: ~/.genetics_consent is outside repo, but just in case
+.genetics_consent
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Legacy documentation (contains personal paths)
+genetics-docs/
+
+# Claude Code local settings
+.claude/

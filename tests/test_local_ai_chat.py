@@ -13,6 +13,7 @@ import pytest
 from src.local_ai import (
     _friendly_ollama_error,
     chat_about_analysis,
+    chat_about_analysis_stream,
 )
 
 
@@ -198,3 +199,96 @@ class TestChatAboutAnalysis:
              patch("src.local_ai.subprocess.run", side_effect=_capture):
             chat_about_analysis(context="ctx", history=[], question="x", language="en")
         assert "educator" in captured["prompt"].lower()
+
+
+# ── chat_about_analysis_stream ──────────────────────────────────────────────
+
+class _FakePopen:
+    """Minimal subprocess.Popen substitute that yields a scripted stdout."""
+    def __init__(self, chunks=("Hello ", "world", ""), stderr="", returncode=0):
+        self._chunks = list(chunks)
+        self._stderr_text = stderr
+        self.returncode = returncode
+        self.stdin = _FakeStdin()
+        self.stdout = self  # we'll implement read() ourselves
+        self.stderr = _FakeStderr(stderr)
+        self.wait_called = False
+
+    def read(self, n=64):
+        if not self._chunks:
+            return ""
+        return self._chunks.pop(0)
+
+    def wait(self, timeout=None):
+        self.wait_called = True
+        return self.returncode
+
+
+class _FakeStdin:
+    def write(self, data): pass
+    def close(self): pass
+
+
+class _FakeStderr:
+    def __init__(self, text): self._text = text
+    def read(self): return self._text
+
+
+class TestChatStream:
+    def test_yields_chunks_in_order(self):
+        fake = _FakePopen(chunks=("Hello, ", "this is ", "the answer.", ""))
+        with patch("src.local_ai.is_ollama_available", return_value=True), \
+             patch("src.local_ai.subprocess.Popen", return_value=fake):
+            chunks = list(chat_about_analysis_stream(
+                context="ctx", history=[], question="hi", model="llama3.1:8b", language="en",
+            ))
+        # All chunks should be strings (no error sentinel since returncode=0)
+        assert all(isinstance(c, str) for c in chunks)
+        assert "".join(chunks) == "Hello, this is the answer."
+
+    def test_yields_error_sentinel_when_ollama_missing(self):
+        with patch("src.local_ai.is_ollama_available", return_value=False):
+            chunks = list(chat_about_analysis_stream(
+                context="ctx", history=[], question="hi",
+            ))
+        assert len(chunks) == 1
+        assert isinstance(chunks[0], dict)
+        assert chunks[0]["event"] == "error"
+
+    def test_yields_error_when_binary_not_found(self):
+        with patch("src.local_ai.is_ollama_available", return_value=True), \
+             patch("src.local_ai.subprocess.Popen", side_effect=FileNotFoundError):
+            chunks = list(chat_about_analysis_stream(
+                context="ctx", history=[], question="hi",
+            ))
+        assert chunks[0]["event"] == "error"
+        assert "ollama" in chunks[0]["message"].lower()
+
+    def test_yields_error_appended_after_text_on_nonzero_exit(self):
+        """If model errors out mid-stream we still surface a diagnostic."""
+        fake = _FakePopen(
+            chunks=("partial reply", ""),
+            stderr="Error: model 'llama3.1:8b' not found",
+            returncode=1,
+        )
+        with patch("src.local_ai.is_ollama_available", return_value=True), \
+             patch("src.local_ai.subprocess.Popen", return_value=fake):
+            chunks = list(chat_about_analysis_stream(
+                context="ctx", history=[], question="hi", model="llama3.1:8b",
+            ))
+        assert chunks[0] == "partial reply"
+        # Last item is the error sentinel
+        assert isinstance(chunks[-1], dict)
+        assert chunks[-1]["event"] == "error"
+        assert "ollama pull" in chunks[-1]["message"]
+
+    def test_yields_error_when_no_text_produced(self):
+        fake = _FakePopen(chunks=("",), returncode=0)
+        with patch("src.local_ai.is_ollama_available", return_value=True), \
+             patch("src.local_ai.subprocess.Popen", return_value=fake):
+            chunks = list(chat_about_analysis_stream(
+                context="ctx", history=[], question="hi",
+            ))
+        assert len(chunks) == 1
+        assert chunks[0]["event"] == "error"
+        assert "empty" in chunks[0]["message"].lower()

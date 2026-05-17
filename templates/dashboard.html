@@ -62,7 +62,11 @@ a { color: var(--accent); }
 .ai-msg.assistant { background: #18181b; color: #e4e4e7; align-self: flex-start; border: 1px solid #27272a; }
 .ai-msg.error { background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.3); color: #fecaca; align-self: stretch; max-width: 100%; }
 .ai-msg.empty { color: #71717a; font-style: italic; text-align: center; align-self: stretch; max-width: 100%; padding: 24px; }
-.ai-typing { color: #71717a; font-size: 13px; align-self: flex-start; padding: 6px 10px; }
+.ai-typing { background: #18181b !important; border: 1px solid #27272a; border-radius: 12px; padding: 12px 16px !important; align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; }
+.ai-typing .ai-dot { width: 6px; height: 6px; background: #71717a; border-radius: 50%; animation: ai-bounce 1.2s ease-in-out infinite; }
+.ai-typing .ai-dot:nth-child(2) { animation-delay: .15s; }
+.ai-typing .ai-dot:nth-child(3) { animation-delay: .30s; }
+@keyframes ai-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: .4; } 30% { transform: translateY(-4px); opacity: 1; } }
 
 .ai-form { border-top: 1px solid #27272a; padding: 14px 16px; display: flex; gap: 8px; align-items: flex-end; background: #0a0a0c; }
 .ai-form textarea { flex: 1; background: #18181b; border: 1px solid #3f3f46; color: #fafafa; border-radius: 10px; padding: 10px 12px; font-size: 13px; font-family: 'Geist', sans-serif; resize: none; min-height: 42px; max-height: 140px; line-height: 1.4; }
@@ -199,6 +203,15 @@ a { color: var(--accent); }
 .cov-badge-partial { color: #eab308; background: rgba(234,179,8,.1); }
 .cov-badge-low { color: #ef4444; background: rgba(239,68,68,.1); }
 .cov-missing { color: #71717a; font-family: 'Geist Mono', monospace; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
+
+/* Hereditary cancer chip-limit warning */
+.hcw-card { border-color: rgba(239,68,68,.3); background: linear-gradient(135deg, rgba(239,68,68,.06), rgba(239,68,68,.01)); margin-top: 12px; }
+.hcw-head { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--red); margin-bottom: 8px; }
+.hcw-body { font-size: 13px; line-height: 1.6; color: #d4d4d8; margin: 0 0 10px; }
+.hcw-cta { font-size: 13px; line-height: 1.6; color: #fafafa; margin: 0; font-weight: 500; }
+.hcw-empty { border-color: rgba(234,179,8,.25); background: rgba(234,179,8,.04); margin-top: 12px; }
+.hcw-empty-title { font-size: 13px; color: var(--yellow); margin: 0 0 6px; display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.hcw-empty-body { font-size: 12px; line-height: 1.6; color: #a1a1aa; margin: 0; }
 </style>
 </head>
 <body>
@@ -419,6 +432,14 @@ a { color: var(--accent); }
         {% endfor %}
       </div>
     </details>
+  </div>
+  {% else %}
+  <!-- Empty-state for hereditary: must NOT read as "you're clear" -->
+  <div class="gc hcw-empty">
+    <div class="gc-b">
+      <p class="hcw-empty-title"><i class="ti ti-info-circle"></i> {{ t.hcw_empty_title }}</p>
+      <p class="hcw-empty-body">{{ t.hcw_empty_body }}</p>
+    </div>
   </div>
   {% endif %}
 
@@ -842,8 +863,13 @@ const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/
   async function send(question) {
     addMsg('user', question);
     history.push({ role: 'user', content: question });
-    const typing = addMsg('assistant', '…');
-    typing.classList.add('ai-typing');
+    const typing = document.createElement('div');
+    typing.className = 'ai-msg assistant ai-typing';
+    typing.innerHTML = '<span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>';
+    const emptyEl = msgs.querySelector('.ai-msg.empty');
+    if (emptyEl) emptyEl.remove();
+    msgs.appendChild(typing);
+    msgs.scrollTop = msgs.scrollHeight;
     sendBtn.disabled = true; input.disabled = true;
 
     try {

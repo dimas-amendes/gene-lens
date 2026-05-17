@@ -384,6 +384,15 @@ a { color: var(--accent); }
     </details>
   </div>
 
+  <!-- Hereditary cancer chip-limitation warning (always shown — silence here is dangerous) -->
+  <div class="gc hcw-card">
+    <div class="gc-b">
+      <div class="hcw-head"><i class="ti ti-alert-octagon"></i> <strong>{{ t.hcw_title }}</strong></div>
+      <p class="hcw-body">{{ t.hcw_body }}</p>
+      <p class="hcw-cta">{{ t.hcw_cta }}</p>
+    </div>
+  </div>
+
   <!-- Accordion: Hereditary Conditions (sex-aware) -->
   {% if hereditary and hereditary.conditions %}
   <div class="gc acc">

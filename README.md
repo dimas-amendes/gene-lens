@@ -14,7 +14,13 @@ Built with Flask, Apache ECharts, Halfmoon CSS, and Geist font. Optional local A
 
 ## Why I Built This
 
-This project started from a personal need: I wanted a private, offline, and reliable way to look deeper into my own health using my genetic data, without relying on cloud services. Since it helped me achieve that goal, I am sharing it with the community. I hope others find it useful for their own self-discovery journeys, and I welcome developers to fork, improve, and contribute to the code.
+There's a long line of inherited illness in my family — conditions that have shown up across multiple generations, with a documented genetic component. Living with that meant always carrying a quiet question: how much of my own health was already written, and how much of it was just coincidence?
+
+When I stumbled on a [post about exploring raw 23andMe data with public databases](https://www.youtube.com/@nicksaraev), something clicked. I had the file. The reference databases (ClinVar, PharmGKB) were free. I just needed a tool that wouldn't ship my DNA to some cloud service to be processed.
+
+So I built one. What surprised me wasn't the tech — it was the overlap. Several of the variants the tool flagged matched conditions that had already been confirmed by my doctors years before, sometimes for things I hadn't even thought to mention. Other findings opened questions I brought to my next appointment. The point was never to diagnose myself — it was to stop being a passenger in conversations about my own body.
+
+If you have a similar family history, or you're just curious, this tool exists for that. It runs entirely on your machine, your data never leaves it, and the findings are framed as starting points for conversations with a real professional — not answers.
 
 ---
 

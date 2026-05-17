@@ -14,7 +14,13 @@ Construido com Flask, Apache ECharts, Halfmoon CSS e fonte Geist. IA local opcio
 
 ## Por que criei este projeto
 
-Este sistema nasceu de uma necessidade pessoal: eu queria uma forma privada, offline e confiavel de olhar mais a fundo para a minha propria saude atraves do meu DNA, sem depender de servicos em nuvem. Como a ferramenta cumpriu esse objetivo para mim, decidi abri-la para a comunidade. Espero que seja util para a jornada de autoconhecimento de outras pessoas, e convido outros desenvolvedores a utilizarem e melhorarem o codigo.
+Tem uma longa linha de doencas hereditarias na minha familia — condicoes que apareceram em varias geracoes, com componente genetico documentado. Crescer com isso significa carregar uma pergunta silenciosa: quanto da minha saude ja esta escrita, e quanto e coincidencia?
+
+Quando esbarrei num [post sobre explorar dados brutos do 23andMe contra bancos publicos](https://www.youtube.com/@nicksaraev), o assunto clicou. Eu tinha o arquivo. Os bancos de referencia (ClinVar, PharmGKB) eram gratuitos. So faltava uma ferramenta que nao mandasse meu DNA pra algum servico em nuvem pra ser processado.
+
+Entao construi uma. O que me surpreendeu nao foi a parte tecnica — foi a sobreposicao. Varias variantes que a ferramenta sinalizou bateram com condicoes que ja tinham sido confirmadas pelos meus medicos anos antes, as vezes pra coisas que eu nem tinha pensado em mencionar. Outros achados abriram perguntas que levei pra minha proxima consulta. O ponto nunca foi me auto-diagnosticar — foi parar de ser passageiro em conversas sobre o meu proprio corpo.
+
+Se voce tem um historico familiar parecido, ou so e curioso, essa ferramenta existe pra isso. Roda inteira na sua maquina, seu DNA nao sai dela, e os achados sao enquadrados como pontos de partida pra conversas com um profissional — nao respostas.
 
 ---
 

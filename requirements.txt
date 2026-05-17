@@ -1,5 +1,5 @@
 # Core (pinned for reproducibility — bump via dependabot)
-flask==3.0.3
+flask==3.1.3
 tqdm==4.66.5
 requests==2.34.2
 

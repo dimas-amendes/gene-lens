@@ -1,4 +1,4 @@
-name: Genetic Health Analyzer CI
+name: Gene Lens CI
 
 on:
   push:

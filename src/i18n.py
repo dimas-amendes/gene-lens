@@ -6,7 +6,7 @@ Usado pelo dashboard para trocar idioma sem reprocessar dados.
 STRINGS = {
     "pt": {
         # Header
-        "app_title": "Analisador Genetico Local",
+        "app_title": "Gene Lens",
         "privacy_badge": "100% OFFLINE &middot; PRIVACIDADE LOCAL",
 
         # Upload
@@ -313,7 +313,7 @@ STRINGS = {
     },
 
     "en": {
-        "app_title": "Local Genetic Analyzer",
+        "app_title": "Gene Lens",
         "privacy_badge": "100% OFFLINE &middot; LOCAL PRIVACY",
 
         "upload_title": "Upload your DNA file",

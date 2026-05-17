@@ -1,4 +1,4 @@
-# Analisador Genetico Local
+# Gene Lens
 
 > Leia em [Ingles](README.md).
 

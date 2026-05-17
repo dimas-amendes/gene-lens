@@ -86,7 +86,7 @@ def sanitize_report_metadata() -> dict:
     """Return safe metadata for reports — no system-identifying info."""
     return {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "tool": "Genetic Health Analyzer (local)",
+        "tool": "Gene Lens (local)",
         "version": "2.0.0",
     }
 

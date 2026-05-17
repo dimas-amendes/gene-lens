@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Genetic Health Analyzer — Privacy-First Local Analysis
+Gene Lens — Privacy-First Local Genome Analysis
 
 Usage:
     python main.py analyze <genome_file>              # Full analysis
@@ -48,7 +48,7 @@ def cmd_analyze(args):
 
     print()
     print("=" * 60)
-    print("  ANALISADOR GENETICO (Privacidade Local)")
+    print("  GENE LENS (Privacidade Local)")
     print("=" * 60)
 
     # Privacy checks
@@ -219,7 +219,7 @@ def cmd_formats(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Genetic Health Analyzer — Privacy-First Local Analysis",
+        description="Gene Lens — Privacy-First Local Genome Analysis",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

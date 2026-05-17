@@ -1,4 +1,4 @@
-# Contributing to Genetic Health Analyzer
+# Contributing to Gene Lens
 
 > Leia em portugues abaixo / Portuguese version below.
 
@@ -136,7 +136,7 @@ By contributing, you agree that your contributions will be licensed under the **
 
 ---
 
-# Contribuindo para o Analisador Genetico
+# Contribuindo para o Gene Lens
 
 Obrigado pelo interesse em contribuir! Este projeto aceita melhorias da comunidade, mas tem diretrizes rigorosas para proteger a privacidade dos usuarios e manter o rigor cientifico.
 

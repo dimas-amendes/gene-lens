@@ -1,4 +1,4 @@
-# Genetic Health Analyzer
+# Gene Lens
 
 > Read this in [Portuguese (PT-BR)](README.pt-BR.md).
 

@@ -1,4 +1,4 @@
-# Project Rules — Genetic Health Analyzer
+# Project Rules — Gene Lens
 
 ## Efficiency Rules
 

@@ -45,6 +45,24 @@ class TestSystemPromptSafety:
         from src.local_ai import SYSTEM_PROMPT_EN
         assert "EMERGENCY" in SYSTEM_PROMPT_EN
         assert "911" in SYSTEM_PROMPT_EN
+        # Brazil's 192 (SAMU) must also be listed — the product targets
+        # Brazil and UI-language isn't a reliable proxy for user location.
+        assert "192" in SYSTEM_PROMPT_EN
+
+    def test_emergency_block_distinguishes_acute_symptoms_from_severity_questions(self):
+        """Regression: 8B model fired the emergency response when user
+        asked 'tenho algo grave?' (= 'is there anything serious?'),
+        treating it as a chest-pain emergency. The prompt must list
+        non-triggering examples explicitly so the model learns the
+        first-person/present-tense gating."""
+        from src.local_ai import SYSTEM_PROMPT_PT, SYSTEM_PROMPT_EN
+        # PT must list at least one "is it serious?"-style example as
+        # NON-triggering, to distinguish from acute symptom descriptions.
+        assert "tenho algo grave" in SYSTEM_PROMPT_PT.lower()
+        assert "primeira pessoa" in SYSTEM_PROMPT_PT.lower()
+        # EN mirror.
+        assert "is this serious" in SYSTEM_PROMPT_EN.lower()
+        assert "first person" in SYSTEM_PROMPT_EN.lower()
 
     def test_pt_prompt_has_high_impact_hereditary_rule(self):
         from src.local_ai import SYSTEM_PROMPT_PT

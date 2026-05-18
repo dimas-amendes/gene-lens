@@ -95,3 +95,40 @@ class TestRobustness:
         genome, _, _ = load_genome(f)
         assert "rs1" in genome
         assert "i12345" not in genome
+
+    def test_keeps_hemizygous_y_chromosome_single_letter_genotypes(self, tmp_path: Path):
+        """Regression: parser was dropping all Y SNPs in males because the
+        old `len(result) < 2` filter rejected single-letter genotypes.
+        Hemizygous Y/MT calls are valid biology, not no-calls.
+        Y count must reach the infer_sex threshold (50) for males."""
+        f = tmp_path / "male_genera.csv"
+        rows = ["RSID,CHROMOSOME,POSITION,RESULT"]
+        # 80 hemizygous Y SNPs (well above the threshold of 50)
+        for i in range(80):
+            rows.append(f"rs{i},Y,{1000 + i},G")
+        # Plus some autosomal so the file isn't degenerate
+        for i in range(80, 160):
+            rows.append(f"rs{i},1,{1000 + i},AA")
+        f.write_text("\n".join(rows) + "\n")
+        genome, _, _ = load_genome(f)
+        y_snps = [r for r, d in genome.items() if d["chromosome"] == "Y"]
+        assert len(y_snps) == 80, f"expected 80 Y SNPs kept, got {len(y_snps)}"
+        # And the sex inference should now correctly call this as male.
+        from src.sex_inference import infer_sex
+        assert infer_sex(genome) == "M"
+
+    def test_drops_empty_and_zero_genotypes(self, tmp_path: Path):
+        """No-call sentinels other than `--` must still be filtered."""
+        f = tmp_path / "edge.csv"
+        f.write_text(
+            "RSID,CHROMOSOME,POSITION,RESULT\n"
+            "rs1,1,100,AA\n"
+            "rs2,1,101,0\n"
+            "rs3,1,102,00\n"
+            "rs4,1,103,-\n"
+            "rs5,1,104,\n"
+        )
+        genome, _, _ = load_genome(f)
+        assert "rs1" in genome
+        for rid in ("rs2", "rs3", "rs4", "rs5"):
+            assert rid not in genome

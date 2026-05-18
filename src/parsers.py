@@ -57,6 +57,13 @@ def parse_genera_csv(path: Path) -> dict:
     """Parse Genera/MeuDNA CSV format (Brazilian DTC services).
     Format: RSID,CHROMOSOME,POSITION,RESULT (comma-separated with header)
     Also handles .csv.gz files.
+
+    Y / MT / male-X SNPs come HEMIZYGOUS — a single letter (e.g. "G")
+    rather than a pair ("GG"). The old `len(result) < 2` filter dropped
+    every one of those, which made `infer_sex()` miscall males as F
+    (Y count fell below threshold because the parser had silently nuked
+    them). We now accept any non-empty, non-no-call genotype regardless
+    of length.
     """
     import csv
     genome = {}
@@ -68,7 +75,7 @@ def parse_genera_csv(path: Path) -> dict:
             chrom = row.get("CHROMOSOME", row.get("chromosome", ""))
             pos = row.get("POSITION", row.get("position", ""))
             result = row.get("RESULT", row.get("result", ""))
-            if not rsid.startswith("rs") or not result or result == "--" or len(result) < 2:
+            if not rsid.startswith("rs") or not result or result in ("--", "-", "0", "00"):
                 continue
             genome[rsid] = {
                 "chromosome": chrom,
@@ -138,7 +145,9 @@ def parse_myheritage(path: Path) -> dict:
             chrom = row.get("CHROMOSOME", row.get("chromosome", ""))
             pos = row.get("POSITION", row.get("position", ""))
             result = row.get("RESULT", row.get("result", ""))
-            if not rsid.startswith("rs") or result == "--" or len(result) < 2:
+            # Same hemizygous-Y caveat as parse_genera_csv — don't filter
+            # single-letter results, they're real calls on Y/MT/male-X.
+            if not rsid.startswith("rs") or not result or result in ("--", "-", "0", "00"):
                 continue
             genome[rsid] = {
                 "chromosome": chrom,

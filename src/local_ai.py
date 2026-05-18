@@ -10,9 +10,33 @@ Requirements:
 - A model pulled: ollama pull llama3.1:8b (or gemma2:9b, mistral, etc.)
 """
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
+
+# Ollama CLI emits ANSI cursor/erase control sequences when it detects (or
+# guesses) a TTY. They survive subprocess.PIPE and leak into the chat as
+# garbage like "[5D [K" or "[1D [K". This regex matches CSI sequences
+# (ESC + '[' + optional params + a final byte) plus bare ESC[?…h variants.
+_ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07]*\x07")
+
+
+def _strip_ansi(text: str) -> str:
+    """Remove ANSI escape sequences from Ollama output."""
+    if not text:
+        return text
+    return _ANSI_ESCAPE_RE.sub("", text)
+
+
+def _clean_env() -> dict:
+    """Environment that tells Ollama (and anything it spawns) we're not a TTY,
+    so it doesn't emit ANSI cursor/spinner control codes."""
+    import os
+    env = os.environ.copy()
+    env["TERM"] = "dumb"
+    env["NO_COLOR"] = "1"
+    return env
 
 
 def is_ollama_available() -> bool:
@@ -180,6 +204,7 @@ def chat_about_analysis(
             capture_output=True,
             text=True,
             timeout=timeout,
+            env=_clean_env(),
         )
     except subprocess.TimeoutExpired:
         return False, "Ollama took too long to respond. Try a smaller model (e.g. gemma2:2b)."
@@ -189,7 +214,7 @@ def chat_about_analysis(
     if result.returncode != 0:
         return False, _friendly_ollama_error(result.stderr or "", model)
 
-    answer = result.stdout.strip()
+    answer = _strip_ansi(result.stdout).strip()
     if not answer:
         return False, "The model produced an empty response. Try rephrasing your question."
     return True, answer
@@ -231,6 +256,7 @@ def chat_about_analysis_stream(
             stderr=subprocess.PIPE,
             text=True,
             bufsize=1,  # line buffered
+            env=_clean_env(),
         )
     except FileNotFoundError:
         yield {"event": "error", "message": "Ollama binary not found. Install it from https://ollama.com."}
@@ -249,9 +275,12 @@ def chat_about_analysis_stream(
     produced_any = False
     try:
         while True:
-            chunk = proc.stdout.read(64) if proc.stdout else ""
-            if not chunk:
+            raw = proc.stdout.read(64) if proc.stdout else ""
+            if not raw:
                 break
+            chunk = _strip_ansi(raw)
+            if not chunk:
+                continue  # whole chunk was control codes, swallow it
             produced_any = True
             yield chunk
     finally:

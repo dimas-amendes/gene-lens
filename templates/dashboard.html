@@ -37,10 +37,20 @@ a { color: var(--accent); }
 .priv-pill { font-size: 11px; color: var(--green); background: var(--green-soft); padding: 4px 12px; border-radius: 20px; font-weight: 500; margin-left: 12px; }
 
 /* ── AI chat drawer ────────────────────────────────────────────────────── */
-.ai-fab { position: fixed; bottom: 24px; right: 24px; z-index: 40; background: var(--accent); color: #09090b; border: none; border-radius: 999px; padding: 14px 22px; font-size: 14px; font-weight: 600; font-family: 'Geist', sans-serif; box-shadow: 0 8px 30px rgba(59,130,246,.35); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: transform .15s, box-shadow .2s; }
-.ai-fab:hover { transform: translateY(-1px); box-shadow: 0 10px 36px rgba(59,130,246,.5); }
+.ai-fab { position: fixed; bottom: 24px; right: 24px; z-index: 40; background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%); color: #fff; border: none; border-radius: 999px; padding: 13px 22px 13px 18px; font-size: 14px; font-weight: 600; font-family: 'Geist', sans-serif; box-shadow: 0 10px 30px -8px rgba(59,130,246,.5), 0 4px 12px -2px rgba(0,0,0,.4); cursor: pointer; display: inline-flex; align-items: center; gap: 9px; transition: transform .18s ease-out, box-shadow .2s; backdrop-filter: blur(8px); }
+.ai-fab .ai-fab-icon { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,.18); font-size: 15px; }
+.ai-fab .ai-fab-dot { position: absolute; top: 6px; right: 6px; width: 9px; height: 9px; border-radius: 50%; background: #22c55e; border: 2px solid #0a0a0c; box-shadow: 0 0 0 0 rgba(34,197,94,.6); animation: ai-fab-pulse 2.4s ease-out infinite; }
+.ai-fab:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 16px 40px -10px rgba(59,130,246,.65), 0 6px 16px -2px rgba(0,0,0,.5); }
+.ai-fab:active { transform: translateY(0) scale(.99); }
 .ai-fab[disabled] { background: #27272a; color: #71717a; cursor: not-allowed; box-shadow: none; }
-.ai-fab[disabled]:hover { transform: none; }
+.ai-fab[disabled]:hover { transform: none; box-shadow: none; }
+.ai-fab[disabled] .ai-fab-icon { background: rgba(255,255,255,.04); }
+.ai-fab[disabled] .ai-fab-dot { display: none; }
+@keyframes ai-fab-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(34,197,94,.55); }
+  70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
+  100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+}
 
 .ai-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 49; opacity: 0; pointer-events: none; transition: opacity .2s; }
 .ai-backdrop.open { opacity: 1; pointer-events: auto; }
@@ -267,6 +277,18 @@ a { color: var(--accent); }
 .sample-form { margin-top: 10px; }
 .link-sample { background: transparent; color: #71717a; border: none; padding: 4px 8px; font-size: 12px; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; text-decoration: underline; text-underline-offset: 3px; text-decoration-style: dotted; text-decoration-color: #3f3f46; }
 .link-sample:hover { color: var(--accent); text-decoration-color: var(--accent); }
+/* Translator-required banner (only shown in PT mode without the en->pt model) */
+.translator-needed { max-width: 560px; margin: 24px auto 0; padding: 18px 20px; background: linear-gradient(135deg, rgba(234,179,8,.08), rgba(234,179,8,.02)); border: 1px solid rgba(234,179,8,.3); border-radius: 12px; display: flex; gap: 14px; align-items: flex-start; }
+.translator-needed-icon { font-size: 22px; color: var(--yellow); flex-shrink: 0; }
+.translator-needed-body { flex: 1; }
+.translator-needed-body h3 { margin: 0 0 6px; font-size: 14px; color: #fafafa; font-weight: 600; }
+.translator-needed-body p { margin: 0 0 12px; font-size: 12px; color: #d4d4d8; line-height: 1.55; }
+.translator-needed-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.btn-translator-cta { background: var(--accent); color: #fff; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+.btn-translator-cta:hover { filter: brightness(1.1); }
+.btn-translator-alt { color: #a1a1aa; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; text-decoration-style: dotted; }
+.btn-translator-alt:hover { color: var(--accent); }
+.uz-blocked { opacity: 0.45; pointer-events: none; }
 .print-only { display: none; }
 
 /* Print stylesheet: user already views in a browser, so "Save as PDF" from
@@ -366,7 +388,20 @@ a { color: var(--accent); }
 {% endif %}{% endwith %}
 
 {% if not results %}
-<div class="uz" id="uploadZone">
+{% if needs_translator %}
+<div class="translator-needed">
+  <div class="translator-needed-icon"><i class="ti ti-language"></i></div>
+  <div class="translator-needed-body">
+    <h3>{{ t.translator_required_title }}</h3>
+    <p>{{ t.translator_required_body }}</p>
+    <div class="translator-needed-actions">
+      <a href="/settings" class="btn-translator-cta"><i class="ti ti-settings"></i> {{ t.translator_required_cta }}</a>
+      <a href="/lang/en" class="btn-translator-alt">{{ t.translator_required_switch_en }}</a>
+    </div>
+  </div>
+</div>
+{% endif %}
+<div class="uz {% if needs_translator %}uz-blocked{% endif %}" id="uploadZone">
   <h2>{{ t.upload_title }}</h2>
   <p style="color:#a1a1aa;margin-bottom:24px;font-size:14px">{{ t.upload_desc }}</p>
   <form action="/analyze" method="post" enctype="multipart/form-data" id="uploadForm" autocomplete="off">
@@ -987,7 +1022,9 @@ const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/
 {% if results %}
 <!-- AI chat — only rendered when there's an active analysis to discuss -->
 <button class="ai-fab" id="aiFab" {% if not ollama_ready %}disabled title="{{ t.ai_disabled_tooltip }}"{% else %}title="{{ t.ai_open_tooltip }}"{% endif %}>
-  <i class="ti ti-message-circle"></i> {{ t.ai_button }}
+  <span class="ai-fab-icon"><i class="ti ti-sparkles"></i></span>
+  <span>{{ t.ai_button }}</span>
+  {% if ollama_ready %}<span class="ai-fab-dot" aria-hidden="true"></span>{% endif %}
 </button>
 
 {% if ollama_ready %}

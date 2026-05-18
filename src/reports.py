@@ -8,6 +8,7 @@ Three reports:
 
 No system-identifying metadata is written. No network access.
 """
+from src.i18n import Lang
 from datetime import datetime
 from collections import defaultdict
 from pathlib import Path
@@ -473,7 +474,7 @@ def generate_protocol(
         f.write(DISCLAIMER)
 
 
-def _build_supplement_list(fd: dict, lang: str = "en") -> list:
+def _build_supplement_list(fd: dict, lang: Lang = "en") -> list:
     supps = []
     _t = _PROTOCOL_PT if lang == "pt" else _PROTOCOL_EN
     if "MTHFR" in fd and fd["MTHFR"]["magnitude"] >= 2:
@@ -497,7 +498,7 @@ def _build_supplement_list(fd: dict, lang: str = "en") -> list:
     return supps
 
 
-def _build_diet_recs(fd: dict, lang: str = "en") -> list:
+def _build_diet_recs(fd: dict, lang: Lang = "en") -> list:
     recs = []
     _t = _PROTOCOL_PT if lang == "pt" else _PROTOCOL_EN
     if "APOA2" in fd and fd["APOA2"].get("status") == "sensitive":
@@ -527,7 +528,7 @@ def _build_diet_recs(fd: dict, lang: str = "en") -> list:
     return recs
 
 
-def _build_exercise_recs(fd: dict, lang: str = "en") -> list:
+def _build_exercise_recs(fd: dict, lang: Lang = "en") -> list:
     recs = []
     _t = _PROTOCOL_PT if lang == "pt" else _PROTOCOL_EN
     if "ACTN3" in fd:
@@ -545,7 +546,7 @@ def _build_exercise_recs(fd: dict, lang: str = "en") -> list:
     return recs
 
 
-def _build_monitoring(fd: dict, disease_findings: dict, lang: str = "en") -> list:
+def _build_monitoring(fd: dict, disease_findings: dict, lang: Lang = "en") -> list:
     tests = []
     _t = _PROTOCOL_PT if lang == "pt" else _PROTOCOL_EN
     if "MTHFR" in fd and fd["MTHFR"]["magnitude"] >= 2:

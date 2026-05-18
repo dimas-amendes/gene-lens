@@ -160,38 +160,28 @@ class MedicalTranslator:
         self._init_argos()
 
     def _init_argos(self):
-        """Initialize argos-translate with en->pt model."""
-        try:
-            import argostranslate.package
-            import argostranslate.translate
+        """Initialize argos-translate using a pre-installed en->pt model.
 
-            # Check if en->pt is installed
+        IMPORTANT: this runs inside the NetworkBlocker during analysis, so
+        we must NEVER attempt to download a model from here — every retry
+        becomes a URLError and argos's internal retry loop blew the stack
+        in production. If the model isn't already installed, we silently
+        fall back to dictionary-only translation. Users get a one-time
+        instruction printed at import time (see download helper below).
+        """
+        try:
+            import argostranslate.translate
             installed = argostranslate.translate.get_installed_languages()
             en = next((l for l in installed if l.code == "en"), None)
             pt = next((l for l in installed if l.code == "pt"), None)
-
             if en and pt:
                 self._argos_translator = en.get_translation(pt)
                 self._argos_available = True
-                return
-
-            # Try to install en->pt package
-            argostranslate.package.update_package_index()
-            available = argostranslate.package.get_available_packages()
-            pkg = next((p for p in available if p.from_code == "en" and p.to_code == "pt"), None)
-            if pkg:
-                print("  Baixando modelo de traducao en->pt (~100MB)...")
-                argostranslate.package.install_from_path(pkg.download())
-                installed = argostranslate.translate.get_installed_languages()
-                en = next((l for l in installed if l.code == "en"), None)
-                pt = next((l for l in installed if l.code == "pt"), None)
-                if en and pt:
-                    self._argos_translator = en.get_translation(pt)
-                    self._argos_available = True
-
         except ImportError:
             pass
         except Exception as e:
+            # Only log once per process — argos can raise during model
+            # introspection and we don't want to spam stderr on every call.
             print(f"  [AVISO] argos-translate nao disponivel: {e}")
 
     def translate(self, text: str) -> str:
@@ -264,3 +254,33 @@ def get_translator() -> MedicalTranslator:
 def translate_medical(text: str) -> str:
     """Convenience function to translate a single medical text."""
     return get_translator().translate(text)
+
+
+def install_en_pt_model() -> tuple[bool, str]:
+    """Download and install the Argos en->pt translation model.
+
+    Must be called OUTSIDE the NetworkBlocker (e.g. from a CLI command or
+    a one-time setup step), since it pulls a ~100MB model from the network.
+    Returns (ok, message).
+    """
+    try:
+        import argostranslate.package
+        import argostranslate.translate
+    except ImportError:
+        return False, "argostranslate is not installed. Run: pip install argostranslate"
+
+    try:
+        installed = argostranslate.translate.get_installed_languages()
+        codes = {l.code for l in installed}
+        if "en" in codes and "pt" in codes:
+            return True, "Model already installed."
+
+        argostranslate.package.update_package_index()
+        available = argostranslate.package.get_available_packages()
+        pkg = next((p for p in available if p.from_code == "en" and p.to_code == "pt"), None)
+        if not pkg:
+            return False, "en->pt package not found in Argos repository."
+        argostranslate.package.install_from_path(pkg.download())
+        return True, "Model installed successfully."
+    except Exception as e:
+        return False, f"Install failed: {e}"

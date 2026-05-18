@@ -5,6 +5,7 @@ Cada painel mapeia SNPs especificos para interpretacoes e recomendacoes
 organizadas por categoria, com scores e conclusoes.
 """
 
+from src.i18n import Lang
 # ═══════════════════════════════════════════════════════════════════════════════
 # NUTRI — Nutricao e Metabolismo
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -967,7 +968,7 @@ SCORE_LABELS_EN = {
 }
 
 
-def analyze_panel(panel_key: str, genome_by_rsid: dict, lang: str = "pt") -> dict:
+def analyze_panel(panel_key: str, genome_by_rsid: dict, lang: Lang = "en") -> dict:
     """Analyze a single wellness panel against the genome.
 
     Returns: {
@@ -978,19 +979,30 @@ def analyze_panel(panel_key: str, genome_by_rsid: dict, lang: str = "pt") -> dic
     """
     panel = ALL_PANELS.get(panel_key)
     if not panel:
-        return {"findings": [], "summary": {}, "conclusions": []}
+        return {"findings": [], "summary": {}, "conclusions": [], "name": "", "name_full": ""}
 
     # Load EN translations if needed
     en_data = {}
     en_overrides = {}
+    panel_names_en = {}
     if lang == "en":
         try:
-            from src.wellness_i18n import WELLNESS_EN, WELLNESS_EN_PANEL_OVERRIDES
+            from src.wellness_i18n import (
+                WELLNESS_EN,
+                WELLNESS_EN_PANEL_OVERRIDES,
+                PANEL_NAMES_EN,
+            )
             en_data = WELLNESS_EN
             en_overrides = WELLNESS_EN_PANEL_OVERRIDES
+            panel_names_en = PANEL_NAMES_EN
         except ImportError:
             pass
     labels = SCORE_LABELS_EN if lang == "en" else SCORE_LABELS
+
+    name = panel["name"]
+    name_full = panel["name_full"]
+    if lang == "en":
+        name_full = panel_names_en.get(panel_key, name_full)
 
     findings = []
     for rsid, info in panel["snps"].items():
@@ -1046,7 +1058,13 @@ def analyze_panel(panel_key: str, genome_by_rsid: dict, lang: str = "pt") -> dic
         elif f["score"] in ("atencao", "warrior", "worrier"):
             conclusions.append(f"**{f['gene']}** ({f['trait']}): {f['text']}")
 
-    return {"findings": findings, "summary": summary, "conclusions": conclusions}
+    return {
+        "findings": findings,
+        "summary": summary,
+        "conclusions": conclusions,
+        "name": name,
+        "name_full": name_full,
+    }
 
 
 def _resolve_apoe(findings: list, genome_by_rsid: dict):
@@ -1079,7 +1097,7 @@ def _resolve_apoe(findings: list, genome_by_rsid: dict):
             break
 
 
-def analyze_all_panels(genome_by_rsid: dict, lang: str = "pt") -> dict:
+def analyze_all_panels(genome_by_rsid: dict, lang: Lang = "en") -> dict:
     """Analyze all wellness panels."""
     results = {key: analyze_panel(key, genome_by_rsid, lang=lang) for key in ALL_PANELS}
 

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-bs-theme="dark">
+<html lang="{{ 'en' if lang == 'en' else 'pt-BR' }}" data-bs-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Termos de Uso</title>
+<title>{{ t.consent_title }}</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/halfmoon.min.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tabler-icons.min.css') }}">
 <style>
@@ -32,28 +32,28 @@ body { font-family: var(--bs-body-font-family); background: var(--bs-body-bg); c
 <body>
 <div class="consent-box">
   <div class="terms">
-    <h1><i class="ti ti-alert-triangle" style="vertical-align:-3px;margin-right:6px"></i>TERMOS DE USO / TERMS OF USE</h1>
+    <h1><i class="ti ti-alert-triangle" style="vertical-align:-3px;margin-right:6px"></i>{{ t.consent_title }}</h1>
 
-    <h2>Este software NAO e um dispositivo medico (SaMD)</h2>
-    <p>Finalidade exclusivamente <span class="highlight">EDUCACIONAL</span> e de <span class="highlight">AUTOCONHECIMENTO</span>.</p>
+    <h2>{{ t.consent_not_device }}</h2>
+    <p>{{ t.consent_purpose | safe }}</p>
 
-    <h2>Fatos importantes</h2>
+    <h2>{{ t.consent_important_facts }}</h2>
     <ul>
-      <li>Testes de genotipagem de consumo (23andMe, Genera, AncestryDNA) possuem taxa de falso positivo de aproximadamente <span class="highlight">40%</span> para variantes clinicamente significativas.</li>
+      <li>{{ t.consent_fact_fp | safe }}</li>
       <li class="ref">(Tandy-Connor et al., Genetics in Medicine, 2018)</li>
-      <li>Os resultados <span class="highlight">NAO substituem</span> exames medicos, diagnosticos clinicos, laudos geneticos ou aconselhamento genetico.</li>
-      <li><span class="highlight">NUNCA</span> altere medicamentos, dietas ou tratamentos baseado nestes resultados sem consultar um medico.</li>
-      <li>O autor/mantenedor <span class="highlight">NAO se responsabiliza</span> por decisoes clinicas, sofrimento psicologico (ansiedade induzida por falsos positivos) ou quaisquer danos causados pelo uso deste software.</li>
+      <li>{{ t.consent_fact_not_replace | safe }}</li>
+      <li>{{ t.consent_fact_never_change | safe }}</li>
+      <li>{{ t.consent_fact_no_liability | safe }}</li>
     </ul>
 
-    <p>Para aconselhamento genetico profissional: <a href="https://findageneticcounselor.nsgc.org" target="_blank" style="color:var(--accent)">findageneticcounselor.nsgc.org</a></p>
+    <p>{{ t.consent_counselor }} <a href="https://findageneticcounselor.nsgc.org" target="_blank" style="color:var(--accent)">findageneticcounselor.nsgc.org</a></p>
 
     <div class="accept-area">
-      <p style="font-size:13px;color:#a1a1aa;margin-bottom:16px">Ao clicar em "Aceitar", voce confirma que leu e compreendeu os termos acima.<br>By clicking "Accept", you confirm that you have read and understood the terms above.</p>
+      <p style="font-size:13px;color:#a1a1aa;margin-bottom:16px">{{ t.consent_confirm }}</p>
       <form method="post">
-        <button type="submit" class="accept-btn">Aceitar e Continuar / Accept and Continue</button>
+        <button type="submit" class="accept-btn">{{ t.consent_accept_btn }}</button>
       </form>
-      <a href="/" class="back-link">Voltar / Go back</a>
+      <a href="/" class="back-link">{{ t.consent_back }}</a>
     </div>
   </div>
 </div>

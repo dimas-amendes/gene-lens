@@ -39,6 +39,15 @@ h1.page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
 .docs-link:hover { text-decoration: underline; }
 .note { background: rgba(59,130,246,.05); border: 1px solid rgba(59,130,246,.2); border-radius: 10px; padding: 14px 18px; font-size: 13px; color: #cbd5e1; margin-bottom: 24px; }
 .note .ti { color: var(--accent); margin-right: 6px; }
+.ai-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; padding: 12px 14px; background: #0a0a0c; border: 1px solid #27272a; border-radius: 8px; }
+.ai-toggle-text { font-size: 13px; color: #d4d4d8; }
+.ai-toggle-title { font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.ai-toggle-desc { color: #a1a1aa; font-size: 12px; line-height: 1.5; }
+.ai-toggle-warn { color: var(--yellow); font-size: 12px; margin-top: 6px; }
+.ai-toggle-btn { background: var(--accent); color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.ai-toggle-btn.is-on { background: transparent; color: #fafafa; border: 1px solid #3f3f46; }
+.ai-toggle-btn:hover:not(:disabled) { filter: brightness(1.1); }
+.ai-toggle-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -83,11 +92,65 @@ h1.page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
     {% if c.docs_url %}
     <a href="{{ c.docs_url }}" target="_blank" rel="noopener noreferrer" class="docs-link">{{ t.settings_docs }} <i class="ti ti-external-link"></i></a>
     {% endif %}
+
+    {% if c.key == 'argos' and translator_pkg_present and not translator_ready %}
+    <div class="ai-toggle-row">
+      <div class="ai-toggle-text">
+        <div class="ai-toggle-title">{{ t.settings_translator_label }}</div>
+        <div class="ai-toggle-desc">{{ t.settings_translator_desc }}</div>
+        {% if translator_install.running %}
+        <div class="ai-toggle-warn" id="tr-progress">{{ t.settings_translator_installing }}</div>
+        {% elif translator_install.ok is sameas false %}
+        <div class="ai-toggle-warn">{{ t.settings_translator_failed }}: {{ translator_install.message }}</div>
+        {% endif %}
+      </div>
+      {% if translator_install.running %}
+      <button class="ai-toggle-btn" disabled><i class="ti ti-loader-2"></i> {{ t.settings_translator_installing_btn }}</button>
+      {% else %}
+      <form method="POST" action="{{ url_for('settings_install_translator') }}">
+        <button type="submit" class="ai-toggle-btn"><i class="ti ti-download"></i> {{ t.settings_translator_install_btn }}</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if c.key == 'ollama' %}
+    <div class="ai-toggle-row">
+      <div class="ai-toggle-text">
+        <div class="ai-toggle-title">{{ t.settings_ai_chat_label }}
+          <span class="badge {% if ai_chat_enabled %}ok{% else %}missing{% endif %}">
+            {% if ai_chat_enabled %}<i class="ti ti-check"></i> {{ t.settings_ai_chat_on }}{% else %}<i class="ti ti-x"></i> {{ t.settings_ai_chat_off }}{% endif %}
+          </span>
+        </div>
+        <div class="ai-toggle-desc">{{ t.settings_ai_chat_desc }}</div>
+        {% if not c.installed %}<div class="ai-toggle-warn">{{ t.settings_ai_chat_needs_ollama }}</div>{% endif %}
+      </div>
+      <form method="POST" action="{{ url_for('settings_ai_toggle') }}">
+        <button type="submit" class="ai-toggle-btn {% if ai_chat_enabled %}is-on{% endif %}" {% if not c.installed and not ai_chat_enabled %}disabled{% endif %}>
+          {% if ai_chat_enabled %}{{ t.settings_ai_chat_disable }}{% else %}{{ t.settings_ai_chat_enable }}{% endif %}
+        </button>
+      </form>
+    </div>
+    {% endif %}
   </div>
   {% endfor %}
 </div>
 
 <script>
+{% if translator_install.running %}
+// Poll the translator install status while a download is in progress; once
+// it finishes (success or failure), reload so the static template reflects
+// the new state. Reload is cheap and avoids a second copy of the rendering
+// logic in JS.
+(function pollTranslator(){
+  fetch('/api/translator-status').then(r=>r.json()).then(d=>{
+    const el=document.getElementById('tr-progress');
+    if(el && d.elapsed_seconds!=null) el.textContent='{{ t.settings_translator_installing }} ('+Math.round(d.elapsed_seconds)+'s)';
+    if(!d.running){location.reload();return;}
+    setTimeout(pollTranslator,1500);
+  }).catch(()=>setTimeout(pollTranslator,3000));
+})();
+{% endif %}
 function copyCmds(btn) {
   const text = btn.dataset.cmds.replaceAll('&#10;', '\n');
   navigator.clipboard.writeText(text).then(() => {

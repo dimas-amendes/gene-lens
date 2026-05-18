@@ -83,22 +83,48 @@ def check_pharmgkb() -> ComponentStatus:
     )
 
 
+def is_argos_model_installed() -> bool:
+    """True only when both the package AND the en->pt model are usable.
+
+    Settings shows two states: package-only (needs model) and fully ready.
+    Analyses in PT mode should be gated on this returning True.
+    """
+    try:
+        import argostranslate.translate  # type: ignore
+        installed = argostranslate.translate.get_installed_languages()
+        codes = {l.code for l in installed}
+        return "en" in codes and "pt" in codes
+    except Exception:
+        return False
+
+
 def check_argos_translate() -> ComponentStatus:
     spec = importlib.util.find_spec("argostranslate")
-    installed = spec is not None
+    pkg_installed = spec is not None
+    model_installed = pkg_installed and is_argos_model_installed()
     version = ""
-    if installed:
+    if pkg_installed:
         try:
             import argostranslate  # type: ignore
             version = getattr(argostranslate, "__version__", "installed")
         except Exception:
             version = "installed"
+
+    if model_installed:
+        detail = f"version {version} · en->pt model ready"
+    elif pkg_installed:
+        detail = f"version {version} · model NOT installed (PT-BR analyses need it)"
+    else:
+        detail = "not installed in this Python environment"
+
     return ComponentStatus(
         key="argos",
         name="Argos Translate (PT-EN neural translation)",
         required=False,
-        installed=installed,
-        detail=f"version {version}" if installed else "not installed in this Python environment",
+        # Treat "installed" as fully usable, so the green checkmark in the
+        # UI only appears when PT-BR analyses will actually get neural text.
+        installed=model_installed,
+        detail=detail,
         install_commands=["pip install argostranslate"],
         docs_url="https://www.argosopentech.com/",
     )

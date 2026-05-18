@@ -6,6 +6,25 @@ Covers all 14 panels: NUTRI, FIT, SKIN, AGING, SENSORY, SLEEP, LONGEVITY,
 MENTAL, FOOD, THYROID, EYES, BONES, ALLERGY, AUTOIMMUNE.
 """
 
+# Panel display names in English (maps panel key -> name_full EN)
+PANEL_NAMES_EN = {
+    "nutri": "Nutrition and Metabolism",
+    "fit": "Physical Fitness",
+    "skin": "Skin and Dermatology",
+    "aging": "Aging and Longevity",
+    "sensory": "Sensory Perception",
+    "sleep": "Sleep and Chronobiology",
+    "longevity": "Longevity",
+    "mental": "Mental Health and Neurochemistry",
+    "food": "Food Sensitivities",
+    "thyroid": "Thyroid",
+    "eyes": "Eye Health",
+    "bones": "Bone Health",
+    "allergy": "Atopic Predisposition and Allergies",
+    "autoimmune": "Autoimmune Predisposition",
+}
+
+
 WELLNESS_EN = {
     # ═══════════════════════════════════════════════════════════════════════════
     # NUTRI — Nutrition and Metabolism

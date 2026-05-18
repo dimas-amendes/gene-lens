@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-bs-theme="dark">
+<html lang="{{ 'en' if lang == 'en' else 'pt-BR' }}" data-bs-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -44,14 +44,14 @@ body { font-family: var(--bs-body-font-family); background: var(--bs-body-bg); c
     <div class="lh" id="hb">
       <div class="spinner"></div>
       <div class="timer" id="timer">0:00</div>
-      <div class="prog" id="prog">Iniciando...</div>
+      <div class="prog" id="prog">{{ 'Starting...' if lang == 'en' else 'Iniciando...' }}</div>
     </div>
     <ul class="sl">
       <li class="si active" id="s-db"><span class="sd"></span><span class="slab">{{ t.loading_step_db }}</span><span class="st" id="t-db"></span></li>
       <li class="si" id="s-read"><span class="sd"></span><span class="slab">{{ t.loading_step_read }}</span><span class="st" id="t-read"></span></li>
       <li class="si" id="s-analyze"><span class="sd"></span><span class="slab">{{ t.loading_step_analyze }}</span><span class="st" id="t-analyze"></span></li>
+      <li class="si" id="s-wellness"><span class="sd"></span><span class="slab">{{ t.loading_step_wellness }}</span><span class="st" id="t-wellness"></span></li>
       <li class="si" id="s-translate"><span class="sd"></span><span class="slab">{{ t.loading_step_translate }}</span><span class="st" id="t-translate"></span></li>
-      <li class="si" id="s-wellness"><span class="sd"></span><span class="slab">Analisando paineis de bem-estar</span><span class="st" id="t-wellness"></span></li>
       <li class="si" id="s-conclude"><span class="sd"></span><span class="slab">{{ t.loading_step_conclude }}</span><span class="st" id="t-conclude"></span></li>
     </ul>
   </div>
@@ -59,17 +59,44 @@ body { font-family: var(--bs-body-font-family); background: var(--bs-body-bg); c
 <script>
 const jid="{{job_id}}";let sec=0;const te=document.getElementById('timer'),pe=document.getElementById('prog');
 setInterval(()=>{sec++;const m=Math.floor(sec/60),s=sec%60;te.textContent=m+':'+String(s).padStart(2,'0');},1000);
-const sids=['s-db','s-read','s-analyze','s-translate','s-wellness','s-conclude'];
-const tids=['t-db','t-read','t-analyze','t-translate','t-wellness','t-conclude'];
+const sids=['s-db','s-read','s-analyze','s-wellness','s-translate','s-conclude'];
+const tids=['t-db','t-read','t-analyze','t-wellness','t-translate','t-conclude'];
 const sst={0:0};let li=0;
 function fmt(s){return s<60?s+'s':Math.floor(s/60)+'m '+(s%60)+'s';}
-function upd(p){let i=0;if(p.includes('Lendo')||p.includes('DNA'))i=1;if(p.includes('Analisando')&&p.includes('SNPs'))i=2;if(p.includes('Traduzindo'))i=3;if(p.includes('bem-estar')||p.includes('paineis')||p.includes('Estimando'))i=4;if(p.includes('conclus')||p.includes('Gerando'))i=5;
-if(i!==li){if(sst[li]!==undefined)document.getElementById(tids[li]).textContent=fmt(sec-sst[li]);sst[i]=sec;li=i;}
-if(sst[i]!==undefined)document.getElementById(tids[i]).textContent=fmt(sec-sst[i]);
-sids.forEach((id,j)=>{const e=document.getElementById(id);e.classList.remove('active','done');if(j<i)e.classList.add('done');else if(j===i)e.classList.add('active');});}
-function chk(){fetch('/status/'+jid).then(r=>r.json()).then(d=>{pe.textContent=d.progress||'';upd(d.progress||'');
-if(d.status==='done'){if(sst[li]!==undefined)document.getElementById(tids[li]).textContent=fmt(sec-sst[li]);sids.forEach(id=>{const e=document.getElementById(id);e.classList.remove('active');e.classList.add('done');});pe.textContent='Concluido! Redirecionando...';document.getElementById('hb').classList.add('finished');setTimeout(()=>{window.location.href='/done/'+jid;},800);}
-else if(d.status==='error'){pe.textContent='Erro: '+(d.error||'desconhecido');document.querySelector('.spinner').style.display='none';te.style.color='#ef4444';}
+function upd(step){
+  let i=Math.max(li, Math.min(Math.max(step|0,0), sids.length-1));
+  if(i!==li){if(sst[li]!==undefined)document.getElementById(tids[li]).textContent=fmt(sec-sst[li]);sst[i]=sec;li=i;}
+  if(sst[i]!==undefined)document.getElementById(tids[i]).textContent=fmt(sec-sst[i]);
+  sids.forEach((id,j)=>{const e=document.getElementById(id);e.classList.remove('active','done');if(j<i)e.classList.add('done');else if(j===i)e.classList.add('active');});
+}
+// While the job is still on step 0 (Loading databases), poll the DB
+// sub-status endpoint so the user sees "Loading ClinVar (12s)…" instead
+// of a silent spinner. ClinVar is 289 MB and genuinely takes 30-90s on
+// first start, so silence here reads as "the app froze".
+const DB_LABELS={
+  'clinvar':"{{ 'Loading ClinVar (289 MB · first run takes 30-90s)' if lang == 'en' else 'Carregando ClinVar (289 MB · primeira vez leva 30-90s)' }}",
+  'pharmgkb':"{{ 'Loading PharmGKB' if lang == 'en' else 'Carregando PharmGKB' }}",
+  'ready':"{{ 'Databases ready' if lang == 'en' else 'Bancos prontos' }}",
+};
+let dbDone=false;
+function dbsub(){
+  if(li>0||dbDone)return;
+  fetch('/api/db-status').then(r=>r.json()).then(d=>{
+    if(d.loaded){dbDone=true;return;}
+    if(DB_LABELS[d.current]){
+      const elapsed=d.elapsed_seconds?' ('+Math.round(d.elapsed_seconds)+'s)':'';
+      pe.textContent=DB_LABELS[d.current]+elapsed;
+    }
+  }).catch(()=>{});
+}
+setInterval(dbsub,1000);
+function chk(){fetch('/status/'+jid).then(r=>r.json()).then(d=>{
+  // Step 0 = DB loading: let dbsub() own the message so we don't overwrite
+  // the sub-progress with the generic "Carregando bancos de dados…".
+  if(d.step>0||dbDone){pe.textContent=d.progress||pe.textContent;}
+  upd(d.step);
+if(d.status==='done'){if(sst[li]!==undefined)document.getElementById(tids[li]).textContent=fmt(sec-sst[li]);sids.forEach(id=>{const e=document.getElementById(id);e.classList.remove('active');e.classList.add('done');});pe.textContent='{{ t.loading_done }}';document.getElementById('hb').classList.add('finished');setTimeout(()=>{window.location.href='/done/'+jid;},800);}
+else if(d.status==='error'){pe.textContent='{{ t.loading_error }}: '+(d.error||'{{ "unknown" if lang == "en" else "desconhecido" }}');document.querySelector('.spinner').style.display='none';te.style.color='#ef4444';}
 else setTimeout(chk,800);}).catch(()=>setTimeout(chk,2000));}
 chk();
 </script>

@@ -7,6 +7,7 @@ e literatura de genetica de pigmentacao.
 AVISO: Predicoes probabilisticas, nao deterministicas.
 """
 
+from src.i18n import Lang
 # ═══════════════════════════════════════════════════════════════════════════════
 # EYE COLOR PREDICTION
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -227,8 +228,37 @@ HAIR_COLORS = {
 }
 
 
-def analyze_phenotype(genome_by_rsid: dict) -> dict:
+def _en_desc(rsid: str, genotype: str, fallback: str) -> str:
+    """Lookup English description for a given rsid+genotype, fallback to PT."""
+    from src.phenotype_i18n import PHENOTYPE_EN
+    entry = PHENOTYPE_EN.get(rsid)
+    if not entry:
+        return fallback
+    variants = entry.get("variants", {})
+    if genotype in variants:
+        return variants[genotype]
+    if len(genotype) == 2 and genotype[::-1] in variants:
+        return variants[genotype[::-1]]
+    return fallback
+
+
+def _en_trait(rsid: str, fallback: str) -> str:
+    """Lookup English trait label for a given rsid, fallback to PT."""
+    from src.phenotype_i18n import PHENOTYPE_EN
+    entry = PHENOTYPE_EN.get(rsid)
+    if entry and entry.get("trait_en"):
+        return entry["trait_en"]
+    return fallback
+
+
+def analyze_phenotype(genome_by_rsid: dict, lang: Lang = "en") -> dict:
     """Predict physical traits from SNPs.
+
+    Args:
+        genome_by_rsid: parsed genome keyed by rsid.
+        lang: "en" (default) or "pt". When "en", user-facing strings
+              (desc, trait, summary labels) are emitted in English using
+              src.phenotype_i18n as the source of truth.
 
     Returns {
         "eye_color": {"predictions": {blue: %, green: %, brown: %}, "details": [...]},
@@ -239,6 +269,10 @@ def analyze_phenotype(genome_by_rsid: dict) -> dict:
         "markers_total": int,
     }
     """
+    is_en = (lang or "en").lower().startswith("en")
+    if is_en:
+        from src.phenotype_i18n import BALDNESS_EN, FRECKLING_EN, TEXTURE_EN
+
     # Eye color
     eye_probs = {"blue": 0.10, "green": 0.15, "brown": 0.75}  # population priors
     eye_details = []
@@ -253,9 +287,11 @@ def analyze_phenotype(genome_by_rsid: dict) -> dict:
             continue
         for color in ("blue", "green", "brown"):
             eye_probs[color] += variant.get(color, 0)
+        desc = _en_desc(rsid, genotype, variant["desc"]) if is_en else variant["desc"]
+        trait = _en_trait(rsid, info["trait"]) if is_en else info["trait"]
         eye_details.append({
             "rsid": rsid, "gene": info["gene"], "genotype": genotype,
-            "trait": info["trait"], "impact": info["impact"], "desc": variant["desc"],
+            "trait": trait, "impact": info["impact"], "desc": desc,
         })
 
     # Normalize eye probs
@@ -277,9 +313,11 @@ def analyze_phenotype(genome_by_rsid: dict) -> dict:
             continue
         for color in ("black", "brown", "blond", "red"):
             hair_probs[color] += variant.get(color, 0)
+        desc = _en_desc(rsid, genotype, variant["desc"]) if is_en else variant["desc"]
+        trait = _en_trait(rsid, info["trait"]) if is_en else info["trait"]
         hair_details.append({
             "rsid": rsid, "gene": info["gene"], "genotype": genotype,
-            "trait": info["trait"], "desc": variant["desc"],
+            "trait": trait, "desc": desc,
         })
 
     hair_probs = {k: max(0, v) for k, v in hair_probs.items()}
@@ -287,7 +325,7 @@ def analyze_phenotype(genome_by_rsid: dict) -> dict:
     hair_probs = {k: round(100 * v / total, 1) for k, v in hair_probs.items()}
 
     # Hair texture
-    texture_desc = "Informacao nao disponivel"
+    texture_desc = TEXTURE_EN["not_available"] if is_en else "Informacao nao disponivel"
     texture_details = []
     for rsid, info in TEXTURE_SNPS.items():
         if rsid not in genome_by_rsid:
@@ -297,9 +335,10 @@ def analyze_phenotype(genome_by_rsid: dict) -> dict:
         if not variant and len(genotype) == 2:
             variant = info["variants"].get(genotype[::-1])
         if variant:
-            texture_desc = variant["desc"]
+            desc = _en_desc(rsid, genotype, variant["desc"]) if is_en else variant["desc"]
+            texture_desc = desc
             texture_details.append({
-                "rsid": rsid, "gene": info["gene"], "genotype": genotype, "desc": variant["desc"],
+                "rsid": rsid, "gene": info["gene"], "genotype": genotype, "desc": desc,
             })
 
     # Freckling
@@ -314,16 +353,17 @@ def analyze_phenotype(genome_by_rsid: dict) -> dict:
             variant = info["variants"].get(genotype[::-1])
         if variant:
             freckle_score += variant.get("freckles", 0)
+            desc = _en_desc(rsid, genotype, variant["desc"]) if is_en else variant["desc"]
             freckle_details.append({
-                "rsid": rsid, "gene": info["gene"], "genotype": genotype, "desc": variant["desc"],
+                "rsid": rsid, "gene": info["gene"], "genotype": genotype, "desc": desc,
             })
 
     if freckle_score >= 0.3:
-        freckle_tendency = "Alta tendencia a sardas"
+        freckle_tendency = FRECKLING_EN["high"] if is_en else "Alta tendencia a sardas"
     elif freckle_score >= 0.15:
-        freckle_tendency = "Moderada tendencia a sardas"
+        freckle_tendency = FRECKLING_EN["moderate"] if is_en else "Moderada tendencia a sardas"
     else:
-        freckle_tendency = "Baixa tendencia a sardas"
+        freckle_tendency = FRECKLING_EN["low"] if is_en else "Baixa tendencia a sardas"
 
     # Baldness risk
     baldness_score = 0
@@ -337,29 +377,31 @@ def analyze_phenotype(genome_by_rsid: dict) -> dict:
             variant = info["variants"].get(genotype[::-1])
         if variant:
             baldness_score += variant.get("risk", 0)
+            desc = _en_desc(rsid, genotype, variant["desc"]) if is_en else variant["desc"]
+            trait = _en_trait(rsid, info["trait"]) if is_en else info["trait"]
             baldness_details.append({
                 "rsid": rsid, "gene": info["gene"], "genotype": genotype,
-                "trait": info["trait"], "impact": info["impact"], "desc": variant["desc"],
+                "trait": trait, "impact": info["impact"], "desc": desc,
             })
 
     if baldness_score >= 0.60:
-        baldness_risk = "Alto risco de calvicie androgenica"
+        baldness_risk = BALDNESS_EN["high"] if is_en else "Alto risco de calvicie androgenica"
         baldness_pct = min(95, round(30 + baldness_score * 80))
     elif baldness_score >= 0.30:
-        baldness_risk = "Risco moderado de calvicie androgenica"
+        baldness_risk = BALDNESS_EN["moderate"] if is_en else "Risco moderado de calvicie androgenica"
         baldness_pct = round(20 + baldness_score * 60)
     elif baldness_score > 0:
-        baldness_risk = "Risco leve de calvicie androgenica"
+        baldness_risk = BALDNESS_EN["mild"] if is_en else "Risco leve de calvicie androgenica"
         baldness_pct = round(10 + baldness_score * 40)
     else:
-        baldness_risk = "Risco baixo de calvicie androgenica (nos loci analisados)"
+        baldness_risk = BALDNESS_EN["low"] if is_en else "Risco baixo de calvicie androgenica (nos loci analisados)"
         baldness_pct = 15  # baseline population risk
 
     # Note about X-linked AR gene
     ar_note = ""
     ar_found = any(d["rsid"] == "rs6152" for d in baldness_details)
     if ar_found:
-        ar_note = "O gene AR (receptor de androgeno) esta no cromossomo X — voce herdou essa variante da sua MAE. Por isso, olhar para o avo materno e mais informativo que o pai."
+        ar_note = BALDNESS_EN["ar_note"] if is_en else "O gene AR (receptor de androgeno) esta no cromossomo X — voce herdou essa variante da sua MAE. Por isso, olhar para o avo materno e mais informativo que o pai."
 
     markers_found = len(eye_details) + len(hair_details) + len(texture_details) + len(freckle_details) + len(baldness_details)
     markers_total = len(EYE_SNPS) + len(HAIR_SNPS) + len(TEXTURE_SNPS) + len(FRECKLE_SNPS) + len(BALDNESS_SNPS)

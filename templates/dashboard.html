@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-bs-theme="dark">
+<html lang="{{ 'en' if lang == 'en' else 'pt-BR' }}" data-bs-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -124,6 +124,11 @@ a { color: var(--accent); }
 .flash-ok .gc-b { color: var(--green) !important; }
 .flash-info { border-color: rgba(59,130,246,.3) !important; }
 .flash-info .gc-b { color: var(--accent) !important; }
+.flash-stack { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.flash-toast { transform: translateX(0); transition: transform .15s ease-out; touch-action: pan-y; cursor: grab; user-select: none; }
+.flash-toast.flash-dragging { transition: none; cursor: grabbing; }
+.flash-toast.flash-out { animation: flash-fade .25s ease-out forwards; }
+@keyframes flash-fade { to { opacity: 0; transform: translateX(120%); height: 0; margin: 0; padding: 0; border-width: 0; } }
 .hint { font-size: 12px; color: #71717a; margin-bottom: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; }
 .hint svg { flex-shrink: 0; }
 .gt { display: flex; gap: 2px; border-bottom: 1px solid #27272a; margin-bottom: 20px; overflow-x: auto; overflow-y: hidden; flex-wrap: nowrap; scrollbar-width: thin; scrollbar-color: #3f3f46 transparent; -ms-overflow-style: none; }
@@ -230,10 +235,38 @@ a { color: var(--accent); }
 .hcw-empty { border-color: rgba(234,179,8,.25); background: rgba(234,179,8,.04); margin-top: 12px; }
 .hcw-empty-title { font-size: 13px; color: var(--yellow); margin: 0 0 6px; display: flex; align-items: center; gap: 6px; font-weight: 600; }
 .hcw-empty-body { font-size: 12px; line-height: 1.6; color: #a1a1aa; margin: 0; }
+
+/* Composite Risk Index cards */
+.prs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.prs-card { background: #0a0a0c; border: 1px solid #27272a; border-radius: 10px; padding: 14px; }
+.prs-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; }
+.prs-head h4 { margin: 0; font-size: 13px; font-weight: 600; color: #fafafa; }
+.prs-band-badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
+.prs-band-elevated-badge { color: #ef4444; background: rgba(239,68,68,.12); }
+.prs-band-average-badge { color: #eab308; background: rgba(234,179,8,.12); }
+.prs-band-below_average-badge { color: #22c55e; background: rgba(34,197,94,.12); }
+.prs-band-insufficient-badge { color: #71717a; background: rgba(113,113,122,.15); }
+.prs-score { display: flex; align-items: baseline; gap: 4px; margin: 8px 0 8px; font-family: 'Geist Mono', monospace; }
+.prs-score-n { font-size: 28px; font-weight: 700; color: #fafafa; }
+.prs-score-d { font-size: 16px; color: #71717a; margin-right: 8px; }
+.prs-score-l { font-size: 11px; color: #a1a1aa; margin-left: auto; text-align: right; line-height: 1.3; }
+.prs-bar { height: 6px; background: #27272a; border-radius: 3px; overflow: hidden; }
+.prs-bar-fill { height: 100%; background: linear-gradient(90deg, #22c55e 0%, #eab308 50%, #ef4444 100%); }
+.prs-band-elevated { border-color: rgba(239,68,68,.35); }
+.prs-insufficient { font-size: 12px; color: #a1a1aa; margin: 6px 0 4px; }
+.prs-detail { margin-top: 12px; }
+.prs-detail > summary { cursor: pointer; font-size: 11px; color: #71717a; text-transform: uppercase; letter-spacing: 0.4px; }
+.prs-detail > summary:hover { color: var(--accent); }
+.prs-tb { margin-top: 8px; font-size: 11px; }
+.prs-missing-row { opacity: 0.45; }
+
 .mb-actions { display: inline-flex; gap: 8px; align-items: center; }
 .btn-export { background: var(--accent); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; }
 .btn-export:hover { filter: brightness(1.1); }
 .btn-clear { color: #71717a; background: #18181b; border: 1px solid #3f3f46; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; }
+.sample-form { margin-top: 10px; }
+.link-sample { background: transparent; color: #71717a; border: none; padding: 4px 8px; font-size: 12px; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; text-decoration: underline; text-underline-offset: 3px; text-decoration-style: dotted; text-decoration-color: #3f3f46; }
+.link-sample:hover { color: var(--accent); text-decoration-color: var(--accent); }
 .print-only { display: none; }
 
 /* Print stylesheet: user already views in a browser, so "Save as PDF" from
@@ -276,7 +309,61 @@ a { color: var(--accent); }
 
 <div class="container" style="padding-top:24px;padding-bottom:40px">
 
-{% with messages = get_flashed_messages() %}{% if messages %}{% for msg in messages %}<div class="gc {% if 'aceito' in msg|lower or 'accepted' in msg|lower or 'limpo' in msg|lower or 'removid' in msg|lower %}flash-ok{% else %}flash-info{% endif %}" style="margin-bottom:12px"><div class="gc-b" style="padding:12px 20px;font-size:13px">{{ msg }}</div></div>{% endfor %}{% endif %}{% endwith %}
+{% with messages = get_flashed_messages() %}{% if messages %}<div class="flash-stack">{% for msg in messages %}<div class="gc flash-toast {% if 'aceito' in msg|lower or 'accepted' in msg|lower or 'limpo' in msg|lower or 'removid' in msg|lower %}flash-ok{% else %}flash-info{% endif %}"><div class="gc-b" style="padding:12px 20px;font-size:13px">{{ msg }}</div></div>{% endfor %}</div>
+<script>
+(function(){
+  document.querySelectorAll('.flash-toast').forEach(function(el, i) {
+    // Auto-dismiss after 8s. Stagger a hair so simultaneous flashes don't
+    // all collapse on the same frame.
+    var timer = setTimeout(function(){ el.classList.add('flash-out'); }, 8000 + i * 150);
+    el.addEventListener('animationend', function(e){
+      if (e.animationName === 'flash-fade') el.remove();
+    });
+
+    // Swipe-to-dismiss. Threshold: 1/3 of the toast's width OR fling velocity > 0.6 px/ms.
+    var startX = 0, startT = 0, currentX = 0, dragging = false, width = 0;
+    function onDown(e){
+      dragging = true;
+      width = el.getBoundingClientRect().width;
+      startX = (e.touches ? e.touches[0].clientX : e.clientX);
+      startT = performance.now();
+      el.classList.add('flash-dragging');
+      clearTimeout(timer);
+    }
+    function onMove(e){
+      if (!dragging) return;
+      var x = (e.touches ? e.touches[0].clientX : e.clientX);
+      currentX = x - startX;
+      el.style.transform = 'translateX(' + currentX + 'px)';
+      el.style.opacity = String(Math.max(0.2, 1 - Math.abs(currentX) / width));
+    }
+    function onUp(){
+      if (!dragging) return;
+      dragging = false;
+      el.classList.remove('flash-dragging');
+      var dt = performance.now() - startT;
+      var velocity = currentX / dt;  // px per ms
+      var threshold = width / 3;
+      if (Math.abs(currentX) > threshold || Math.abs(velocity) > 0.6) {
+        el.classList.add('flash-out');
+      } else {
+        // Snap back.
+        el.style.transform = '';
+        el.style.opacity = '';
+        // Re-arm the auto-dismiss for another 8s after a partial swipe.
+        timer = setTimeout(function(){ el.classList.add('flash-out'); }, 8000);
+      }
+      currentX = 0;
+    }
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointercancel', onUp);
+    el.addEventListener('pointerleave', function(e){ if (dragging) onUp(e); });
+  });
+})();
+</script>
+{% endif %}{% endwith %}
 
 {% if not results %}
 <div class="uz" id="uploadZone">
@@ -300,7 +387,10 @@ a { color: var(--accent); }
     <div class="hint"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> {{ t.profile_optional }}</div>
     <button type="submit" class="btn btn-primary" id="submitBtn" style="background:var(--accent);border:none;padding:14px 40px;font-weight:600;border-radius:10px;font-size:15px;cursor:pointer;transition:background .2s;display:inline-flex;align-items:center;gap:8px"><i class="ti ti-bolt"></i> {{ t.upload_btn }}</button>
   </form>
-  <p style="color:#52525b;margin-top:20px;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-lock"></i> {{ t.upload_note }}</p>
+  <form action="/analyze-sample" method="post" class="sample-form">
+    <button type="submit" class="link-sample" title="{{ t.try_sample_hint }}"><i class="ti ti-flask-2"></i> {{ t.try_sample_btn }}</button>
+  </form>
+  <p style="color:#52525b;margin-top:12px;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-lock"></i> {{ t.upload_note }}</p>
 </div>
 {% if history %}
 <div class="gc" style="max-width:700px;margin:20px auto 0">
@@ -495,6 +585,52 @@ a { color: var(--accent); }
       <p class="hcw-empty-title"><i class="ti ti-info-circle"></i> {{ t.hcw_empty_title }}</p>
       <p class="hcw-empty-body">{{ t.hcw_empty_body }}</p>
     </div>
+  </div>
+  {% endif %}
+
+  <!-- Composite Risk Index (transparent risk-allele tally, NOT a calibrated PRS) -->
+  {% if prs and prs.panels %}
+  <div class="gc acc">
+    <details>
+      <summary><i class="ti ti-chart-radar"></i> {{ t.prs_title }} <span class="tm" style="font-size:11px;margin-left:8px">{{ t.prs_subtitle }}</span></summary>
+      <div class="acc-body">
+        <div class="tn" style="margin-bottom:14px"><strong>{{ t.warning_label }}:</strong> {{ t.prs_disclaimer }}</div>
+        <div class="prs-grid">
+          {% for p in prs.panels %}
+          <div class="prs-card prs-band-{{ p.band }}">
+            <div class="prs-head">
+              <h4>{{ p.name_pt if lang == 'pt' else p.name_en }}</h4>
+              <span class="prs-band-badge prs-band-{{ p.band }}-badge">{{ t['prs_band_' ~ p.band] }}</span>
+            </div>
+            {% if p.band == 'insufficient' %}
+            <p class="prs-insufficient">{{ t.prs_insufficient_text }} ({{ p.snps_used }}/{{ p.snps_total }})</p>
+            {% else %}
+            <div class="prs-score">
+              <span class="prs-score-n">{{ p.score }}</span>
+              <span class="prs-score-d">/ {{ p.max_score }}</span>
+              <span class="prs-score-l">{{ t.prs_risk_alleles }} ({{ p.snps_used }}/{{ p.snps_total }} SNPs)</span>
+            </div>
+            <div class="prs-bar"><div class="prs-bar-fill" style="width: {{ (p.ratio * 100)|round|int }}%"></div></div>
+            {% endif %}
+            <details class="prs-detail">
+              <summary>{{ t.prs_show_snps }}</summary>
+              <table class="tb prs-tb"><thead><tr><th>{{ t.col_gene }}</th><th>rsID</th><th>{{ t.col_genotype }}</th><th>{{ t.prs_risk_allele }}</th><th>{{ t.prs_copies }}</th></tr></thead><tbody>
+              {% for d in p.details %}
+              <tr class="{% if not d.present %}prs-missing-row{% endif %}">
+                <td class="fw6">{{ d.gene }}</td>
+                <td><code>{{ d.rsid }}</code></td>
+                <td>{% if d.genotype %}<code>{{ d.genotype }}</code>{% else %}<span class="tm">—</span>{% endif %}</td>
+                <td><code>{{ d.risk_allele }}</code></td>
+                <td>{% if d.present %}{{ d.copies }}/2{% else %}<span class="tm">—</span>{% endif %}</td>
+              </tr>
+              {% endfor %}
+              </tbody></table>
+            </details>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </details>
   </div>
   {% endif %}
 

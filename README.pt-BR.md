@@ -64,6 +64,26 @@ Se você tem um histórico familiar parecido, ou só é curioso, essa ferramenta
 
 ---
 
+## Screenshots
+
+![Tela de upload com campos de perfil e formatos suportados](assets/screenshots/01-landing.png)
+
+*Envie seu arquivo de DNA. Todos os campos de perfil são opcionais — o sexo pode ser inferido do cromossomo Y se preferir não especificar.*
+
+![Visão geral do dashboard com KPIs e gráficos da análise](assets/screenshots/02-dashboard.png)
+
+*Após a análise: faixa de KPIs no topo e seis abas cobrindo Saúde & Riscos, Medicamentos, Bem-estar, Saúde Avançada e Herança. Os gráficos usam paleta single-hue para que o formato dos dados carregue o sinal, não as cores.*
+
+![Chat de IA local respondendo pergunta sobre metabolismo de medicamentos](assets/screenshots/03-ai-chat.png)
+
+*IA local (Ollama) discutindo o metabolismo de medicamentos do usuário. Respostas são ancoradas na análise, nunca prescritivas, e sempre apontam de volta pro médico. O rodapé mostra modelo, tempo de resposta e contagem de tokens — prova de que nada sai da máquina.*
+
+![Relatório print-friendly com botão Save as PDF](assets/screenshots/04-report.png)
+
+*A view `/report`: layout otimizado para impressão com `⌘P → Save as PDF`, pra entregar um documento limpo para seu médico.*
+
+---
+
 ## Início Rápido
 
 ### Pré-requisitos

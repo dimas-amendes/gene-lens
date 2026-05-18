@@ -64,6 +64,26 @@ If you have a similar family history, or you're just curious, this tool exists f
 
 ---
 
+## Screenshots
+
+![Upload screen with profile fields and supported formats](assets/screenshots/01-landing.png)
+
+*Upload your DNA file. Profile fields are all optional — sex can be inferred from the Y chromosome if you'd rather not specify.*
+
+![Dashboard overview with KPI strip and analysis charts](assets/screenshots/02-dashboard.png)
+
+*After analysis: top-of-page KPI strip plus six tabs covering Health & Risks, Medications, Wellness, Advanced Health, and Heritage. Charts use a single-hue palette so the data shape carries the signal, not the colors.*
+
+![Local AI chat answering a pharmacogenomics question about medications](assets/screenshots/03-ai-chat.png)
+
+*Local AI (Ollama) discussing the user's medication metabolism. Replies are grounded in the analysis, never prescriptive, and always point back to the doctor. Footer shows the model, wall-clock time, and token count — proof that nothing leaves the machine.*
+
+![Print-friendly report with Save as PDF button](assets/screenshots/04-report.png)
+
+*The `/report` view: print-first layout with `⌘P → Save as PDF` so you can hand a tidy document to your physician.*
+
+---
+
 ## Quick Start
 
 ### Prerequisites

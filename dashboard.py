@@ -17,7 +17,7 @@ from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response, make_response
 from werkzeug.utils import secure_filename
 
 from config import DATA_DIR, INPUT_DIR, OUTPUT_DIR
@@ -797,6 +797,7 @@ _HC = {
         "female_menopause": "**Pos-menopausa:** O painel de saude ossea e especialmente relevante. A perda de estrogeno acelera a perda ossea em mulheres com variantes de risco.",
         "male_profile": "**Perfil masculino:** O painel de calvicie androgenica e particularmente relevante. Condicoes X-linked (G6PD, daltonismo) afetam homens com maior frequencia e severidade.",
         "male_hfe": "**Ferro (HFE):** Homens acumulam ferro mais cedo que mulheres (sem perda menstrual). Monitorar ferritina e mais urgente.",
+        "sex_inferred_note": "**Sexo inferido cromossomicamente** (você não informou no formulário). Para evitar conselhos sexo-específicos incorretos, as notas personalizadas por sexo foram omitidas. Se quiser ativá-las, reenvie o arquivo selecionando seu sexo no campo do formulário — esse valor sobrescreve a inferência por contagem de SNPs do cromossomo Y.",
         "age_eye": "**Idade {age}:** Exames oftalmologicos anuais sao recomendados, especialmente se ha variantes de risco para DMRI ou glaucoma.",
         "age_screening": "**Rastreamento:** A partir dos 50 anos, colonoscopia e densitometria ossea devem ser discutidas com seu medico, especialmente com variantes de risco.",
         "bmi_obese": "**IMC {bmi} (obesidade):** Variantes de risco para diabetes (TCF7L2) e cardiovascular (AGT, AGTR1) tem impacto amplificado. Controle de peso e a intervencao mais eficaz.",
@@ -838,6 +839,7 @@ _HC = {
         "female_menopause": "**Post-menopause:** The bone health panel is especially relevant. Estrogen loss accelerates bone loss in women with risk variants.",
         "male_profile": "**Male profile:** The androgenetic alopecia panel is particularly relevant. X-linked conditions (G6PD, color blindness) affect men with greater frequency and severity.",
         "male_hfe": "**Iron (HFE):** Men accumulate iron earlier than women (no menstrual loss). Monitoring ferritin is more urgent.",
+        "sex_inferred_note": "**Sex inferred chromosomally** (you didn't supply it in the form). To avoid showing incorrect sex-specific advice, the personalized sex-based notes have been omitted. To enable them, re-upload the file and pick your sex in the profile field — that value overrides the Y-chromosome SNP count guess.",
         "age_eye": "**Age {age}:** Annual eye exams are recommended, especially if you have risk variants for AMD or glaucoma.",
         "age_screening": "**Screening:** From age 50, colonoscopy and bone density scans should be discussed with your physician, especially with risk variants.",
         "bmi_obese": "**BMI {bmi} (obese):** Risk variants for diabetes (TCF7L2) and cardiovascular (AGT, AGTR1) have amplified impact. Weight management is the most effective intervention.",
@@ -882,13 +884,20 @@ def _build_profile_notes(profile: dict, health: dict, disease: dict, lang: Lang 
     t = _HC.get(lang, _HC["en"])
 
     sex = profile.get("sex")
+    sex_inferred = profile.get("sex_inferred")
     age = profile.get("age")
     bmi = profile.get("bmi")
 
     fd = {f["gene"]: f for f in health.get("findings", [])}
 
-    # Sex-specific notes
-    if sex == "F":
+    # Sex-specific notes — ONLY when sex was user-confirmed. Showing
+    # menopause/HFE-female/autoimmune-female advice to a male user whose
+    # sex was miscalled by the chromosomal heuristic is worse than showing
+    # nothing — it becomes inappropriate clinical guidance. So when sex is
+    # inferred, we surface a single explanatory note and skip the rest.
+    if sex_inferred:
+        notes.append(t["sex_inferred_note"])
+    elif sex == "F":
         notes.append(t["female_autoimmune"])
         if age and 18 <= age <= 45:
             notes.append(t["female_fertile"])
@@ -1379,13 +1388,162 @@ def report():
     )
 
 
+# Language-switch translation state. The first switch from EN→PT (or any
+# switch where cached findings need re-translating) kicks Argos's neural
+# model, which takes 20-60s on CPU. We run it on a worker thread and the
+# interstitial page polls `/api/translate-status` so the user sees progress
+# instead of a frozen browser tab.
+_translation_state = {
+    "running": False,
+    "done": False,
+    "current": 0,
+    "total": 0,
+    "started_at": None,
+    "error": None,
+}
+_translation_lock = threading.Lock()
+
+
+def _translation_needed(active: dict, target_lang: str) -> bool:
+    """Return True iff switching to `target_lang` requires running Argos."""
+    if not active:
+        return False
+    cached = active.get("_lang_cached")
+    if cached == target_lang:
+        return False
+    # EN→PT requires real translation; PT→EN just restores from cache, fast.
+    if target_lang != "pt":
+        return False
+    findings = (active.get("health") or {}).get("findings") or []
+    return any(f.get("description") for f in findings)
+
+
+def _translate_active_with_progress(active: dict, target_lang: str):
+    """Translate an active analysis to `target_lang`, reporting per-finding
+    progress on `_translation_state`. Designed to run inside a daemon thread."""
+    global _current_lang
+    _current_lang = target_lang
+    try:
+        findings = (active.get("health") or {}).get("findings") or []
+        with _translation_lock:
+            _translation_state.update({
+                "running": True, "done": False, "error": None,
+                "current": 0, "total": len(findings),
+                "started_at": time.time(),
+            })
+
+        # Inlined version of `_retranslate_active_if_needed` that increments
+        # the progress counter as each finding is translated. We intentionally
+        # duplicate a small amount of logic here because hooking a progress
+        # callback into the shared function would entangle two callers.
+        if target_lang == "pt":
+            from src.translator import get_translator
+            tr = get_translator()
+            cache: dict[str, str] = {}
+            for i, f in enumerate(findings, start=1):
+                if not f.get("description_original"):
+                    f["description_original"] = f.get("description", "")
+                src = f["description_original"]
+                if src:
+                    if src not in cache:
+                        cache[src] = tr.translate(src)
+                    f["description"] = cache[src]
+                with _translation_lock:
+                    _translation_state["current"] = i
+        # Re-run lang-dependent analyses (wellness, family, hereditary, ancestry)
+        gbr = active.get("genome_by_rsid")
+        if gbr:
+            try:
+                active["wellness"] = analyze_all_panels(gbr, lang=target_lang)
+            except Exception:
+                pass
+            try:
+                fam = analyze_family_planning(active.get("disease"), active.get("health", {}), lang=target_lang)
+                fam["phenotype"] = analyze_phenotype(gbr, lang=target_lang)
+                active["family"] = fam
+            except Exception:
+                pass
+            try:
+                active["hereditary"] = analyze_hereditary_conditions(
+                    active.get("disease"),
+                    active.get("genome_info", {}).get("profile", {}),
+                    lang=target_lang,
+                )
+            except Exception:
+                pass
+            try:
+                active["ancestry"] = analyze_ancestry(gbr, lang=target_lang)
+            except Exception:
+                pass
+        active["_lang_cached"] = target_lang
+    except Exception as e:
+        _log(f"Translation worker failed: {e}\n{traceback.format_exc()}")
+        with _translation_lock:
+            _translation_state["error"] = str(e)
+    finally:
+        with _translation_lock:
+            _translation_state["running"] = False
+            _translation_state["done"] = True
+
+
 @app.route("/lang/<code>")
 def set_lang(code):
+    """Switch UI language. If switching EN→PT triggers a re-translation of
+    cached findings, render an interstitial loading page that polls until
+    the worker is done; otherwise redirect immediately to `next` (or `/`)."""
     global _current_lang
-    _current_lang = normalize_lang(code)
-    resp = redirect(url_for("index"))
-    resp.set_cookie("lang", _current_lang, max_age=365*24*3600, httponly=True, samesite="Strict")
+    target = normalize_lang(code)
+    raw_next = request.args.get("next") or ""
+    # Only honor relative paths to avoid open-redirect; reject anything that
+    # looks like a scheme or external host.
+    next_url = raw_next if raw_next.startswith("/") and not raw_next.startswith("//") else url_for("index")
+
+    active = _jobs.get("active_result")
+    if _translation_needed(active, target):
+        # Cookie set on the SAME response that returns the interstitial so
+        # the polled status / next-page render both see the new language.
+        with _translation_lock:
+            already_running = _translation_state["running"]
+        if not already_running:
+            threading.Thread(
+                target=_translate_active_with_progress,
+                args=(active, target),
+                daemon=True,
+                name="lang-translate",
+            ).start()
+        t = get_strings(target)
+        resp = make_response(render_template(
+            "loading_translate.html",
+            t=t, lang=target, next_url=next_url,
+        ))
+        resp.set_cookie("lang", target, max_age=365*24*3600, httponly=True, samesite="Strict")
+        return resp
+
+    # Fast path: PT→EN (cached EN already on `description_original`) or
+    # no active analysis. Set lang and bounce immediately.
+    _current_lang = target
+    if active and active.get("_lang_cached") != target:
+        # Restore EN strings from cache, cheap.
+        _retranslate_active_if_needed(active)
+    resp = redirect(next_url)
+    resp.set_cookie("lang", target, max_age=365*24*3600, httponly=True, samesite="Strict")
     return resp
+
+
+@app.route("/api/translate-status")
+def translate_status():
+    """Polled by loading_translate.html every ~500ms while Argos runs."""
+    with _translation_lock:
+        s = dict(_translation_state)
+    elapsed = round(time.time() - s["started_at"], 1) if s["started_at"] else None
+    return jsonify({
+        "running": s["running"],
+        "done": s["done"],
+        "current": s["current"],
+        "total": s["total"],
+        "elapsed_seconds": elapsed,
+        "error": s["error"],
+    })
 
 
 @app.route("/consent", methods=["GET", "POST"])
@@ -1625,7 +1783,16 @@ def _build_chat_context(active: dict, lang: Lang) -> str:
             bits = []
             for key in ("sex", "age", "weight", "height"):
                 if profile.get(key):
-                    bits.append(f"{key}={profile[key]}")
+                    val = profile[key]
+                    # Critical: when sex is INFERRED from chromosome Y SNP
+                    # counts (user didn't supply it), the model must not
+                    # talk about it as a confirmed fact. Y-coverage on
+                    # consumer chips varies and the heuristic can miscall
+                    # — the user reporting "I'm male but it said F" is the
+                    # exact case this annotation prevents.
+                    if key == "sex" and profile.get("sex_inferred"):
+                        val = f"{val} (INFERRED from chromosomal Y SNP count — NOT user-confirmed; can be wrong on chips with poor Y coverage, in XXY/X0/XY-female/SRY-translocation cases, or with mosaicism. Do NOT state this as fact. If sex matters for the answer, ASK the user to confirm — and tell them they can re-upload the file with their sex explicitly set in the profile form to override the chromosomal guess.)"
+                    bits.append(f"{key}={val}")
             if bits:
                 lines.append("Profile: " + ", ".join(bits))
 
@@ -1685,6 +1852,29 @@ def _build_chat_context(active: dict, lang: Lang) -> str:
     if family.get("phenotype"):
         lines.append("")
         lines.append("Phenotype: " + ", ".join(f"{k}={v}" for k, v in family["phenotype"].items() if v))
+
+    # ── Specialty referral guidance for THIS analysis ──────────────────
+    # The system prompt already has the full referral map for general
+    # awareness; here we inject the SUS/insurance-specific notes for the
+    # findings the user actually has, so the model can be concrete about
+    # *where* to look — "ambulatório de oncogenética do INCA" instead of
+    # the vague "cancer geneticist". Capped at 10 entries (see
+    # find_relevant_for_analysis docstring for the attention-budget
+    # rationale).
+    from src.medical_specialties import find_relevant_for_analysis
+    referrals = find_relevant_for_analysis(active, max_results=10)
+    if referrals:
+        lines.append("")
+        lines.append(
+            f"Referral context relevant to THIS user's findings "
+            f"({len(referrals)} matched — use these specialty + pathway "
+            f"details when the question touches one of these areas):"
+        )
+        for r in referrals:
+            lines.append(
+                f"- {r['trigger'][lang]} → {r['specialty'][lang]}. "
+                f"{r['notes'][lang]}"
+            )
 
     return "\n".join(lines) if lines else "Analysis loaded but no notable findings."
 

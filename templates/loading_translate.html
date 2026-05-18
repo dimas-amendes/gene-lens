@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="{{ 'en' if lang == 'en' else 'pt-BR' }}" data-bs-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ t.translate_loading_title }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/halfmoon.min.css') }}">
+<style>
+@font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-400.woff2') }}") format('woff2'); font-weight:400; font-display:swap; }
+@font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-500.woff2') }}") format('woff2'); font-weight:500; font-display:swap; }
+@font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-600.woff2') }}") format('woff2'); font-weight:600; font-display:swap; }
+@font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-700.woff2') }}") format('woff2'); font-weight:700; font-display:swap; }
+@font-face { font-family:'Geist Mono'; src:url("{{ url_for('static', filename='fonts/geist-mono-400.woff2') }}") format('woff2'); font-weight:400; font-display:swap; }
+body { font-family: 'Geist', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; }
+
+/* Reusing the look/feel of loading.html (analysis run): same spinner, same
+   card chrome. We're a different phase but the user is doing the same
+   thing — waiting for a one-shot local computation to finish — so the
+   visual treatment should match. */
+.wrap { max-width: 520px; margin: 80px auto; padding: 0 20px; }
+.card { background: var(--surface-3); border: 1px solid var(--border-default); border-radius: 16px; padding: 48px 36px; text-align: center; }
+.spinner { width: 56px; height: 56px; border: 3px solid rgba(255,255,255,.06); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.title { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.subtitle { font-size: 13px; color: var(--text-muted); line-height: 1.6; max-width: 380px; margin: 0 auto 28px; }
+.timer { font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); letter-spacing: 1px; margin-top: 12px; }
+.progress-wrap { margin-top: 24px; }
+.progress-label { font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--text-faint); margin-bottom: 8px; display: flex; justify-content: space-between; }
+.progress-bar { height: 6px; background: var(--border-default); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width .3s ease-out; width: 0; }
+.note { margin-top: 24px; font-size: 11px; color: var(--text-faint); line-height: 1.7; }
+.finished .spinner { display: none; }
+.finished .timer { color: var(--green); }
+.finished .progress-fill { background: var(--green); }
+.error-banner { display: none; margin-top: 16px; padding: 10px 14px; background: var(--red-soft); border: 1px solid rgba(239,68,68,.3); border-radius: 8px; color: var(--red); font-size: 13px; }
+.error-banner.show { display: block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="card">
+    <div class="spinner"></div>
+    <div class="title" id="title">{{ t.translate_loading_title }}</div>
+    <div class="subtitle">{{ t.translate_loading_subtitle }}</div>
+
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="prog-current">{{ t.translate_loading_starting }}</span>
+        <span id="prog-elapsed">0s</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="prog-fill"></div>
+      </div>
+    </div>
+
+    <div class="timer" id="timer" style="display:none">0:00</div>
+
+    <div class="error-banner" id="err"></div>
+
+    <div class="note">{{ t.translate_loading_note }}</div>
+  </div>
+</div>
+
+<script>
+// next_url is server-rendered; this page lives long enough that the cookie
+// is already set before we navigate.
+const NEXT = "{{ next_url|safe }}";
+const T_DONE = "{{ t.translate_loading_done }}";
+const T_OF = "{{ t.translate_loading_of }}";
+const startMs = Date.now();
+const card = document.getElementById('card');
+const fill = document.getElementById('prog-fill');
+const progCurrent = document.getElementById('prog-current');
+const progElapsed = document.getElementById('prog-elapsed');
+const errEl = document.getElementById('err');
+
+function fmtSec(s) { return s < 60 ? s.toFixed(0) + 's' : Math.floor(s/60) + 'm ' + (s%60).toFixed(0) + 's'; }
+
+function poll() {
+  fetch('/api/translate-status').then(r => r.json()).then(d => {
+    const elapsed = (Date.now() - startMs) / 1000;
+    progElapsed.textContent = fmtSec(elapsed);
+
+    if (d.error) {
+      errEl.textContent = d.error;
+      errEl.classList.add('show');
+      // Still navigate — the lang cookie is set, user can retry from there.
+      setTimeout(() => { window.location = NEXT; }, 1500);
+      return;
+    }
+
+    // The /lang/ handler kicks the thread BEFORE rendering this page, but
+    // there's a tiny race window where the first poll could land before the
+    // worker has set total>0. Treat "running=false && done=false" early on
+    // as "warming up", not "finished".
+    if (d.total > 0) {
+      const pct = Math.min(100, (d.current / d.total) * 100);
+      fill.style.width = pct + '%';
+      progCurrent.textContent = d.current + ' ' + T_OF + ' ' + d.total;
+    }
+
+    if (d.done) {
+      fill.style.width = '100%';
+      progCurrent.textContent = T_DONE;
+      card.classList.add('finished');
+      setTimeout(() => { window.location = NEXT; }, 350);
+      return;
+    }
+    setTimeout(poll, 500);
+  }).catch(() => setTimeout(poll, 1200));
+}
+poll();
+</script>
+</body>
+</html>

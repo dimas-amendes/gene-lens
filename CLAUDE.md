@@ -31,25 +31,45 @@
 
 ## Architecture Rules
 
-- **Privacy first**: NetworkBlocker must wrap ALL analysis code. Translation runs inside the blocker.
+- **Privacy first**: `NetworkBlocker` must wrap ALL analysis code. Translation runs inside the blocker.
+- **NetworkBlocker is THREAD-LOCAL** (since the gray-screen-loading bug): the monkey-patch of `socket.socket` / `getaddrinfo` is installed globally but only RAISES on threads inside `with NetworkBlocker():`. Other threads (Flask serving static assets, Argos translator install) keep networking normally. Do NOT call `NetworkBlocker` from a Flask request handler — only from background analysis threads. Nesting is supported via a per-thread depth counter; inner `__exit__` does not unblock the outer scope. Regression locked by `tests/test_privacy.py::TestNetworkBlockerThreadIsolation`.
+- **AI chat hits local Ollama via HTTP loopback only**: `chat_about_analysis` posts to `http://127.0.0.1:11434/api/chat` (NOT `ollama run` subprocess). The CLI rendering was soft-wrapping mid-word and truncating PT replies. HTTP gives us deterministic `num_predict` / `num_ctx`. Privacy posture identical (same daemon, pure loopback). Locked by `test_request_targets_local_ollama_loopback`. Streaming (`chat_about_analysis_stream`) still uses subprocess; migrate only if it surfaces in the UI path.
 - **No prescriptive language**: Use "associated with", "may indicate", "discuss with your physician" — never "you have", "you should take", "recommended dose".
-- **Sex-aware routing**: Hereditary conditions use `text_F`, `text_M`, `text_neutral` variants. Profile is optional — sex can be inferred from Y chromosome.
+- **Sex-aware routing is CHROMOSOMAL, not clinical**: `infer_sex()` counts chromosome Y SNPs and emits `M` / `F` / `None`. Known miscalls: Klinefelter (XXY), Turner (X0), complete androgen insensitivity (XY female), XX male (SRY translocation), mosaicism. Downstream code MUST honor `profile.get("sex")` over the inferred value when both exist (this is already wired in `analyze_hereditary_conditions`). Hereditary conditions use `text_F`, `text_M`, `text_neutral` variants — when no sex is known, fall back to `text_neutral`, never guess. If a condition has `text_M=None` (e.g. polyposis, mostly studied in women), the matcher must fall back to neutral text, not crash on `None`.
+- **Hereditary condition matrix integrity**: every entry in `HEREDITARY_CONDITIONS` must have **both** PT and EN variants for `name`, `text_neutral`, `evidence`, `confirm`. Sex-specific text fields (`text_F` / `text_M`) are optional but, if PT is set, EN must be set too (and vice-versa). Locked by parametrized test in `tests/test_hereditary_conditions.py`.
 - **Secure deletion**: Always use `secure_delete()` for genetic data files, never `unlink()`.
 - **CSRF protection**: All POST routes are protected via Origin/Referer check in `_csrf_check()`.
 
+## Console & log language
+
+- `python main.py web` boots in EN by default. `--lang pt` (or `pt-BR`) switches startup banner, DB loader messages, and the initial dashboard language until the user's cookie overrides.
+- DB loader messages go through `src.databases.set_lang(code)` + `_t(key)`. Both `_MSGS["en"]` and `_MSGS["pt"]` must carry the same key set — paridade enforced by `test_every_pt_key_exists_in_en_and_vice_versa`.
+- The startup banner title is `"Dashboard Gene Lens"` in both languages.
+
 ## File Organization
 
-- `dashboard.py` — Flask app, routes, conclusions builders, human conclusions (bilingual via `_HC` and `_TC` dicts)
+- `dashboard.py` — Flask app, routes, conclusions builders, human conclusions (bilingual via `_HC` and `_TC` dicts). `run_dashboard(port, lang)` is the public entrypoint called from `main.py`.
 - `src/wellness_panels.py` — 14 panels with PT text, EN translations in `src/wellness_i18n.py`
 - `src/phenotype_i18n.py` — EN translations for phenotype + ancestry
-- `src/hereditary_conditions.py` — Sex-aware condition matrix (15 conditions)
+- `src/hereditary_conditions.py` — Sex-aware condition matrix (15 conditions). `analyze_hereditary_conditions(disease_findings, profile, lang)` is the only consumer; matrix entries follow strict bilingual schema.
+- `src/sex_inference.py` — `infer_sex(genome_by_rsid, threshold=50)` → `M` / `F` / `None`. Chromosomal heuristic only; honor `profile.sex` over it.
+- `src/local_ai.py` — `chat_about_analysis` (blocking, HTTP), `chat_about_analysis_stream` (streaming, subprocess), `_build_chat_messages` (single source of truth for the Ollama `messages` array).
+- `src/privacy.py` — `NetworkBlocker` (thread-local), `secure_delete`, `sanitize_report_metadata`.
+- `src/databases.py` — `load_clinvar`, `load_pharmgkb`, `set_lang` for console messages.
 - `src/reports.py` — Protocol builders with `_PROTOCOL_PT` / `_PROTOCOL_EN` dicts
 
 ## Testing
 
-- Always test with `sample/sample_genome.csv` (synthetic, 200+ SNPs)
-- Verify both languages work after any text change
-- Run `python main.py privacy-check` after touching privacy code
+- **Run the suite**: `.venv/bin/python -m pytest tests/` (~2s, 176 tests at last count). System `python` is missing Flask — always use the venv.
+- **Manual smoke**: `sample/sample_genome.csv` (synthetic, 200+ SNPs) through the dashboard. Verify both languages render after any text change.
+- **Privacy guarantee**: `python main.py privacy-check` after touching `src/privacy.py` or anything that runs inside `NetworkBlocker`.
+- **Don't hit the network in tests.** AI chat tests mock `urllib.request.urlopen`; streaming tests mock `subprocess.Popen`; DB loader tests write synthetic TSVs to `tmp_path`. A test that times out for 80+ seconds is almost certainly trying to reach a real Ollama daemon — fix the mock.
+- **When to add a test (the bar):**
+  - Sex-aware routing change in `hereditary_conditions.py` → extend `tests/test_hereditary_conditions.py`.
+  - New condition added to the matrix → the parametrized integrity test catches missing bilingual fields automatically.
+  - New i18n key in `databases._MSGS` → paridade test catches half-translations automatically.
+  - Fix for a user-reported bug → write the regression test FIRST, watch it fail, then fix.
+  - New public function in `src/local_ai.py`, `src/privacy.py`, `src/hereditary_conditions.py`, `src/sex_inference.py`, `src/databases.py` → must ship with tests in the matching `tests/test_*.py`.
 
 ## Data classification (anti-leakage)
 

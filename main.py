@@ -249,6 +249,10 @@ Examples:
     # web
     p_web = subparsers.add_parser("web", help="Start local dashboard")
     p_web.add_argument("--port", type=int, default=5000, help="Port (default: 5000)")
+    p_web.add_argument(
+        "--lang", type=str, default="en", choices=["en", "pt", "pt-BR"],
+        help="Console/log language (default: en). UI language is per-user via cookie.",
+    )
 
     # formats
     p_formats = subparsers.add_parser("formats", help="Show supported DNA formats")
@@ -261,7 +265,7 @@ Examples:
         cmd_download(args)
     elif args.command == "web":
         from dashboard import run_dashboard
-        run_dashboard(port=args.port)
+        run_dashboard(port=args.port, lang=args.lang)
     elif args.command == "privacy-check":
         cmd_privacy_check(args)
     elif args.command == "formats":

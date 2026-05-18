@@ -15,6 +15,41 @@ from config import (
 )
 
 
+# Startup log language. Default EN; the dashboard sets this via set_lang()
+# when the user launches with `--lang pt`.
+_lang = "en"
+
+_MSGS = {
+    "en": {
+        "clinvar_missing": "[SKIP] ClinVar not found at {path}",
+        "clinvar_loading": "Loading ClinVar from {name}...",
+        "clinvar_loaded": "{count:,} ClinVar entries loaded -> {snps:,} SNP positions indexed",
+        "pharmgkb_missing": "[SKIP] PharmGKB files not found",
+        "pharmgkb_loading": "Loading PharmGKB annotations...",
+        "pharmgkb_loaded": "{count:,} drug-gene interactions loaded",
+    },
+    "pt": {
+        "clinvar_missing": "[PULAR] ClinVar não encontrado em {path}",
+        "clinvar_loading": "Carregando ClinVar de {name}...",
+        "clinvar_loaded": "{count:,} entradas ClinVar carregadas -> {snps:,} posições SNP indexadas",
+        "pharmgkb_missing": "[PULAR] Arquivos PharmGKB não encontrados",
+        "pharmgkb_loading": "Carregando anotações PharmGKB...",
+        "pharmgkb_loaded": "{count:,} interações droga-gene carregadas",
+    },
+}
+
+
+def set_lang(code: str):
+    """Set the language for startup/DB log messages. Accepts 'en' or 'pt'."""
+    global _lang
+    _lang = "pt" if (code or "").lower().startswith("pt") else "en"
+
+
+def _t(key: str, **kwargs) -> str:
+    template = _MSGS.get(_lang, _MSGS["en"]).get(key, key)
+    return template.format(**kwargs)
+
+
 def _safe_int(val: str) -> int:
     """Parse int from string, returning 0 for any non-numeric value."""
     try:
@@ -31,10 +66,10 @@ def load_clinvar(path: Path = None) -> dict:
     """
     path = path or CLINVAR_TSV
     if not path.exists():
-        print(f"  [PULAR] ClinVar nao encontrado em {path}")
+        print(f"  {_t('clinvar_missing', path=path)}")
         return {}
 
-    print(f"  Carregando ClinVar de {path.name}...")
+    print(f"  {_t('clinvar_loading', name=path.name)}")
     index = defaultdict(list)
     count = 0
 
@@ -77,7 +112,7 @@ def load_clinvar(path: Path = None) -> dict:
             })
 
     snp_positions = len(index)
-    print(f"  {count:,} entradas ClinVar carregadas -> {snp_positions:,} posicoes SNP indexadas")
+    print(f"  {_t('clinvar_loaded', count=count, snps=snp_positions)}")
     return dict(index)
 
 
@@ -93,10 +128,10 @@ def load_pharmgkb(
     alleles_path = alleles_path or PHARMGKB_ALLELES
 
     if not annotations_path.exists() or not alleles_path.exists():
-        print("  [PULAR] Arquivos PharmGKB nao encontrados")
+        print(f"  {_t('pharmgkb_missing')}")
         return {}
 
-    print(f"  Carregando anotacoes PharmGKB...")
+    print(f"  {_t('pharmgkb_loading')}")
 
     # Step 1: Load annotation metadata
     annotation_meta = {}
@@ -139,5 +174,5 @@ def load_pharmgkb(
                 }
             pharmgkb[rsid]["genotypes"][genotype] = row.get("Annotation Text", "")
 
-    print(f"  {len(pharmgkb):,} interacoes droga-gene carregadas")
+    print(f"  {_t('pharmgkb_loaded', count=len(pharmgkb))}")
     return pharmgkb

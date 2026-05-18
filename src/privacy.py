@@ -129,7 +129,7 @@ def sanitize_report_metadata() -> dict:
     return {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "tool": "Gene Lens (local)",
-        "version": "2.0.0",
+        "version": "1.0.0",
     }
 
 

@@ -17,6 +17,18 @@
 
 **Fallback direction.** If a PT translation is missing, fall back to EN. Never the inverse. If `translate_medical` (Argos neural EN→PT) is unavailable, show the EN source — graceful degradation.
 
+**Decision rule — where does a new string live?** Before reflexively adding `field` + `field_en` to a data dict, pick the right channel:
+
+| Kind of text | Channel | Why |
+|---|---|---|
+| UI label, button, error, table header, status phrase | `STRINGS` in `src/i18n.py`, referenced via `t["key"]` in templates | Single source of truth, no duplication across templates |
+| Clinically sensitive long-form text (hereditary condition narrative, family-planning guidance, prescriptive-language-adjacent copy) | **Hardcoded EN + PT pair** in the domain dict (`text_F`/`text_F_en`, `condition_pt`/`condition_en`) | Neural translation can shift medical meaning ("mastectomy profilática" → "preventive mastectomy" is fine; subtler clinical idioms aren't) |
+| Short trait/category labels ("Eye color", "Skin pigmentation") | Either `STRINGS` or hardcoded pair — caller's call | Low risk either way; prefer `STRINGS` if reused in multiple places |
+| Dynamic clinical annotations from external corpora (ClinVar significance text, PharmGKB drug notes, gene descriptions ingested in bulk) | **Argos neural EN→PT at runtime** via `src/translator.py` | Corpus too large to hardcode; manual translation doesn't scale |
+| AI system prompts | `SYSTEM_PROMPT_EN` + `SYSTEM_PROMPT_PT` pair in `src/local_ai.py` | Prompt engineering is fragile; an Argos retranslation could break instruction following |
+
+**Default for new code**: if the text is shorter than a sentence, lives in a `STRINGS`-able UI surface, or could be reused → `src/i18n.py`. If it's domain data with safety implications → hardcoded EN+PT. If it's coming from an external feed → Argos. Only invent a new `_en`/`_pt` pair on a dict when none of the above fit.
+
 **Definition of done.** A PR adding a new string is not done until both languages render correctly. CI doesn't enforce this — code review does. If you see a hardcoded literal in a PR diff, block it.
 
 ## Efficiency Rules

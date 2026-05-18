@@ -153,39 +153,54 @@ Obrigado pelo interesse em contribuir! Este projeto aceita melhorias da comunida
 
 ## Politica de Idioma
 
-**Todas as Issues, Pull Requests, mensagens de commit e revisoes de codigo devem ser em ingles.** Isso garante que a comunidade global possa participar. Comentarios no codigo podem ser em ingles ou portugues.
+**Todas as Issues, Pull Requests, mensagens de commit e revisões de código devem ser em inglês.** Isso garante que a comunidade global possa participar. Comentários no código podem ser em inglês ou português.
 
 ---
 
-## Criterios de Rejeicao Imediata
+## Critérios de Rejeição Imediata
 
-Os seguintes itens serao rejeitados sem revisao:
+Os seguintes itens serão rejeitados sem revisão:
 
-- **Dados geneticos reais** em qualquer arquivo, commit ou comentario
-- **Chamadas de rede durante analise** — o NetworkBlocker e uma garantia central
-- **Linguagem diagnostica** — "voce tem", "voce esta em risco", "dose recomendada", "voce deve tomar"
-- **Modulos de Polygenic Risk Score (PRS)** — complexos, dependentes de etnia, enganosos com chips de consumo
-- **Alteracoes no codigo de privacidade** (`src/privacy.py`) sem discussao previa em Issue
+- **Dados genéticos reais** em qualquer arquivo, commit ou comentário
+- **Chamadas de rede durante análise** — o NetworkBlocker é uma garantia central
+- **Linguagem diagnóstica** — "você tem", "você está em risco", "dose recomendada", "você deve tomar"
+- **Módulos de Polygenic Risk Score (PRS)** — complexos, dependentes de etnia, enganosos com chips de consumo
+- **Alterações no código de privacidade** (`src/privacy.py`, `src/consent.py`, `src/chat_store.py`, `download_databases.py`) sem discussão prévia em Issue
 
 ## O que Aceitamos
 
-- Correcoes de bugs com casos de teste reproduziveis
-- Novos paineis de SNPs bem validados (com citacoes e qualidade de evidencia)
-- Melhorias de traducao (PT-BR / EN)
+- Correções de bugs com casos de teste reproduzíveis
+- Novos painéis de SNPs bem validados (com citações e qualidade de evidência)
+- Melhorias de tradução (PT-BR / EN)
 - Melhorias de UI/UX no dashboard
-- Melhorias de documentacao
+- Melhorias de documentação
 
 ## Como Contribuir
 
 1. **Abra uma Issue primeiro** para discutir a abordagem
-2. **Siga a arquitetura existente** (veja exemplos nos paineis de wellness)
+2. **Siga a arquitetura existente** (veja exemplos nos painéis de wellness)
 3. **Teste localmente** com `sample/sample_genome.csv`
 4. **Submeta um Pull Request** preenchendo o template completo
-5. **Aguarde o CI passar** antes de solicitar revisao
+5. **Aguarde o CI passar** antes de solicitar revisão
+
+### Para mudanças sensíveis à privacidade
+
+Se você está editando `src/privacy.py`, `src/consent.py`, `src/chat_store.py` ou `download_databases.py`:
+
+- Abra uma Issue primeiro pra discutir a mudança
+- Atualize ou estenda o teste relevante (`tests/test_privacy.py`, `tests/test_chat_store.py`)
+- Releia [SECURITY.md](SECURITY.md) e confirme que o modelo de ameaça continua válido
+- Rode `python main.py privacy-check` depois da mudança
+
+### Para o chat com IA (`src/local_ai.py`)
+
+- Mantenha os system prompts (PT + EN) não-prescritivos — eles são a única coisa entre o modelo e uma resposta que soe como diagnóstico
+- O construtor de prompt é compartilhado entre as variantes bloqueante e streaming via `_build_chat_prompt` — não duplique a lógica
+- Adicione um teste em `tests/test_local_ai_chat.py` para qualquer nova classe de erro ou formato de saída
 
 ### Mantendo sua branch em sincronia (prefira rebase)
 
-Quando a `main` avancar enquanto seu PR estiver aberto, **rebase** sua branch em cima da `main` em vez de mergear a `main` nela. Isso mantem o historico do PR linear e o diff focado no que voce efetivamente alterou:
+Quando a `main` avançar enquanto seu PR estiver aberto, **rebase** sua branch em cima da `main` em vez de mergear a `main` nela. Isso mantém o histórico do PR linear e o diff focado no que você efetivamente alterou:
 
 ```bash
 git fetch origin
@@ -193,23 +208,23 @@ git rebase origin/main
 git push --force-with-lease
 ```
 
-Evite `git merge main` em uma branch de feature — cria merge commits que poluem o diff do PR com mudancas da `main` que voce nao fez.
+Evite `git merge main` em uma branch de feature — cria merge commits que poluem o diff do PR com mudanças da `main` que você não fez.
 
-Se voce esta colaborando com outra pessoa na mesma branch, combine antes de rebasear e sempre use `--force-with-lease` (nunca `--force`).
+Se você está colaborando com outra pessoa na mesma branch, combine antes de rebasear e sempre use `--force-with-lease` (nunca `--force`).
 
-PRs sao mergeados via squash na `main`, entao commits individuais da sua branch nao vao parar no historico da `main` — pode commitar quantas vezes quiser enquanto trabalha.
+PRs são mergeados via squash na `main`, então commits individuais da sua branch não vão parar no histórico da `main` — pode commitar quantas vezes quiser enquanto trabalha.
 
 ## Diretrizes de Linguagem
 
-Este projeto usa **linguagem exploratoria**, nao clinica/diagnostica:
+Este projeto usa **linguagem exploratória**, não clínica/diagnóstica:
 
-| NAO use | Use em vez disso |
+| NÃO use | Use em vez disso |
 |---|---|
-| "Voce tem condicao X" | "Variante associada a condicao X detectada" |
-| "Voce esta em risco de" | "Pode indicar predisposicao a" |
-| "Dose recomendada: 500mg" | "Literatura referencia doses de 400-800mg (discutir com medico)" |
-| "Risco de doenca" | "Exploracao de variantes de doenca" |
-| "Interpretacao clinica" | "Anotacao baseada em referencia" |
+| "Você tem condição X" | "Variante associada a condição X detectada" |
+| "Você está em risco de" | "Pode indicar predisposição a" |
+| "Dose recomendada: 500mg" | "Literatura referencia doses de 400-800mg (discutir com médico)" |
+| "Risco de doença" | "Exploração de variantes de doença" |
+| "Interpretação clínica" | "Anotação baseada em referência" |
 
 ## Licenca
 

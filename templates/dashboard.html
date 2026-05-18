@@ -39,7 +39,7 @@ a { color: var(--accent); }
 /* ── AI chat drawer ────────────────────────────────────────────────────── */
 .ai-fab { position: fixed; bottom: 24px; right: 24px; z-index: 40; background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%); color: #fff; border: none; border-radius: 999px; padding: 13px 22px 13px 18px; font-size: 14px; font-weight: 600; font-family: 'Geist', sans-serif; box-shadow: 0 10px 30px -8px rgba(59,130,246,.5), 0 4px 12px -2px rgba(0,0,0,.4); cursor: pointer; display: inline-flex; align-items: center; gap: 9px; transition: transform .18s ease-out, box-shadow .2s; backdrop-filter: blur(8px); }
 .ai-fab .ai-fab-icon { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,.18); font-size: 15px; }
-.ai-fab .ai-fab-dot { position: absolute; bottom: -1px; right: -1px; width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #6ee7b7 0%, #10b981 55%, #047857 100%); box-shadow: 0 0 0 2px #2c44d4, 0 0 6px rgba(16,185,129,.55); }
+.ai-fab .ai-fab-dot { position: absolute; top: -1px; right: -1px; width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #6ee7b7 0%, #10b981 55%, #047857 100%); box-shadow: 0 0 0 2px #2c44d4, 0 0 6px rgba(16,185,129,.55); }
 .ai-fab .ai-fab-dot::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; background: rgba(16,185,129,.45); animation: ai-fab-pulse 2.2s ease-out infinite; z-index: -1; }
 .ai-fab:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 16px 40px -10px rgba(59,130,246,.65), 0 6px 16px -2px rgba(0,0,0,.5); }
 .ai-fab:active { transform: translateY(0) scale(.99); }

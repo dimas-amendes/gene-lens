@@ -11,6 +11,7 @@ Requirements:
 """
 import json
 import re
+import socket
 import subprocess
 import sys
 from pathlib import Path
@@ -326,47 +327,85 @@ def chat_about_analysis(
     """Ask a question about a previously generated analysis.
 
     Returns (ok, text). On failure, text holds a user-facing error message.
+
+    Talks to the local Ollama daemon over loopback (127.0.0.1:11434) instead
+    of spawning `ollama run`. The CLI is a thin client to the same daemon —
+    going direct avoids its terminal rendering (soft-wrap mid-word, ANSI
+    spinners) that smuggled word fragments like "CYP2C1\\nCYP2C19" into the
+    chat bubble, and lets us pin num_ctx / num_predict explicitly so replies
+    aren't truncated mid-thought.
     """
-    if not is_ollama_available():
-        return False, (
-            "Ollama is not available on this machine. Install it from "
-            "https://ollama.com and pull a model (e.g. `ollama pull llama3.1:8b`)."
-        )
+    import urllib.request
+    import urllib.error
 
-    prompt = _build_chat_prompt(context, history, question, language)
-
+    messages = _build_chat_messages(context, history, question, language)
+    body = json.dumps({
+        "model": model,
+        "messages": messages,
+        "stream": False,
+        "options": {
+            "num_ctx": 8192,
+            "num_predict": 2048,
+            "temperature": 0.3,
+        },
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        "http://127.0.0.1:11434/api/chat",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
     try:
-        # NOTE: text=False (binary) on purpose. With text=True, Python's
-        # universal-newlines turns Ollama's spinner CRs into LFs, which
-        # smuggles "CYP2C1\nCYP2C19" word-fragments into the rendered
-        # bubble. Decoding manually lets _strip_ansi see the bare \r and
-        # discard the rewritten partials cleanly.
-        result = subprocess.run(
-            ["ollama", "run", model],
-            input=prompt.encode("utf-8"),
-            capture_output=True,
-            text=False,
-            timeout=timeout,
-            env=_clean_env(),
-        )
-    except subprocess.TimeoutExpired:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        detail = ""
+        try:
+            detail = e.read().decode("utf-8", errors="replace")
+        except Exception:
+            pass
+        return False, _friendly_ollama_error(detail or str(e), model)
+    except urllib.error.URLError as e:
+        reason = str(e.reason) if hasattr(e, "reason") else str(e)
+        return False, _friendly_ollama_error(f"could not connect: {reason}", model)
+    except (TimeoutError, socket.timeout):
         return False, "Ollama took too long to respond. Try a smaller model (e.g. gemma2:2b)."
-    except FileNotFoundError:
-        return False, "Ollama binary not found. Install it from https://ollama.com."
 
-    def _to_text(b):
-        if not b:
-            return ""
-        return b.decode("utf-8", errors="replace") if isinstance(b, (bytes, bytearray)) else b
-    stdout = _to_text(result.stdout)
-    stderr = _to_text(result.stderr)
-    if result.returncode != 0:
-        return False, _friendly_ollama_error(stderr, model)
-
-    answer = _strip_ansi(stdout).strip()
+    answer = ((payload.get("message") or {}).get("content") or "").strip()
     if not answer:
         return False, "The model produced an empty response. Try rephrasing your question."
     return True, answer
+
+
+def _build_chat_messages(context: str, history: list, question: str, language: str) -> list[dict]:
+    """Build the messages array for Ollama's /api/chat endpoint."""
+    system_prompt = SYSTEM_PROMPT_PT if language == "pt" else SYSTEM_PROMPT_EN
+
+    MAX_CONTEXT_CHARS = 20000
+    ctx = (context or "").strip()
+    if len(ctx) > MAX_CONTEXT_CHARS:
+        ctx = ctx[:MAX_CONTEXT_CHARS] + (
+            f"\n\n[... analysis truncated: {len(ctx) - MAX_CONTEXT_CHARS} "
+            "characters omitted to fit the model's context window. "
+            "Ask about specific findings to get more detail.]"
+        )
+
+    messages = [{
+        "role": "system",
+        "content": (
+            system_prompt
+            + "\n\n---- USER'S ANALYSIS (read-only context) ----\n"
+            + ctx
+            + "\n---- END OF ANALYSIS ----"
+        ),
+    }]
+    for turn in history[-8:]:
+        role = "user" if turn.get("role") == "user" else "assistant"
+        content = (turn.get("content") or "").strip()
+        if content:
+            messages.append({"role": role, "content": content})
+    messages.append({"role": "user", "content": question.strip()})
+    return messages
 
 
 def chat_about_analysis_stream(

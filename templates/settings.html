@@ -93,27 +93,6 @@ h1.page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
     <a href="{{ c.docs_url }}" target="_blank" rel="noopener noreferrer" class="docs-link">{{ t.settings_docs }} <i class="ti ti-external-link"></i></a>
     {% endif %}
 
-    {% if c.key == 'argos' and translator_pkg_present and not translator_ready %}
-    <div class="ai-toggle-row">
-      <div class="ai-toggle-text">
-        <div class="ai-toggle-title">{{ t.settings_translator_label }}</div>
-        <div class="ai-toggle-desc">{{ t.settings_translator_desc }}</div>
-        {% if translator_install.running %}
-        <div class="ai-toggle-warn" id="tr-progress">{{ t.settings_translator_installing }}</div>
-        {% elif translator_install.ok is sameas false %}
-        <div class="ai-toggle-warn">{{ t.settings_translator_failed }}: {{ translator_install.message }}</div>
-        {% endif %}
-      </div>
-      {% if translator_install.running %}
-      <button class="ai-toggle-btn" disabled><i class="ti ti-loader-2"></i> {{ t.settings_translator_installing_btn }}</button>
-      {% else %}
-      <form method="POST" action="{{ url_for('settings_install_translator') }}">
-        <button type="submit" class="ai-toggle-btn"><i class="ti ti-download"></i> {{ t.settings_translator_install_btn }}</button>
-      </form>
-      {% endif %}
-    </div>
-    {% endif %}
-
     {% if c.key == 'ollama' %}
     <div class="ai-toggle-row">
       <div class="ai-toggle-text">
@@ -137,20 +116,6 @@ h1.page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
 </div>
 
 <script>
-{% if translator_install.running %}
-// Poll the translator install status while a download is in progress; once
-// it finishes (success or failure), reload so the static template reflects
-// the new state. Reload is cheap and avoids a second copy of the rendering
-// logic in JS.
-(function pollTranslator(){
-  fetch('/api/translator-status').then(r=>r.json()).then(d=>{
-    const el=document.getElementById('tr-progress');
-    if(el && d.elapsed_seconds!=null) el.textContent='{{ t.settings_translator_installing }} ('+Math.round(d.elapsed_seconds)+'s)';
-    if(!d.running){location.reload();return;}
-    setTimeout(pollTranslator,1500);
-  }).catch(()=>setTimeout(pollTranslator,3000));
-})();
-{% endif %}
 function copyCmds(btn) {
   const text = btn.dataset.cmds.replaceAll('&#10;', '\n');
   navigator.clipboard.writeText(text).then(() => {

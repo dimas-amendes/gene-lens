@@ -144,6 +144,104 @@ def cmd_download(args):
     download_databases.main()
 
 
+def cmd_install_translator_model(args):
+    """Download the Argos en->pt neural translation model (~100 MB).
+
+    Used by PT-BR analyses to translate clinical annotations from English
+    into Portuguese without sending anything over the network at analysis
+    time. The download itself is a one-time network hit from Argos's CDN.
+    """
+    print()
+    print("=" * 60)
+    print("  Installing Argos en->pt neural model (~100 MB)")
+    print("  This is a one-time download.")
+    print("=" * 60)
+    # Quick sanity check: argostranslate must be importable by THIS Python.
+    # The most common gotcha is the user installed the package into the venv
+    # then ran this command outside the venv. Catch that explicitly.
+    import importlib.util
+    if importlib.util.find_spec("argostranslate") is None:
+        print()
+        print(f"  ✗ argostranslate is not installed in this Python interpreter")
+        print(f"    ({sys.executable})")
+        venv_py = Path(__file__).parent / ".venv" / "bin" / "python"
+        if venv_py.exists():
+            try:
+                import subprocess
+                check = subprocess.run(
+                    [str(venv_py), "-c", "import argostranslate"],
+                    capture_output=True, timeout=5,
+                )
+                if check.returncode == 0:
+                    print()
+                    print("  The project's .venv DOES have it. Activate the venv or run:")
+                    print(f"    {venv_py} main.py install-translator-model")
+                    sys.exit(1)
+            except (subprocess.TimeoutExpired, OSError):
+                pass
+        print()
+        print("  Install it first:")
+        print("    pip install argostranslate")
+        sys.exit(1)
+
+    from src.translator import install_en_pt_model
+    import argostranslate.settings as _argos_settings
+    import threading, time as _time
+
+    downloads_dir = Path(_argos_settings.downloads_dir)
+    downloads_dir.mkdir(parents=True, exist_ok=True)
+    pre_existing = {p: p.stat().st_size for p in downloads_dir.glob("*") if p.is_file()}
+
+    result: dict = {}
+
+    def _run():
+        result["return"] = install_en_pt_model()
+
+    worker = threading.Thread(target=_run, daemon=True)
+    worker.start()
+
+    # Poll the downloads dir for any new (or growing) file. Argos streams
+    # the .argosmodel into here before installing; size growth is our only
+    # signal because the IPackage API has no progress callback.
+    started = _time.monotonic()
+    spinner = "|/-\\"
+    last_size = 0
+    while worker.is_alive():
+        elapsed = _time.monotonic() - started
+        active = None
+        for p in downloads_dir.glob("*"):
+            if not p.is_file():
+                continue
+            sz = p.stat().st_size
+            if pre_existing.get(p) == sz:  # untouched file
+                continue
+            if active is None or sz > active[1]:
+                active = (p, sz)
+        if active:
+            mb = active[1] / (1024 * 1024)
+            last_size = active[1]
+            print(f"\r  {spinner[int(elapsed * 4) % 4]}  Downloading {active[0].name}: {mb:.1f} MB  ({elapsed:.1f}s)",
+                  end="", flush=True)
+        else:
+            print(f"\r  {spinner[int(elapsed * 4) % 4]}  Preparing download...  ({elapsed:.1f}s)",
+                  end="", flush=True)
+        _time.sleep(0.25)
+    worker.join()
+    # Clear the progress line so the result message lands on a clean row.
+    print("\r" + " " * 78 + "\r", end="")
+
+    ok, msg = result.get("return", (False, "install thread exited without result"))
+    print()
+    if ok:
+        final_mb = f" ({last_size / (1024 * 1024):.1f} MB)" if last_size else ""
+        print(f"  ✓ {msg}{final_mb}")
+        print("  PT-BR analyses will now use neural translation.")
+    else:
+        print(f"  ✗ {msg}")
+        print("  PT-BR analyses will fall back to English source text.")
+        sys.exit(1)
+
+
 def cmd_privacy_check(args):
     """Verify privacy setup."""
     from src.privacy import NetworkBlocker
@@ -254,6 +352,12 @@ Examples:
         help="Console/log language (default: en). UI language is per-user via cookie.",
     )
 
+    # install-translator-model (downloads the Argos en->pt neural model)
+    p_tr = subparsers.add_parser(
+        "install-translator-model",
+        help="Download the Argos en->pt neural model (~100 MB, required for PT-BR analyses)",
+    )
+
     # formats
     p_formats = subparsers.add_parser("formats", help="Show supported DNA formats")
 
@@ -268,6 +372,8 @@ Examples:
         run_dashboard(port=args.port, lang=args.lang)
     elif args.command == "privacy-check":
         cmd_privacy_check(args)
+    elif args.command == "install-translator-model":
+        cmd_install_translator_model(args)
     elif args.command == "formats":
         cmd_formats(args)
     else:

@@ -112,10 +112,19 @@ def check_argos_translate() -> ComponentStatus:
 
     if model_installed:
         detail = f"version {version} · en->pt model ready"
+        cmds: list[str] = []
     elif pkg_installed:
+        # Package is there but the ~100MB en->pt model isn't. Show only the
+        # one command that's still missing — copying `pip install` again
+        # would just be noise.
         detail = f"version {version} · model NOT installed (PT-BR analyses need it)"
+        cmds = ["python main.py install-translator-model"]
     else:
         detail = "not installed in this Python environment"
+        cmds = [
+            "pip install argostranslate",
+            "python main.py install-translator-model   # downloads the en->pt model (~100 MB)",
+        ]
 
     return ComponentStatus(
         key="argos",
@@ -125,7 +134,7 @@ def check_argos_translate() -> ComponentStatus:
         # UI only appears when PT-BR analyses will actually get neural text.
         installed=model_installed,
         detail=detail,
-        install_commands=["pip install argostranslate"],
+        install_commands=cmds,
         docs_url="https://www.argosopentech.com/",
     )
 

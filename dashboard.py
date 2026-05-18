@@ -138,6 +138,13 @@ def _ensure_dbs():
             _db_cache["loaded"] = True
             _db_cache["status"]["current"] = "ready"
             _db_cache["status"]["finished_at"] = time.time()
+            ready_msg = app.config.get("_GENE_LENS_READY_MSG")
+            ready_port = app.config.get("_GENE_LENS_PORT")
+            if ready_msg and ready_port:
+                print()
+                print("─" * 60)
+                print(f"  ✓ {ready_msg.format(port=ready_port)}")
+                print("─" * 60, flush=True)
         except Exception as e:
             _log(f"ERRO DBs: {e}\n{traceback.format_exc()}")
             _db_cache["status"]["current"] = "error"
@@ -1727,53 +1734,15 @@ def settings():
         ollama_installed=ollama_installed,
         translator_ready=bool(argos and argos.installed),
         translator_pkg_present=argos_pkg_present,
-        translator_install=dict(_translator_install),
     )
 
 
-# Neural translator install state: shared so the settings page can poll
-# progress while the download runs in the background. The install pulls
-# ~100MB from the network, so it MUST run on a thread spawned from the
-# Flask request — never from inside the NetworkBlocker.
-_translator_install = {"running": False, "ok": None, "message": "", "started_at": None}
-_translator_install_lock = threading.Lock()
-
-
-def _install_translator_worker():
-    from src.translator import install_en_pt_model
-    ok, msg = install_en_pt_model()
-    _translator_install["running"] = False
-    _translator_install["ok"] = ok
-    _translator_install["message"] = msg
-    _log(f"Translator install: ok={ok} msg={msg}")
-
-
-@app.route("/settings/install-translator", methods=["POST"])
-def settings_install_translator():
-    """Kick off a background download of the Argos en->pt model."""
-    with _translator_install_lock:
-        if _translator_install["running"]:
-            return redirect(url_for("settings"))
-        _translator_install.update({
-            "running": True, "ok": None, "message": "", "started_at": time.time(),
-        })
-    threading.Thread(target=_install_translator_worker, daemon=True, name="argos-install").start()
-    return redirect(url_for("settings"))
-
-
-@app.route("/api/translator-status")
-def translator_status():
-    from src.system_status import is_argos_model_installed
-    elapsed = None
-    if _translator_install["started_at"]:
-        elapsed = round(time.time() - _translator_install["started_at"], 1)
-    return jsonify({
-        "running": _translator_install["running"],
-        "ok": _translator_install["ok"],
-        "message": _translator_install["message"],
-        "elapsed_seconds": elapsed,
-        "model_installed": is_argos_model_installed(),
-    })
+# Neural translator install is documented in the settings page as a one-time
+# `pip install argostranslate` + model download instruction. We removed the
+# in-app installer button because the background download path was flaky
+# (Argos pulls from a CDN with no resume, and an interrupted download left
+# a corrupt half-model the next launch couldn't recover from). The CLI path
+# is reliable and gives the user real progress + errors.
 
 
 @app.route("/settings/ai-toggle", methods=["POST"])
@@ -1806,14 +1775,21 @@ def run_dashboard(port: int = 5000, debug: bool = False, lang: Lang = "en"):
             "privacy": "Privacy: server bound to localhost only",
             "assets": "ECharts + Tabler served locally (no CDN)",
             "preload": "Pre-loading databases in background...",
+            "ready": "Everything loaded — open http://127.0.0.1:{port}",
         },
         "pt": {
             "title": "Dashboard Gene Lens",
             "privacy": "Privacidade: servidor apenas em localhost",
             "assets": "ECharts + Tabler servidos localmente (sem CDN)",
             "preload": "Pré-carregando bancos de dados em background...",
+            "ready": "Tudo carregado — abra http://127.0.0.1:{port}",
         },
     }[lang_code]
+    # Stash the port + ready message so the DB preloader thread can print
+    # the final "everything's up" line when it finishes (it runs after the
+    # banner so the user sees the link as the last thing on screen).
+    app.config["_GENE_LENS_PORT"] = port
+    app.config["_GENE_LENS_READY_MSG"] = msgs["ready"]
 
     print()
     print("=" * 60)

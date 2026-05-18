@@ -57,6 +57,17 @@ For anything beyond a typo fix, please open an Issue to discuss the approach bef
 - Reference ranges from literature only — never prescriptive language
 - Always frame as "topics to discuss with your doctor"
 
+**For privacy-critical changes** (anything in `src/privacy.py`, `src/consent.py`, `src/chat_store.py`, or `download_databases.py`):
+- Open an Issue first to discuss the change
+- Update or extend the relevant test (`tests/test_privacy.py`, `tests/test_chat_store.py`)
+- Re-read [SECURITY.md](SECURITY.md) and check the threat model still holds
+- Run `python main.py privacy-check` after the change
+
+**For the AI chat** (`src/local_ai.py`):
+- Keep the system prompts (PT + EN) non-prescriptive — they're the only thing standing between the model and a diagnostic-sounding reply
+- The prompt builder is shared between blocking and streaming variants via `_build_chat_prompt` — don't fork the logic
+- Add a test in `tests/test_local_ai_chat.py` for any new error class or output shape
+
 ### 3. Test locally
 ```bash
 # Parse sample genome

@@ -7,6 +7,8 @@ import json
 import sys
 import time
 import traceback
+import os
+import shutil
 import threading
 import uuid
 from pathlib import Path
@@ -96,7 +98,15 @@ def _log(msg):
 
 # ── DB Cache ──────────────────────────────────────────────────────────────────
 
-_db_cache = {"clinvar": None, "pharmgkb": None, "loaded": False}
+# `status` is updated as each DB loads so the UI can show sub-progress on the
+# loading page. Started/finished are unix timestamps; current is a short slug
+# the frontend maps to a translated label.
+_db_cache = {
+    "clinvar": None,
+    "pharmgkb": None,
+    "loaded": False,
+    "status": {"current": "idle", "started_at": None, "finished_at": None, "error": None},
+}
 
 def _ensure_dbs():
     if _db_cache["loaded"]:
@@ -104,22 +114,37 @@ def _ensure_dbs():
     with _db_lock:
         if _db_cache["loaded"]:  # double-check after acquiring lock
             return
+        _db_cache["status"]["started_at"] = time.time()
+        _db_cache["status"]["error"] = None
         try:
             ensure_directories()
-            _log("Carregando ClinVar...")
+            _db_cache["status"]["current"] = "clinvar"
+            _log("Carregando ClinVar (289 MB) — pode levar 30-90s na primeira vez...")
             _db_cache["clinvar"] = load_clinvar()
             _log(f"ClinVar OK: {len(_db_cache['clinvar']):,} posicoes")
+            _db_cache["status"]["current"] = "pharmgkb"
             _log("Carregando PharmGKB...")
             _db_cache["pharmgkb"] = load_pharmgkb()
             _log(f"PharmGKB OK: {len(_db_cache['pharmgkb']):,} interacoes")
             _db_cache["loaded"] = True
+            _db_cache["status"]["current"] = "ready"
+            _db_cache["status"]["finished_at"] = time.time()
         except Exception as e:
             _log(f"ERRO DBs: {e}\n{traceback.format_exc()}")
+            _db_cache["status"]["current"] = "error"
+            _db_cache["status"]["error"] = str(e)
             # Don't mark as loaded so it retries next time
             if _db_cache["clinvar"] is None:
                 _db_cache["clinvar"] = {}
             if _db_cache["pharmgkb"] is None:
                 _db_cache["pharmgkb"] = {}
+
+
+def _preload_dbs_async():
+    """Kick off DB loading right after the server is up so the user never
+    waits on the first analysis. Safe to call multiple times — _ensure_dbs
+    is idempotent and protected by _db_lock."""
+    threading.Thread(target=_ensure_dbs, daemon=True, name="db-preloader").start()
 
 
 # ── Job system (async analysis with progress) ────────────────────────────────
@@ -129,20 +154,25 @@ _jobs = {}  # job_id -> {status, progress, result, error}
 def _run_analysis(job_id: str, filepath: Path, subject_name: str, profile: dict = None, lang: str = "en"):
     """Run analysis in background thread."""
     job = _jobs[job_id]
+    _tr = get_strings(lang)
+    _analyzing_label = "Analyzing" if lang == "en" else "Analisando"
+    _no_snps = "No SNPs loaded." if lang == "en" else "Nenhum SNP carregado."
     try:
         t0_total = time.time()
-        job["progress"] = "Carregando bancos de dados..."
+        job["progress"] = _tr["loading_step_db"] + "..."
+        job["step"] = 0
         _log(f"[JOB {job_id[:8]}] Carregando DBs")
         _ensure_dbs()
 
-        job["progress"] = "Lendo arquivo de DNA..."
+        job["progress"] = _tr["loading_step_read"] + "..."
+        job["step"] = 1
         _log(f"[JOB {job_id[:8]}] Lendo genoma")
         genome_by_rsid, genome_by_position, fmt = load_genome(filepath)
         _log(f"[JOB {job_id[:8]}] Formato: {fmt}, SNPs: {len(genome_by_rsid):,}")
 
         if len(genome_by_rsid) == 0:
             job["status"] = "error"
-            job["error"] = f"Nenhum SNP carregado. Formato: {fmt}"
+            job["error"] = f"{_no_snps} Format: {fmt}" if lang == "en" else f"{_no_snps} Formato: {fmt}"
             return
 
         # Infer biological sex if not provided in profile
@@ -156,7 +186,8 @@ def _run_analysis(job_id: str, filepath: Path, subject_name: str, profile: dict 
                 profile["sex_inferred"] = True
                 _log(f"[JOB {job_id[:8]}] Sexo inferido: {inferred}")
 
-        job["progress"] = f"Analisando {len(genome_by_rsid):,} SNPs..."
+        job["progress"] = f"{_analyzing_label} {len(genome_by_rsid):,} SNPs..."
+        job["step"] = 2
         _log(f"[JOB {job_id[:8]}] Analisando")
 
         # === ALL ANALYSIS INSIDE NETWORK BLOCKER ===
@@ -167,8 +198,7 @@ def _run_analysis(job_id: str, filepath: Path, subject_name: str, profile: dict 
                 genome_by_position, _db_cache["clinvar"]
             )
 
-            # Protocol
-            job["progress"] = "Gerando conclusoes..."
+            # Protocol (still part of variant analysis phase)
             findings_dict = {f["gene"]: f for f in health_results["findings"]}
             protocol_data = {
                 "supplements": _build_supplement_list(findings_dict, lang),
@@ -190,40 +220,70 @@ def _run_analysis(job_id: str, filepath: Path, subject_name: str, profile: dict 
             conclusions = build_conclusions(health_results, disease_findings, protocol_data, lang=lang)
 
             # Wellness panels (needed before human conclusions)
-            job["progress"] = "Analisando paineis de bem-estar..."
+            job["progress"] = _tr["loading_step_wellness"] + "..."
+            job["step"] = 3
             _log(f"[JOB {job_id[:8]}] Paineis de bem-estar")
             wellness = analyze_all_panels(genome_by_rsid, lang=lang)
 
             # Family planning + phenotype
-            family = analyze_family_planning(disease_findings, health_results)
-            family["phenotype"] = analyze_phenotype(genome_by_rsid)
+            family = analyze_family_planning(disease_findings, health_results, lang=lang)
+            family["phenotype"] = analyze_phenotype(genome_by_rsid, lang=lang)
 
             # Hereditary conditions (sex-aware)
-            hereditary = analyze_hereditary_conditions(disease_findings, profile)
+            hereditary = analyze_hereditary_conditions(disease_findings, profile, lang=lang)
             _log(f"[JOB {job_id[:8]}] Condicoes hereditarias: {len(hereditary['conditions'])} detectadas (sexo={hereditary['sex']})")
 
+            # Coverage report (how many key markers does this chip actually carry?)
+            from src.coverage import compute_coverage
+            coverage = compute_coverage(genome_by_rsid)
+            _log(
+                f"[JOB {job_id[:8]}] Cobertura: "
+                f"{coverage['summary']['markers_present']}/{coverage['summary']['markers_total']} marcadores "
+                f"(alta={coverage['summary']['panels_high']}, parcial={coverage['summary']['panels_partial']}, baixa={coverage['summary']['panels_low']})"
+            )
+
+            # Composite Risk Index (transparent risk-allele tally per condition;
+            # NOT a calibrated PRS — see src/prs.py for the rationale).
+            from src.prs import compute_prs
+            prs = compute_prs(genome_by_rsid)
+            _log(
+                f"[JOB {job_id[:8]}] CRI: "
+                + ", ".join(f"{p['key']}={p['score']}/{p['max_score']}({p['band']})" for p in prs["panels"])
+            )
+
             # Ancestry
-            job["progress"] = "Estimando ancestralidade..."
+            job["progress"] = ("Estimating ancestry..." if lang == "en" else "Estimando ancestralidade...")
             _log(f"[JOB {job_id[:8]}] Ancestralidade")
-            ancestry = analyze_ancestry(genome_by_rsid)
+            ancestry = analyze_ancestry(genome_by_rsid, lang=lang)
             _log(f"[JOB {job_id[:8]}] Ancestralidade: {ancestry['percentages']} ({ancestry['markers_used']} marcadores)")
 
-            # Translate INSIDE blocker (model must be pre-cached via download step)
-            job["progress"] = "Traduzindo anotacoes clinicas..."
-            try:
-                translator = get_translator()
-                _log(f"[JOB {job_id[:8]}] Tradutor: neural={'sim' if translator.is_neural_available else 'nao'}")
-                for finding in health_results["pharmgkb_findings"]:
-                    if finding.get("annotation"):
-                        finding["annotation_original"] = finding["annotation"]
-                        finding["annotation"] = translator.translate(finding["annotation"])
-                _log(f"[JOB {job_id[:8]}] Traducao OK: {len(health_results['pharmgkb_findings'])} anotacoes")
-            except Exception as e:
-                _log(f"[JOB {job_id[:8]}] Traducao falhou (mantendo ingles): {e}")
+            # Translate INSIDE blocker — only meaningful for PT-BR, since
+            # ClinVar/PharmGKB annotations are already in English. Running
+            # the translator for an EN analysis is wasted work AND touches
+            # argos's init path unnecessarily (which historically tried to
+            # hit the network from inside the blocker).
+            if lang == "pt":
+                job["progress"] = _tr["loading_step_translate"] + "..."
+                job["step"] = 4
+                try:
+                    translator = get_translator()
+                    _log(f"[JOB {job_id[:8]}] Tradutor: neural={'sim' if translator.is_neural_available else 'nao'}")
+                    for finding in health_results["pharmgkb_findings"]:
+                        if finding.get("annotation"):
+                            finding["annotation_original"] = finding["annotation"]
+                            finding["annotation"] = translator.translate(finding["annotation"])
+                    _log(f"[JOB {job_id[:8]}] Traducao OK: {len(health_results['pharmgkb_findings'])} anotacoes")
+                except Exception as e:
+                    _log(f"[JOB {job_id[:8]}] Traducao falhou (mantendo ingles): {e}")
+            else:
+                _log(f"[JOB {job_id[:8]}] Lang={lang}: pulando tradutor (anotacoes ja em ingles)")
+                job["step"] = 4
 
         # === NETWORK BLOCKER RELEASED ===
 
         # Human-friendly conclusions for non-technical users
+        job["progress"] = _tr["loading_step_conclude"] + "..."
+        job["step"] = 5
         human = build_human_conclusions(
             health_results, disease_findings, protocol_data, wellness, family, ancestry,
             profile=profile, lang=lang,
@@ -249,6 +309,8 @@ def _run_analysis(job_id: str, filepath: Path, subject_name: str, profile: dict 
             "ancestry": ancestry,
             "family": family,
             "hereditary": hereditary,
+            "coverage": coverage,
+            "prs": prs,
             "elapsed": round(time.time() - t0_total, 1),
         }
 
@@ -539,7 +601,7 @@ def build_conclusions(health, disease, protocol, lang="en"):
             drugs = set()
             for f in l1:
                 drugs.update(d.strip() for d in f["drugs"].split(";")[:3])
-            overview.append(f"Ha {len(l1)} interacao(oes) droga-gene com diretrizes clinicas (CPIC Nivel 1). Medicamentos envolvidos incluem: {', '.join(list(drugs)[:5])}. Compartilhe com seu medico prescritor.")
+            overview.append(t["overview_drugs"].format(n=len(l1), drugs=", ".join(list(drugs)[:5])))
     c["overview"] = overview
 
     # Lifestyle
@@ -1042,6 +1104,7 @@ def index():
                 family = analyze_family_planning(
                     active.get("disease"),
                     active.get("health", {}),
+                    lang=_current_lang,
                 )
                 # Preserve phenotype from old data
                 if active.get("family", {}).get("phenotype"):
@@ -1050,12 +1113,19 @@ def index():
             except Exception:
                 pass
 
-    # Detect Ollama once per page load so the AI chat button can be enabled.
+    # AI chat is opt-in: requires Ollama installed AND the user toggling it on
+    # in /settings. We detect both signals on each page load so the FAB reflects
+    # the latest state without needing a restart.
     try:
         from src.local_ai import is_ollama_available, list_models
-        ollama_ready = is_ollama_available()
+        from src.preferences import is_ai_chat_enabled
+        ollama_installed = is_ollama_available()
+        ai_chat_enabled = is_ai_chat_enabled()
+        ollama_ready = ollama_installed and ai_chat_enabled
         ollama_models = list_models() if ollama_ready else []
     except Exception:
+        ollama_installed = False
+        ai_chat_enabled = False
         ollama_ready = False
         ollama_models = []
 
@@ -1073,12 +1143,19 @@ def index():
         ancestry=active.get("ancestry") or {} if active else {},
         family=active.get("family") or {} if active else {},
         hereditary=active.get("hereditary") or {} if active else {},
+        coverage=active.get("coverage") or {} if active else {},
+        prs=active.get("prs") or {} if active else {},
         elapsed=active.get("elapsed", 0) if active else 0,
         history=history,
         t=t,
         lang=_current_lang,
         ollama_ready=ollama_ready,
         ollama_models=ollama_models,
+        ollama_installed=ollama_installed,
+        ai_chat_enabled=ai_chat_enabled,
+        needs_translator=_block_pt_without_translator(),
+        needs_clinvar=_clinvar_missing(),
+        needs_pharmgkb=_pharmgkb_missing(),
     )
 
 
@@ -1103,9 +1180,31 @@ def consent():
             "This file records that the user accepted the terms of use.\n"
             "Delete this file to be prompted again.\n"
         )
-        flash("Termos aceitos. / Terms accepted.")
+        flash(get_strings(_get_lang())["flash_terms_accepted"])
         return redirect(url_for("index"))
     return render_template("consent.html", terms=TERMS_TEXT, t=t, lang=_current_lang)
+
+
+def _block_pt_without_translator() -> bool:
+    """In PT mode the analysis depends on the neural translator. If the
+    model isn't installed, redirect the user to /settings instead of
+    producing a half-translated report. EN mode bypasses this entirely."""
+    if _get_lang() != "pt":
+        return False
+    from src.system_status import is_argos_model_installed
+    return not is_argos_model_installed()
+
+
+def _clinvar_missing() -> bool:
+    """ClinVar is the core reference DB. Analysing without it yields an
+    empty report — better to redirect than fake success."""
+    from config import CLINVAR_TSV
+    return not CLINVAR_TSV.exists()
+
+
+def _pharmgkb_missing() -> bool:
+    from config import PHARMGKB_ANNOTATIONS, PHARMGKB_ALLELES
+    return not (PHARMGKB_ANNOTATIONS.exists() and PHARMGKB_ALLELES.exists())
 
 
 @app.route("/analyze", methods=["POST"])
@@ -1113,14 +1212,21 @@ def analyze():
     _log("ROUTE HIT /analyze")
     if not require_consent_web():
         return redirect(url_for("consent"))
+    if _block_pt_without_translator():
+        flash(get_strings(_get_lang())["flash_translator_required"])
+        return redirect(url_for("settings"))
+    if _clinvar_missing():
+        flash(get_strings(_get_lang())["flash_clinvar_required"])
+        return redirect(url_for("settings"))
     try:
+        _t = get_strings(_get_lang())
         if "genome_file" not in request.files:
-            flash("Nenhum arquivo selecionado.")
+            flash(_t["flash_no_file"])
             return redirect(url_for("index"))
 
         uploaded = request.files["genome_file"]
         if uploaded.filename == "":
-            flash("Nenhum arquivo selecionado.")
+            flash(_t["flash_no_file"])
             return redirect(url_for("index"))
 
         subject_name = request.form.get("subject_name", "").strip() or None
@@ -1154,19 +1260,19 @@ def analyze():
         filename = secure_filename(uploaded.filename)
         allowed_ext = {'.txt', '.csv', '.tsv', '.gz'}
         if not any(filename.lower().endswith(ext) for ext in allowed_ext):
-            flash("Invalid file type. Accepted: .txt, .csv, .tsv, .gz")
+            flash(_t["flash_invalid_file"])
             return redirect(url_for("index"))
         filepath = INPUT_DIR / filename
         uploaded.save(str(filepath))
         _log(f"Arquivo salvo: {filename} ({filepath.stat().st_size:,} bytes)")
     except Exception as ex:
         _log(f"ERRO upload: {ex}\n{traceback.format_exc()}")
-        flash("Upload error. Please try again with a valid DNA file (.txt, .csv, .tsv, .gz).")
+        flash(get_strings(_get_lang())["flash_upload_error"])
         return redirect(url_for("index"))
 
     # Start background job
     job_id = str(uuid.uuid4())
-    _jobs[job_id] = {"status": "running", "progress": "Iniciando...", "result": None, "error": None}
+    _jobs[job_id] = {"status": "running", "progress": "Iniciando...", "step": 0, "result": None, "error": None}
     _jobs["current_job"] = job_id
 
     _lang_for_thread = _get_lang()
@@ -1176,10 +1282,69 @@ def analyze():
     return redirect(url_for("loading", job_id=job_id))
 
 
+@app.route("/analyze-sample", methods=["POST"])
+def analyze_sample():
+    """Run the analysis on the bundled synthetic sample genome.
+
+    The source file at sample/sample_genome.csv is COPIED into INPUT_DIR
+    under a timestamped name. The background job then secure_deletes the
+    copy after analysis (same as a real upload), but the original sample
+    stays intact — so the user can hit "try sample" repeatedly even after
+    deleting the resulting analyses from history.
+    """
+    if not require_consent_web():
+        return redirect(url_for("consent"))
+    if _block_pt_without_translator():
+        flash(get_strings(_get_lang())["flash_translator_required"])
+        return redirect(url_for("settings"))
+    _t = get_strings(_get_lang())
+    sample_src = Path(__file__).parent / "sample" / "sample_genome.csv"
+    if not sample_src.exists():
+        flash(_t.get("flash_sample_missing", "Sample genome file not found."))
+        return redirect(url_for("index"))
+
+    ensure_directories()
+    # Timestamped name keeps concurrent runs from clobbering each other and
+    # makes it obvious in INPUT_DIR which copies came from the sample button.
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filepath = INPUT_DIR / f"sample_{ts}.csv"
+    shutil.copyfile(sample_src, filepath)
+    _log(f"Sample copiado para analise: {filepath.name}")
+
+    job_id = str(uuid.uuid4())
+    _jobs[job_id] = {"status": "running", "progress": "Iniciando...", "step": 0, "result": None, "error": None}
+    _jobs["current_job"] = job_id
+    _lang_for_thread = _get_lang()
+    th = threading.Thread(
+        target=_run_analysis,
+        args=(job_id, filepath, "Sample", {}, _lang_for_thread),
+        daemon=True,
+    )
+    th.start()
+    return redirect(url_for("loading", job_id=job_id))
+
+
 @app.route("/loading/<job_id>")
 def loading(job_id):
     t = get_strings(_current_lang)
     return render_template("loading.html", job_id=job_id, t=t, lang=_current_lang)
+
+
+@app.route("/api/db-status")
+def db_status():
+    """Sub-progress for the DB preloader so the loading page can show
+    'Loading ClinVar (12s elapsed)' instead of a generic spinner."""
+    s = _db_cache["status"]
+    elapsed = None
+    if s["started_at"]:
+        end = s["finished_at"] or time.time()
+        elapsed = round(end - s["started_at"], 1)
+    return jsonify({
+        "loaded": _db_cache["loaded"],
+        "current": s["current"],
+        "elapsed_seconds": elapsed,
+        "error": s["error"],
+    })
 
 
 @app.route("/status/<job_id>")
@@ -1188,6 +1353,7 @@ def job_status(job_id):
     return jsonify({
         "status": job.get("status", "not_found"),
         "progress": job.get("progress", ""),
+        "step": job.get("step", 0),
         "error": job.get("error"),
     })
 
@@ -1196,7 +1362,7 @@ def job_status(job_id):
 def job_done(job_id):
     job = _jobs.get(job_id)
     if not job or job["status"] != "done":
-        flash("Analise nao encontrada ou ainda em andamento.")
+        flash(get_strings(_get_lang())["flash_analysis_not_found"])
         return redirect(url_for("index"))
     _jobs["active_result"] = job["result"]
     return redirect(url_for("index"))
@@ -1206,7 +1372,7 @@ def job_done(job_id):
 def load_history(hid):
     data = _load_history_full(hid)
     if not data:
-        flash("Analise nao encontrada no historico.")
+        flash(get_strings(_get_lang())["flash_history_not_found"])
         return redirect(url_for("index"))
     _jobs["active_result"] = data
     return redirect(url_for("index"))
@@ -1215,14 +1381,14 @@ def load_history(hid):
 @app.route("/history/delete/<hid>", methods=["POST"])
 def delete_history(hid):
     _delete_history(hid)
-    flash("Analise removida do historico.")
+    flash(get_strings(_get_lang())["flash_history_deleted"])
     return redirect(url_for("index"))
 
 
 @app.route("/clear", methods=["POST"])
 def clear():
     _jobs.pop("active_result", None)
-    flash("Resultados limpos.")
+    flash(get_strings(_get_lang())["flash_results_cleared"])
     return redirect(url_for("index"))
 
 
@@ -1297,6 +1463,10 @@ def chat_ask():
     if not question:
         return {"ok": False, "error": "empty question"}, 400
 
+    from src.preferences import is_ai_chat_enabled
+    if not is_ai_chat_enabled():
+        return {"ok": False, "error": "ai_chat_disabled"}, 403
+
     history = payload.get("history") or []
     model = payload.get("model") or "llama3.1:8b"
     lang = _get_lang()
@@ -1321,13 +1491,82 @@ def chat_ask():
 def settings():
     """Show installation status of databases and optional integrations."""
     from src.system_status import check_all
+    from src.preferences import is_ai_chat_enabled
     t = get_strings(_get_lang())
+    components = check_all()
+    ollama_installed = any(c.key == "ollama" and c.installed for c in components)
+    argos = next((c for c in components if c.key == "argos"), None)
+    # argos.installed is True only when both package AND model are present.
+    argos_pkg_present = bool(argos and "not installed in this Python" not in argos.detail)
     return render_template(
         "settings.html",
         t=t,
         lang=_get_lang(),
-        components=check_all(),
+        components=components,
+        ai_chat_enabled=is_ai_chat_enabled(),
+        ollama_installed=ollama_installed,
+        translator_ready=bool(argos and argos.installed),
+        translator_pkg_present=argos_pkg_present,
+        translator_install=dict(_translator_install),
     )
+
+
+# Neural translator install state: shared so the settings page can poll
+# progress while the download runs in the background. The install pulls
+# ~100MB from the network, so it MUST run on a thread spawned from the
+# Flask request — never from inside the NetworkBlocker.
+_translator_install = {"running": False, "ok": None, "message": "", "started_at": None}
+_translator_install_lock = threading.Lock()
+
+
+def _install_translator_worker():
+    from src.translator import install_en_pt_model
+    ok, msg = install_en_pt_model()
+    _translator_install["running"] = False
+    _translator_install["ok"] = ok
+    _translator_install["message"] = msg
+    _log(f"Translator install: ok={ok} msg={msg}")
+
+
+@app.route("/settings/install-translator", methods=["POST"])
+def settings_install_translator():
+    """Kick off a background download of the Argos en->pt model."""
+    with _translator_install_lock:
+        if _translator_install["running"]:
+            return redirect(url_for("settings"))
+        _translator_install.update({
+            "running": True, "ok": None, "message": "", "started_at": time.time(),
+        })
+    threading.Thread(target=_install_translator_worker, daemon=True, name="argos-install").start()
+    return redirect(url_for("settings"))
+
+
+@app.route("/api/translator-status")
+def translator_status():
+    from src.system_status import is_argos_model_installed
+    elapsed = None
+    if _translator_install["started_at"]:
+        elapsed = round(time.time() - _translator_install["started_at"], 1)
+    return jsonify({
+        "running": _translator_install["running"],
+        "ok": _translator_install["ok"],
+        "message": _translator_install["message"],
+        "elapsed_seconds": elapsed,
+        "model_installed": is_argos_model_installed(),
+    })
+
+
+@app.route("/settings/ai-toggle", methods=["POST"])
+def settings_ai_toggle():
+    """Flip the AI chat opt-in. Requires Ollama to be installed before enabling."""
+    from src.local_ai import is_ollama_available
+    from src.preferences import set_ai_chat_enabled, is_ai_chat_enabled
+    desired = not is_ai_chat_enabled()
+    if desired and not is_ollama_available():
+        flash(get_strings(_get_lang())["flash_install_ollama"])
+        return redirect(url_for("settings"))
+    set_ai_chat_enabled(desired)
+    return redirect(url_for("settings"))
 
 
 def run_dashboard(port: int = 5000, debug: bool = False):
@@ -1342,8 +1581,15 @@ def run_dashboard(port: int = 5000, debug: bool = False):
     print("  ECharts + Tabler servidos localmente (sem CDN)")
     print("=" * 60)
     print()
-    # When debug=True is requested, also enable template auto-reload so
-    # developers can iterate on Jinja files without restarting Flask.
+    # Kick off DB loading in the background so the first analysis doesn't
+    # eat the 30-90s ClinVar parse. The /api/db-status endpoint surfaces
+    # progress to the loading page if a user uploads before it finishes.
+    # Skip during the Werkzeug reloader's parent process to avoid loading
+    # twice (debug=True spawns a child that reruns this).
+    if not (debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true"):
+        _preload_dbs_async()
+        print("  Pre-carregando bancos de dados em background...")
+        print()
     app.config["TEMPLATES_AUTO_RELOAD"] = debug
     app.run(host="127.0.0.1", port=port, debug=debug)
 

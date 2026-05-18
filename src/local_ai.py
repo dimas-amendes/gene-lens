@@ -23,10 +23,24 @@ _ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07]*\x07")
 
 
 def _strip_ansi(text: str) -> str:
-    """Remove ANSI escape sequences from Ollama output."""
+    """Remove ANSI escape sequences from Ollama output.
+
+    Ollama's CLI also rewrites partial lines with carriage returns, so a
+    bare `\\r` means "discard everything since the previous newline" — we
+    apply that semantics here so duplicated word fragments don't leak into
+    the rendered chat bubble.
+    """
     if not text:
         return text
-    return _ANSI_ESCAPE_RE.sub("", text)
+    cleaned = _ANSI_ESCAPE_RE.sub("", text)
+    if "\r" in cleaned:
+        out_lines = []
+        for line in cleaned.split("\n"):
+            if "\r" in line:
+                line = line.split("\r")[-1]
+            out_lines.append(line)
+        cleaned = "\n".join(out_lines)
+    return cleaned
 
 
 def _clean_env() -> dict:

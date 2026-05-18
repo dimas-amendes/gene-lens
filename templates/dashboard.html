@@ -38,8 +38,9 @@ a { color: var(--accent); }
 
 /* ── AI chat drawer ────────────────────────────────────────────────────── */
 .ai-fab { position: fixed; bottom: 24px; right: 24px; z-index: 40; background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%); color: #fff; border: none; border-radius: 999px; padding: 13px 22px 13px 18px; font-size: 14px; font-weight: 600; font-family: 'Geist', sans-serif; box-shadow: 0 10px 30px -8px rgba(59,130,246,.5), 0 4px 12px -2px rgba(0,0,0,.4); cursor: pointer; display: inline-flex; align-items: center; gap: 9px; transition: transform .18s ease-out, box-shadow .2s; backdrop-filter: blur(8px); }
-.ai-fab .ai-fab-icon { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,.18); font-size: 15px; }
-.ai-fab .ai-fab-dot { position: absolute; top: 6px; right: 6px; width: 9px; height: 9px; border-radius: 50%; background: #22c55e; border: 2px solid #0a0a0c; box-shadow: 0 0 0 0 rgba(34,197,94,.6); animation: ai-fab-pulse 2.4s ease-out infinite; }
+.ai-fab .ai-fab-icon { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,.18); font-size: 15px; }
+.ai-fab .ai-fab-dot { position: absolute; bottom: -1px; right: -1px; width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #6ee7b7 0%, #10b981 55%, #047857 100%); box-shadow: 0 0 0 2px #2c44d4, 0 0 6px rgba(16,185,129,.55); }
+.ai-fab .ai-fab-dot::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; background: rgba(16,185,129,.45); animation: ai-fab-pulse 2.2s ease-out infinite; z-index: -1; }
 .ai-fab:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 16px 40px -10px rgba(59,130,246,.65), 0 6px 16px -2px rgba(0,0,0,.5); }
 .ai-fab:active { transform: translateY(0) scale(.99); }
 .ai-fab[disabled] { background: #27272a; color: #71717a; cursor: not-allowed; box-shadow: none; }
@@ -47,9 +48,9 @@ a { color: var(--accent); }
 .ai-fab[disabled] .ai-fab-icon { background: rgba(255,255,255,.04); }
 .ai-fab[disabled] .ai-fab-dot { display: none; }
 @keyframes ai-fab-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(34,197,94,.55); }
-  70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
-  100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+  0% { transform: scale(.8); opacity: .55; }
+  70% { transform: scale(1.7); opacity: 0; }
+  100% { transform: scale(1.7); opacity: 0; }
 }
 
 .ai-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 49; opacity: 0; pointer-events: none; transition: opacity .2s; }
@@ -69,7 +70,7 @@ a { color: var(--accent); }
 .ai-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
 .ai-msg { max-width: 88%; padding: 10px 14px; border-radius: 12px; font-size: 13.5px; line-height: 1.55; word-wrap: break-word; white-space: pre-wrap; }
 .ai-msg.user { background: var(--accent-soft); color: #cbd5e1; align-self: flex-end; border: 1px solid rgba(59,130,246,.25); }
-.ai-msg.assistant { background: #18181b; color: #e4e4e7; align-self: flex-start; border: 1px solid #27272a; }
+.ai-msg.assistant { background: #18181b; color: #e4e4e7; align-self: flex-start; border: 1px solid #27272a; white-space: normal; }
 .ai-msg.assistant p { margin: 0 0 8px; }
 .ai-msg.assistant p:last-child { margin-bottom: 0; }
 .ai-msg.assistant ul, .ai-msg.assistant ol { margin: 6px 0 8px; padding-left: 22px; }
@@ -79,6 +80,11 @@ a { color: var(--accent); }
 .ai-msg.assistant pre { background: #0a0a0c; border: 1px solid #27272a; border-radius: 6px; padding: 10px 12px; overflow-x: auto; margin: 6px 0; }
 .ai-msg.assistant pre code { background: transparent; border: none; padding: 0; color: #d4d4d8; }
 .ai-msg.assistant strong { color: #fafafa; font-weight: 600; }
+.ai-msg.assistant { position: relative; padding-right: 38px; }
+.ai-msg-copy { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 6px; background: transparent; border: 1px solid transparent; color: #71717a; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; opacity: 0; transition: opacity .15s, background .15s, color .15s, border-color .15s; }
+.ai-msg.assistant:hover .ai-msg-copy { opacity: 1; }
+.ai-msg-copy:hover { background: #27272a; color: #fafafa; border-color: #3f3f46; }
+.ai-msg-copy.copied { color: var(--green); opacity: 1; }
 .ai-msg.assistant em { color: #d4d4d8; font-style: italic; }
 .ai-msg.assistant .rsid-chip { background: var(--accent-soft); border: 1px solid rgba(59,130,246,.3); color: var(--accent); font-family: 'Geist Mono', monospace; font-size: 12px; padding: 1px 6px; border-radius: 4px; cursor: pointer; transition: background .15s; }
 .ai-msg.assistant .rsid-chip:hover { background: rgba(59,130,246,.18); }
@@ -284,6 +290,11 @@ a { color: var(--accent); }
 .link-sample:hover { color: var(--accent); text-decoration-color: var(--accent); }
 /* Translator-required banner (only shown in PT mode without the en->pt model) */
 .translator-needed { max-width: 560px; margin: 24px auto 0; padding: 18px 20px; background: linear-gradient(135deg, rgba(234,179,8,.08), rgba(234,179,8,.02)); border: 1px solid rgba(234,179,8,.3); border-radius: 12px; display: flex; gap: 14px; align-items: flex-start; }
+.pharmgkb-warn { max-width: 560px; margin: 16px auto 0; padding: 11px 16px; background: rgba(234,179,8,.06); border: 1px solid rgba(234,179,8,.25); border-radius: 10px; display: flex; gap: 12px; align-items: center; font-size: 12.5px; color: #e4e4e7; }
+.pharmgkb-warn i { color: var(--yellow); font-size: 16px; flex-shrink: 0; }
+.pharmgkb-warn strong { color: #fafafa; font-weight: 600; }
+.pharmgkb-warn a { color: var(--accent); text-decoration: none; font-weight: 500; }
+.pharmgkb-warn a:hover { text-decoration: underline; }
 .translator-needed-icon { font-size: 22px; color: var(--yellow); flex-shrink: 0; }
 .translator-needed-body { flex: 1; }
 .translator-needed-body h3 { margin: 0 0 6px; font-size: 14px; color: #fafafa; font-weight: 600; }
@@ -299,25 +310,62 @@ a { color: var(--accent); }
 /* Print stylesheet: user already views in a browser, so "Save as PDF" from
    the OS print dialog gives a no-dependency, privacy-preserving export. */
 @media print {
-  @page { size: A4; margin: 16mm 14mm; }
-  body { background: #fff !important; color: #111 !important; font-size: 11pt; }
+  @page { size: A4; margin: 14mm 12mm; }
+  body { background: #fff !important; color: #111 !important; font-size: 10pt; }
   .site-header, .ai-fab, .ai-drawer, .ai-backdrop, .mb-actions, .tabs, .lang-toggle, form, button { display: none !important; }
+  .container { padding: 0 !important; max-width: 100% !important; }
   .print-only { display: block !important; }
-  .tp { display: block !important; page-break-before: always; }
-  .tp:first-of-type { page-break-before: avoid; }
+
+  /* Tabs: render every panel in natural flow — don't force page breaks per tab */
+  .tp { display: block !important; }
+  .tp + .tp { margin-top: 18px; }
+
+  /* Open all accordions, hide the +/- markers */
   details, details > summary { display: block !important; }
   details > summary::-webkit-details-marker { display: none; }
-  details summary { font-weight: 600; margin-bottom: 8px; }
+  details summary { font-weight: 600; margin: 0 0 8px; cursor: default; }
+  details summary::after { content: none !important; }
   details > *:not(summary) { display: block !important; }
-  .cw, .cg { display: none !important; }
-  .gc, .cc, .hc, .tn, .ctx, .med-banner, .hcw-card, .hcw-empty, .cov-card, .cov-stat, .cov-panel { background: #fff !important; color: #111 !important; border: 1px solid #ccc !important; box-shadow: none !important; }
-  table.tb { font-size: 9pt; page-break-inside: auto; }
-  table.tb tr { page-break-inside: avoid; }
-  h1, h2, h3, h4 { color: #111 !important; page-break-after: avoid; }
+  .acc-body { padding: 8px 0 0 !important; }
+
+  /* Charts/graphics: cut */
+  .cw, .cg, .cov-bar { display: none !important; }
+
+  /* Flatten dark card chrome */
+  .gc, .cc, .hc, .tn, .ctx, .med-banner, .hcw-card, .hcw-empty, .cov-card, .cov-stat, .cov-panel { background: #fff !important; color: #111 !important; border: 1px solid #d4d4d8 !important; box-shadow: none !important; }
+  .gc { margin-bottom: 10px !important; }
+  .gc + .gc { margin-top: 10px; }
+  .gc-h { padding: 8px 12px !important; border-bottom: 1px solid #d4d4d8 !important; }
+  .gc-h h3 { font-size: 11pt; }
+  .gc-b { padding: 10px 12px !important; }
+  .gc-b.np { padding: 0 !important; }
+
+  /* Tables: let them flow, repeat the header on every page, no row-locking */
+  table.tb { font-size: 8.5pt; page-break-inside: auto; break-inside: auto; width: 100%; border-collapse: collapse; }
+  table.tb thead { display: table-header-group; }
+  table.tb tbody { display: table-row-group; }
+  table.tb tr, table.tb td, table.tb th { page-break-inside: auto; break-inside: auto; }
+  table.tb thead th { background: #f4f4f5 !important; color: #111 !important; border-bottom: 1px solid #999 !important; padding: 5px 8px !important; }
+  table.tb tbody td { padding: 5px 8px !important; border-bottom: 1px solid #e5e5e5 !important; color: #111 !important; vertical-align: top; }
+
+  /* Headings: don't leave them as orphans at the bottom of a page */
+  h1, h2, h3, h4 { color: #111 !important; page-break-after: avoid; break-after: avoid; }
+  .gc-h, .ctx h4 { page-break-after: avoid; break-after: avoid; }
+
   a { color: #1d4ed8; text-decoration: underline; }
-  code { background: #f4f4f5; color: #111; }
+  code { background: #f4f4f5; color: #111; padding: 0 2px; border-radius: 2px; }
+
+  /* Coverage panel grid: keep tight */
+  .cov-summary { display: flex !important; gap: 8px; margin: 8px 0; }
+  .cov-stat { flex: 1; padding: 8px !important; text-align: center; }
+  .cov-grid { display: block !important; }
+  .cov-panel { margin-bottom: 4px !important; padding: 6px 8px !important; }
+
+  /* Status pills/badges: make them readable in B&W */
+  .bs, .badge-count { background: #f4f4f5 !important; color: #111 !important; border: 1px solid #ccc !important; padding: 1px 6px !important; }
+
   .print-header { display: flex !important; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #111; padding-bottom: 6px; margin-bottom: 12px; }
-  .print-header strong { font-size: 14pt; }
+  .print-header strong { font-size: 13pt; }
   .print-footer { display: block !important; margin-top: 16px; font-size: 8pt; color: #555; text-align: center; }
 }
 </style>
@@ -406,7 +454,24 @@ a { color: var(--accent); }
   </div>
 </div>
 {% endif %}
-<div class="uz {% if needs_translator %}uz-blocked{% endif %}" id="uploadZone">
+{% if needs_clinvar %}
+<div class="translator-needed">
+  <div class="translator-needed-icon"><i class="ti ti-database-off"></i></div>
+  <div class="translator-needed-body">
+    <h3>{{ t.clinvar_required_title }}</h3>
+    <p>{{ t.clinvar_required_body }}</p>
+    <div class="translator-needed-actions">
+      <a href="/settings" class="btn-translator-cta"><i class="ti ti-download"></i> {{ t.clinvar_required_cta }}</a>
+    </div>
+  </div>
+</div>
+{% elif needs_pharmgkb %}
+<div class="pharmgkb-warn">
+  <i class="ti ti-alert-triangle"></i>
+  <div><strong>{{ t.pharmgkb_warn_title }}</strong> — {{ t.pharmgkb_warn_body }} <a href="/settings">{{ t.pharmgkb_warn_cta }}</a></div>
+</div>
+{% endif %}
+<div class="uz {% if needs_translator or needs_clinvar %}uz-blocked{% endif %}" id="uploadZone">
   <h2>{{ t.upload_title }}</h2>
   <p style="color:#a1a1aa;margin-bottom:24px;font-size:14px">{{ t.upload_desc }}</p>
   <form action="/analyze" method="post" enctype="multipart/form-data" id="uploadForm" autocomplete="off">
@@ -1044,7 +1109,10 @@ const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/
         </select>
       </div>
     </div>
-    <button class="ai-close" id="aiClose" aria-label="{{ t.ai_close }}"><i class="ti ti-x"></i></button>
+    <div style="display:flex;gap:6px">
+      <button class="ai-close" id="aiExport" type="button" aria-label="{{ t.ai_export }}" title="{{ t.ai_export }}"><i class="ti ti-download"></i></button>
+      <button class="ai-close" id="aiClose" aria-label="{{ t.ai_close }}"><i class="ti ti-x"></i></button>
+    </div>
   </div>
   <div class="ai-disclaimer"><i class="ti ti-alert-triangle"></i> {{ t.ai_disclaimer }}</div>
   <div class="ai-messages" id="aiMessages">
@@ -1091,6 +1159,8 @@ const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/
 
   fab.addEventListener('click', open);
   closeBtn.addEventListener('click', close);
+  const exportBtn = document.getElementById('aiExport');
+  if (exportBtn) exportBtn.addEventListener('click', exportConversation);
   backdrop.addEventListener('click', close);
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && drawer.classList.contains('open')) close(); });
 
@@ -1104,15 +1174,75 @@ const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
   });
 
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  // Minimal markdown: escape HTML first, then turn **bold**, `code`,
+  // list bullets and paragraph breaks into real elements. The model
+  // outputs markdown intentionally (see system prompt), so we render it
+  // rather than displaying literal asterisks/backticks.
+  function renderMd(raw) {
+    let s = escapeHtml(raw).replace(/\r/g, '');
+    s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+    const lines = s.split('\n');
+    let html = '', inList = false;
+    for (const line of lines) {
+      const m = line.match(/^\s*[-*]\s+(.*)$/);
+      if (m) {
+        if (!inList) { html += '<ul>'; inList = true; }
+        html += '<li>' + m[1] + '</li>';
+      } else {
+        if (inList) { html += '</ul>'; inList = false; }
+        html += line + '<br>';
+      }
+    }
+    if (inList) html += '</ul>';
+    return html.replace(/(<br>){2,}/g, '<br><br>');
+  }
   function addMsg(role, content) {
     const empty = msgs.querySelector('.ai-msg.empty');
     if (empty) empty.remove();
     const el = document.createElement('div');
     el.className = 'ai-msg ' + role;
-    el.textContent = content;
+    if (role === 'assistant') {
+      el.innerHTML = renderMd(content);
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'ai-msg-copy';
+      copyBtn.type = 'button';
+      copyBtn.title = '{{ t.ai_copy }}';
+      copyBtn.innerHTML = '<i class="ti ti-copy"></i>';
+      copyBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(content);
+          copyBtn.innerHTML = '<i class="ti ti-check"></i>';
+          copyBtn.classList.add('copied');
+          setTimeout(() => { copyBtn.innerHTML = '<i class="ti ti-copy"></i>'; copyBtn.classList.remove('copied'); }, 1400);
+        } catch (e) { /* clipboard may be blocked on http */ }
+      });
+      el.appendChild(copyBtn);
+    } else {
+      el.textContent = content;
+    }
     msgs.appendChild(el);
     msgs.scrollTop = msgs.scrollHeight;
     return el;
+  }
+
+  function exportConversation() {
+    if (!history.length) return;
+    const lines = ['# {{ t.ai_export_title }}', '', '_{{ t.ai_export_subtitle }}_', ''];
+    for (const m of history) {
+      const tag = m.role === 'user' ? '**{{ t.ai_export_you }}**' : '**{{ t.ai_export_ai }}**';
+      lines.push(tag, '', m.content, '', '---', '');
+    }
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    a.href = url; a.download = `gene-lens-chat-${ts}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function formatElapsed(ms) {

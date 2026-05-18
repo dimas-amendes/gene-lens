@@ -6,6 +6,8 @@ happening, nothing reaches the network. Any future change that loosens
 this protection must update or remove these tests deliberately.
 """
 import socket
+import threading
+import time
 import urllib.request
 from pathlib import Path
 
@@ -64,6 +66,142 @@ class TestNetworkBlocker:
             # Inner block exited; outer is still blocking.
             with pytest.raises(ConnectionError):
                 socket.socket()
+        assert socket.socket is before
+
+
+class TestNetworkBlockerThreadIsolation:
+    """Regression guard for the "loading page stuck on gray screen" bug.
+
+    Original implementation patched socket.socket globally, so when the
+    analysis thread entered NetworkBlocker the Flask main thread couldn't
+    accept new client connections — every static asset request hung, the
+    loading template never painted, and the timer was stuck at 00:00.
+
+    The fix tracks which threads are inside a blocker and lets every other
+    thread keep using the network normally.
+    """
+
+    def test_other_thread_can_still_open_sockets_during_blocker(self):
+        results = {"error": None, "ok": False}
+
+        def worker():
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.close()
+                results["ok"] = True
+            except Exception as e:  # captures ConnectionError too
+                results["error"] = e
+
+        with NetworkBlocker():
+            # Sanity: this thread IS blocked.
+            with pytest.raises(ConnectionError):
+                socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # But a sibling thread must remain unaffected.
+            t = threading.Thread(target=worker)
+            t.start()
+            t.join(timeout=2.0)
+
+        assert results["error"] is None, (
+            f"sibling thread was wrongly blocked: {results['error']!r}. "
+            "This is the bug that froze the loading page — do not regress."
+        )
+        assert results["ok"] is True
+
+    def test_other_thread_dns_resolution_unaffected(self):
+        results = {"ok": False, "error": None}
+
+        def worker():
+            try:
+                # Loopback is always resolvable, doesn't need actual DNS.
+                socket.getaddrinfo("127.0.0.1", 0)
+                results["ok"] = True
+            except Exception as e:
+                results["error"] = e
+
+        with NetworkBlocker():
+            with pytest.raises(ConnectionError):
+                socket.getaddrinfo("127.0.0.1", 0)
+            t = threading.Thread(target=worker)
+            t.start()
+            t.join(timeout=2.0)
+
+        assert results["ok"], f"sibling thread getaddrinfo wrongly blocked: {results['error']!r}"
+
+    def test_concurrent_blockers_in_separate_threads_dont_unblock_each_other(self):
+        """Two analysis threads can run with their own blockers. When one
+        exits, the other must remain blocked — same lesson as nested blockers,
+        but across threads."""
+        thread_a_in_block = threading.Event()
+        thread_a_can_exit = threading.Event()
+        results = {"a_blocked": None, "b_blocked": None, "a_still_blocked_after_b": None}
+
+        def thread_a():
+            with NetworkBlocker():
+                # While inside, our own socket call is blocked.
+                try:
+                    socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    results["a_blocked"] = False
+                except ConnectionError:
+                    results["a_blocked"] = True
+                thread_a_in_block.set()
+                # Wait for thread B to enter, run, and exit its blocker.
+                thread_a_can_exit.wait(timeout=3.0)
+                # After B exited, we must STILL be blocked.
+                try:
+                    socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    results["a_still_blocked_after_b"] = False
+                except ConnectionError:
+                    results["a_still_blocked_after_b"] = True
+
+        def thread_b():
+            thread_a_in_block.wait(timeout=3.0)
+            with NetworkBlocker():
+                try:
+                    socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    results["b_blocked"] = False
+                except ConnectionError:
+                    results["b_blocked"] = True
+            thread_a_can_exit.set()
+
+        ta = threading.Thread(target=thread_a)
+        tb = threading.Thread(target=thread_b)
+        ta.start(); tb.start()
+        ta.join(timeout=5.0); tb.join(timeout=5.0)
+
+        assert results["a_blocked"] is True
+        assert results["b_blocked"] is True
+        assert results["a_still_blocked_after_b"] is True, (
+            "Thread A was unblocked when Thread B exited its own blocker — "
+            "blocker state is leaking across threads."
+        )
+
+    def test_main_thread_unblocked_after_worker_thread_blocker_finishes(self):
+        """End-to-end version of the Flask scenario: a background worker
+        enters a blocker, the main thread (us) keeps networking, and after
+        the worker exits the global patches are torn down."""
+        worker_done = threading.Event()
+
+        def worker():
+            with NetworkBlocker():
+                # Hold the block for a moment so the main thread tries to
+                # open a socket while the worker is inside.
+                time.sleep(0.05)
+            worker_done.set()
+
+        before = socket.socket
+        t = threading.Thread(target=worker)
+        t.start()
+
+        # While the worker is inside its blocker, main thread must still
+        # be able to create sockets (this is what Flask needs).
+        time.sleep(0.01)  # let worker enter
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.close()
+
+        worker_done.wait(timeout=2.0)
+        t.join(timeout=2.0)
+
+        # All blockers exited → originals restored.
         assert socket.socket is before
 
 

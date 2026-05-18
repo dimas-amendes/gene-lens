@@ -10,6 +10,7 @@ Design principles:
 import os
 import sys
 import socket
+import threading
 import contextlib
 from pathlib import Path
 from datetime import datetime
@@ -48,37 +49,78 @@ def secure_delete_dir(directory: Path, passes: int = 3) -> None:
 
 
 class NetworkBlocker:
-    """Context manager that blocks all outbound network connections.
+    """Context manager that blocks outbound network connections for the
+    *calling thread only*.
 
-    Replaces socket.socket with a stub that raises ConnectionError.
-    This guarantees no data leaks during analysis — even if a dependency
-    tries to phone home.
+    Replaces socket.socket / getaddrinfo at the module level, but the
+    replacement checks the current thread ident against a registry — so
+    other threads (e.g. the Flask web server serving static assets while
+    an analysis job runs in the background) keep working normally.
+
+    Prior versions patched globally, which deadlocked the Flask UI:
+    accept()ing a new client socket from the browser would raise
+    ConnectionError, leaving static CSS requests hanging and the loading
+    page stuck on a gray screen.
     """
 
-    def __init__(self):
-        self._original_socket = None
-        self._original_getaddrinfo = None
+    _lock = threading.Lock()
+    # thread_ident -> nesting depth. A thread is "blocked" iff it appears here.
+    # Counting (instead of a set) lets nested `with NetworkBlocker()` work
+    # correctly: the inner __exit__ must not unblock the outer scope.
+    _blocked_threads: dict = {}
+    _original_socket = None
+    _original_getaddrinfo = None
+
+    @classmethod
+    def _install_patch(cls):
+        cls._original_socket = socket.socket
+        cls._original_getaddrinfo = socket.getaddrinfo
+
+        def guarded_socket(*args, **kwargs):
+            if threading.get_ident() in cls._blocked_threads:
+                raise ConnectionError(
+                    "Network access is blocked during genetic analysis for privacy. "
+                    "Use 'python main.py download' separately to fetch databases."
+                )
+            return cls._original_socket(*args, **kwargs)
+
+        def guarded_getaddrinfo(*args, **kwargs):
+            if threading.get_ident() in cls._blocked_threads:
+                raise ConnectionError("Network access blocked for privacy.")
+            return cls._original_getaddrinfo(*args, **kwargs)
+
+        socket.socket = guarded_socket
+        socket.getaddrinfo = guarded_getaddrinfo
+
+    @classmethod
+    def _uninstall_patch(cls):
+        if cls._original_socket is not None:
+            socket.socket = cls._original_socket
+            cls._original_socket = None
+        if cls._original_getaddrinfo is not None:
+            socket.getaddrinfo = cls._original_getaddrinfo
+            cls._original_getaddrinfo = None
 
     def __enter__(self):
-        self._original_socket = socket.socket
-        self._original_getaddrinfo = socket.getaddrinfo
-
-        def blocked_socket(*args, **kwargs):
-            raise ConnectionError(
-                "Network access is blocked during genetic analysis for privacy. "
-                "Use 'python main.py download' separately to fetch databases."
+        with NetworkBlocker._lock:
+            if not NetworkBlocker._blocked_threads:
+                NetworkBlocker._install_patch()
+            tid = threading.get_ident()
+            NetworkBlocker._blocked_threads[tid] = (
+                NetworkBlocker._blocked_threads.get(tid, 0) + 1
             )
-
-        def blocked_getaddrinfo(*args, **kwargs):
-            raise ConnectionError("Network access blocked for privacy.")
-
-        socket.socket = blocked_socket
-        socket.getaddrinfo = blocked_getaddrinfo
         return self
 
     def __exit__(self, *exc):
-        socket.socket = self._original_socket
-        socket.getaddrinfo = self._original_getaddrinfo
+        with NetworkBlocker._lock:
+            tid = threading.get_ident()
+            depth = NetworkBlocker._blocked_threads.get(tid, 0) - 1
+            if depth <= 0:
+                NetworkBlocker._blocked_threads.pop(tid, None)
+            else:
+                NetworkBlocker._blocked_threads[tid] = depth
+            if not NetworkBlocker._blocked_threads:
+                NetworkBlocker._uninstall_patch()
         return False
 
 

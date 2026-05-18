@@ -52,17 +52,6 @@ Improvements that need careful design before they're built.
 - [ ] Carrier-screening expansion: opt-in extended panel for couples planning pregnancy, calibrated against ACMG carrier-screening recommendations
 - [ ] More phenotype loci where evidence is strong (skin tone, height, lactose)
 
-## Won't do (deliberate exclusions)
-
-Items the project has decided against, to keep the scope honest:
-
-- **Polygenic Risk Scores (PRS).** Ethnicity-dependent, prone to overinterpretation on consumer-chip data. The product's framing ("conversation starters, not answers") is incompatible with risk scores that quantify what they can't reliably measure.
-- **Cloud / multi-user mode.** Goes against the core local-first promise. Anyone who wants a hosted version can fork — that's what MIT is for.
-- **Telemetry of any kind.** Including "anonymous usage stats". The privacy floor stays at zero outbound network during analysis.
-- **Prescriptive language.** Even when the literature supports a recommendation, the product never says "take X" or "you should". Phrasing is always exploratory.
-- **Diagnostic claims.** Not a SaMD, not a medical device, will not pursue regulatory clearance — by design.
-- **Cross-browser voice I/O (TTS/STT).** Web Speech API silently uses cloud providers in some browsers; conflicts with the offline guarantee.
-
 ---
 
 To propose adding (or removing) something, open an Issue. Roadmap items

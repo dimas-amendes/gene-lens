@@ -15,6 +15,7 @@ import pytest
 
 from src.medical_specialties import (
     SPECIALTY_REFERRALS,
+    find_relevant_for_analysis,
     format_for_prompt,
     lookup,
 )
@@ -76,6 +77,131 @@ class TestLookup:
 
     def test_lookup_returns_none_for_unknown_key(self):
         assert lookup("does-not-exist") is None
+
+
+class TestRelevanceMatching:
+    """`find_relevant_for_analysis` is what plugs the catalog into the
+    chat context. The model only gets the SUS/insurance pathway notes
+    for findings the user actually has — so this is the gatekeeper for
+    "don't tell a patient with no BRCA hits about oncogenetic referral
+    pathways at INCA, because that's noise"."""
+
+    def test_empty_analysis_returns_no_referrals(self):
+        assert find_relevant_for_analysis({}) == []
+        assert find_relevant_for_analysis(None) == []
+
+    def test_matches_health_finding_by_gene(self):
+        active = {"health": {"findings": [{"gene": "CYP2D6", "rsid": "rs1"}]}}
+        result = find_relevant_for_analysis(active)
+        keys = [r["key"] for r in result]
+        assert "pgx_psychiatry" in keys
+
+    def test_matches_disease_finding_by_gene(self):
+        active = {"disease": {"findings": [{"gene": "BRCA1", "rsid": "rs80357906"}]}}
+        result = find_relevant_for_analysis(active)
+        assert any(r["key"] == "hboc_brca" for r in result)
+
+    def test_matches_hereditary_match_by_gene(self):
+        active = {"hereditary": {"matches": [{"genes": ["F5"], "gene_details": []}]}}
+        result = find_relevant_for_analysis(active)
+        assert any(r["key"] == "thrombophilia" for r in result)
+
+    def test_matches_wellness_panel_by_key(self):
+        active = {"wellness": {"thyroid": {"findings": [{"rsid": "rs1"}]}}}
+        result = find_relevant_for_analysis(active)
+        assert any(r["key"] == "wellness_thyroid" for r in result)
+
+    def test_wellness_panel_without_findings_is_ignored(self):
+        active = {"wellness": {"thyroid": {"findings": []}}}
+        result = find_relevant_for_analysis(active)
+        assert not any(r["key"] == "wellness_thyroid" for r in result)
+
+    def test_multiple_overlaps_outrank_single_overlap(self):
+        # BRCA1 + BRCA2 both belong to hboc_brca → score 2
+        # CYP2C19 belongs to pgx_psychiatry → score 1
+        active = {
+            "disease": {"findings": [{"gene": "BRCA1"}, {"gene": "BRCA2"}]},
+            "health": {"findings": [{"gene": "CYP2C19"}]},
+        }
+        result = find_relevant_for_analysis(active)
+        assert result[0]["key"] == "hboc_brca"
+
+    def test_panel_match_outranks_incidental_gene_overlap(self):
+        """When the user has the Skin panel active AND a stray MC1R gene
+        elsewhere, the panel referral should still come first."""
+        active = {"wellness": {"skin": {"findings": [{"rsid": "rs1"}]}}}
+        result = find_relevant_for_analysis(active)
+        # The wellness_skin entry should be the top-ranked entry,
+        # because exact panel match scores 2 (see implementation).
+        assert result[0]["key"] == "wellness_skin"
+
+    def test_max_results_caps_output(self):
+        # Active analysis with many gene matches across multiple entries.
+        active = {
+            "disease": {"findings": [
+                {"gene": "BRCA1"}, {"gene": "MLH1"}, {"gene": "APC"},
+                {"gene": "TP53"}, {"gene": "PTEN"}, {"gene": "LDLR"},
+                {"gene": "F5"}, {"gene": "HFE"}, {"gene": "SERPINA1"},
+                {"gene": "CYP2D6"}, {"gene": "VKORC1"}, {"gene": "TPMT"},
+            ]}
+        }
+        result = find_relevant_for_analysis(active, max_results=3)
+        assert len(result) == 3
+
+    def test_unrelated_analysis_returns_empty(self):
+        active = {"disease": {"findings": [{"gene": "NEVER_HEARD_OF_THIS_GENE"}]}}
+        result = find_relevant_for_analysis(active)
+        assert result == []
+
+
+class TestChatContextIntegration:
+    """`_build_chat_context` in dashboard.py is where the catalog meets the
+    user. The behavior we want to lock: relevant referral notes (with
+    SUS/insurance pathway) get appended; otherwise the section stays out
+    so empty / unrelated analyses don't get a generic referral block."""
+
+    def test_context_includes_referral_notes_for_relevant_finding(self):
+        from dashboard import _build_chat_context
+        active = {
+            "disease": {"findings": [
+                {"gene": "BRCA1", "rsid": "rs80357906", "clinical_significance": "Pathogenic"},
+            ]},
+        }
+        ctx = _build_chat_context(active, "pt")
+        # The trigger phrase and a key part of the SUS/insurance note must
+        # both surface — otherwise we've inlined the trigger without the
+        # pathway, defeating the whole point of the integration.
+        assert "BRCA1/2" in ctx or "HBOC" in ctx
+        assert "INCA" in ctx or "NCCN" in ctx  # one of the SUS/insurance anchors
+
+    def test_context_omits_referral_block_when_no_matches(self):
+        from dashboard import _build_chat_context
+        active = {"disease": {"findings": [{"gene": "DOES_NOT_EXIST"}]}}
+        ctx = _build_chat_context(active, "pt")
+        assert "Referral context" not in ctx
+
+    def test_user_provided_sex_is_shown_without_uncertainty_disclaimer(self):
+        from dashboard import _build_chat_context
+        active = {"genome_info": {"profile": {"sex": "M"}}}
+        ctx = _build_chat_context(active, "pt")
+        assert "sex=M" in ctx
+        # No inference disclaimer when the user typed sex themselves.
+        assert "INFERRED" not in ctx
+
+    def test_inferred_sex_carries_uncertainty_disclaimer(self):
+        """If sex was inferred chromosomally (user didn't supply it), the
+        chat context must flag it as uncertain so the model doesn't
+        confidently say "you are male/female". Regression for a real
+        miscall where a male user was inferred F (low Y coverage)."""
+        from dashboard import _build_chat_context
+        active = {
+            "genome_info": {"profile": {"sex": "F", "sex_inferred": True}}
+        }
+        ctx = _build_chat_context(active, "pt")
+        assert "sex=F" in ctx
+        assert "INFERRED" in ctx
+        # Make sure the model is told not to claim it as fact.
+        assert "Do NOT state this as fact" in ctx or "ask the user to confirm" in ctx
 
 
 class TestCoverageOfAppFindings:

@@ -512,6 +512,66 @@ SPECIALTY_REFERRALS: list[dict] = [
 ]
 
 
+def find_relevant_for_analysis(active: dict, max_results: int = 10) -> list[dict]:
+    """Return referral entries whose genes or wellness-panel key match the
+    user's active analysis. Ordered by overlap strength so the most
+    on-point referrals come first.
+
+    `max_results` defaults to 10 — generous because the model is local,
+    but not unbounded. The real cost isn't dollars (loopback to Ollama),
+    it's attention-budget on an 8B model: past ~3-4k prompt tokens the
+    model starts dropping instruction-following. 10 well-scored referrals
+    add ~1-1.5k tokens and stay safely under that ceiling. Bump higher if
+    you need; expect quality drop somewhere around 25+.
+
+    Returns the full referral dicts (including `notes`), so the caller
+    can choose how much to inline. Returns [] when there's no active
+    analysis or no overlap.
+    """
+    if not active:
+        return []
+
+    seen_genes: set[str] = set()
+    seen_panels: set[str] = set()
+
+    for src_key in ("health", "disease"):
+        section = active.get(src_key) or {}
+        for f in section.get("findings", []) or []:
+            g = f.get("gene")
+            if g:
+                seen_genes.add(g)
+
+    # Hereditary results carry per-gene detail and condition-level gene lists.
+    hereditary = active.get("hereditary") or {}
+    for cond in hereditary.get("matches", []) or []:
+        for d in cond.get("gene_details", []) or []:
+            if d.get("gene"):
+                seen_genes.add(d["gene"])
+        for g in cond.get("genes", []) or []:
+            seen_genes.add(g)
+
+    # Wellness panels are indexed by short key (skin, sleep, …). Referral
+    # keys follow the convention "wellness_<panel>".
+    for panel_key, panel in (active.get("wellness") or {}).items():
+        if (panel or {}).get("findings"):
+            seen_panels.add(panel_key.lower())
+
+    scored: list[tuple[int, dict]] = []
+    for r in SPECIALTY_REFERRALS:
+        gene_overlap = len(set(r["genes"]) & seen_genes)
+        panel_match = 0
+        for p in seen_panels:
+            if r["key"].lower() == f"wellness_{p}":
+                panel_match = 2  # exact panel match beats incidental gene overlap
+                break
+        score = gene_overlap + panel_match
+        if score > 0:
+            scored.append((score, r))
+
+    scored.sort(key=lambda x: -x[0])
+    return [r for _, r in scored[:max_results]]
+
+
 def format_for_prompt(lang: Lang) -> str:
     """Render SPECIALTY_REFERRALS as a markdown bullet block for inlining in
     the system prompt. Only the `trigger → specialty` line — notes are

@@ -52,6 +52,22 @@
 - **Secure deletion**: Always use `secure_delete()` for genetic data files, never `unlink()`.
 - **CSRF protection**: All POST routes are protected via Origin/Referer check in `_csrf_check()`.
 
+## UI target: desktop-only by design
+
+Gene Lens is a **desktop-first product** and we don't pretend otherwise. Reasoning:
+
+- The whole runtime lives on the user's machine: `pip install`, `python run.py`, Ollama serving a ~5 GB local model, ClinVar's 290 MB index loaded into RAM. None of this works on mobile.
+- The browser that views the dashboard is on the **same machine** that ran the analysis — they're not on different devices.
+- An analysis session is a deep reading task: 200-SNP tables, ancestry maps, donut charts with multiple categories, AI chat next to a panel. That's mouse-and-monitor work.
+- The plausible mobile case ("I want to show my dad my Factor V Leiden on a phone") is niche.
+
+**What this means for changes:**
+
+- Don't accept feature requests framed as "make X mobile-friendly" without checking who actually uses it on mobile. The answer is usually "nobody".
+- A media query for narrow viewports is OK if it prevents the worst layout breaks (header wrap, table overflow), but don't redesign components for touch / small screens.
+- The `/report` route is the one exception: it has its own A4-paper layout because the user *does* sometimes want to share a PDF with a doctor. That's not mobile, that's print.
+- If a future contributor wants real mobile support, that's a re-platform conversation (PWA + worker offload + remote inference + auth), not a CSS pass.
+
 ## Console & log language
 
 - `python main.py web` boots in EN by default. `--lang pt` (or `pt-BR`) switches startup banner, DB loader messages, and the initial dashboard language until the user's cookie overrides.

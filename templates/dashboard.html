@@ -160,22 +160,138 @@ a { color: var(--accent); }
 /* Tabular figures everywhere numbers live in rows/cells — prevents
    width jitter when sorting tables or polling DB status. */
 .tb td, .tb th, code, .cov-stat-n, .cov-panel-ratio { font-variant-numeric: tabular-nums; }
-.uz { background: var(--surface-3); border: 2px dashed var(--border-strong); border-radius: 16px; padding: 32px 40px 40px; text-align: center; max-width: 560px; margin: 24px auto 20px; transition: border-color .3s, background .3s; }
+.uz { background: var(--surface-3); border: 2px dashed var(--border-strong); border-radius: 16px; padding: 28px 40px 24px; text-align: center; max-width: 720px; margin: 20px auto 14px; transition: border-color .3s, background .3s; }
 .uz:hover { border-color: var(--accent); }
 .uz.drag-over { border-color: var(--accent); background: rgba(59,130,246,.06); }
 .uz h2 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
 .uz .fc { background: var(--border-default); border: 1px solid var(--border-strong); color: var(--text); border-radius: 8px; padding: 10px 14px; width: 100%; }
 .uz .fc:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,.2); }
+/* Placeholders are example values — same dim treatment as the field-opt
+   suffix so the user reads them as "this is what would go here" rather
+   than entered data. */
+.uz .fc::placeholder { color: var(--text-faint); opacity: 1; font-weight: 400; }
 .uz select.fc { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2371717a' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
-.dropzone { cursor: pointer; padding: 28px 20px; margin-bottom: 16px; border: 2px dashed var(--border-strong); border-radius: 12px; transition: border-color .2s, background .2s; position: relative; }
+/* When the empty-value option is selected, render the closed-state face
+   in the placeholder color — so "Outro / prefiro não dizer" reads as a
+   default-state hint, not as a chosen value. Dropdown options themselves
+   keep the bright --text color so they're readable when expanded.
+   Uses :has() (Chrome 105+, Safari 15.4+, Firefox 121+). */
+.uz select.fc:has(option[value=""]:checked) { color: var(--text-faint); }
+.uz select.fc option { color: var(--text); background: var(--surface-3); }
+.dropzone { cursor: pointer; padding: 22px 20px; margin-bottom: 14px; border: 2px dashed var(--border-strong); border-radius: 12px; transition: border-color .2s, background .2s; position: relative; }
 .dropzone:hover { border-color: var(--accent); background: rgba(59,130,246,.04); }
 .dropzone.has-file { border-color: var(--green); border-style: solid; background: rgba(34,197,94,.04); }
 .dropzone-icon { font-size: 36px; margin-bottom: 8px; opacity: .6; }
 .dropzone-text { font-size: 14px; color: var(--text-muted); margin-bottom: 4px; }
 .dropzone-sub { font-size: 12px; color: var(--text-dim); }
 .dropzone-file { font-size: 13px; color: var(--green); font-weight: 600; margin-top: 6px; }
-.profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 420px; margin: 0 auto 12px; }
+.profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; max-width: 560px; margin: 8px auto 12px; }
 .profile-grid .full { grid-column: 1 / -1; }
+/* Outlined textfield with notched label (Material-style). The label
+   always sits on the top border so the user knows what each input is
+   even when empty — better than placeholder-only because placeholders
+   disappear the moment you start typing, and selects can't have them. */
+.field { position: relative; }
+.field > label {
+  position: absolute;
+  top: -7px; left: 10px;
+  background: var(--bg);
+  padding: 0 6px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  pointer-events: none;
+  transition: color .15s;
+}
+.field:focus-within > label { color: var(--accent); }
+/* "optional" suffix on every label — visually muted secondary metadata.
+   Separated by a · bullet to read as "name · optional" without the
+   visual weight of "(optional)" parens competing with the field name.
+   text-transform: none + letter-spacing: 0 override the parent label's
+   uppercase + spaced caps. */
+.field > label .field-opt {
+  color: var(--text-faint);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: lowercase;
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 9.5px;
+  margin-left: 6px;
+  font-style: italic;
+}
+.field > label .field-opt::before { content: "· "; font-style: normal; }
+.field:focus-within > label .field-opt { color: var(--text-muted); }
+/* Inline info trigger — small icon next to the label that reveals a
+   custom tooltip on hover/focus. We render the bubble via ::after with
+   `data-tooltip` so the message stays in HTML (translatable) but the
+   styling stays in CSS (themable, readable, no native browser tooltip
+   sizing). Tabindex=0 + role=button + aria-label keeps it keyboard
+   accessible — focusing the icon shows the tooltip too. */
+.field-info {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  opacity: .7;
+  vertical-align: -2px;
+  cursor: help;
+  padding: 2px;
+  border-radius: 50%;
+  outline: none;
+  pointer-events: auto;
+  white-space: nowrap;
+}
+.field-info:hover, .field-info:focus-visible { opacity: 1; color: var(--accent); }
+.field-info[data-tooltip]:hover::after,
+.field-info[data-tooltip]:focus-visible::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 12.5px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.55;
+  padding: 11px 13px;
+  border-radius: 8px;
+  white-space: normal;
+  text-align: left;
+  box-shadow: 0 12px 28px -6px rgba(0,0,0,.55);
+  z-index: 30;
+  pointer-events: none;
+  animation: tooltip-in .12s ease-out;
+}
+/* Little arrow connecting the bubble to the icon. */
+.field-info[data-tooltip]:hover::before,
+.field-info[data-tooltip]:focus-visible::before {
+  content: "";
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 8px; height: 8px;
+  background: var(--surface-2);
+  border-left: 1px solid var(--border-default);
+  border-top: 1px solid var(--border-default);
+  z-index: 31;
+  pointer-events: none;
+}
+@keyframes tooltip-in { from { opacity: 0; transform: translateX(-50%) translateY(-3px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+/* Match input padding to give the label air without the value text
+   crashing into it. */
+.uz .field > input.fc,
+.uz .field > select.fc { padding-top: 12px; padding-bottom: 12px; }
 .flash-ok { border-color: rgba(34,197,94,.3) !important; }
 .flash-ok .gc-b { color: var(--green) !important; }
 .flash-info { border-color: rgba(59,130,246,.3) !important; }
@@ -185,8 +301,11 @@ a { color: var(--accent); }
 .flash-toast.flash-dragging { transition: none; cursor: grabbing; }
 .flash-toast.flash-out { animation: flash-fade .25s ease-out forwards; }
 @keyframes flash-fade { to { opacity: 0; transform: translateX(120%); height: 0; margin: 0; padding: 0; border-width: 0; } }
-.hint { font-size: 12px; color: var(--text-faint); margin-bottom: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; }
-.hint svg { flex-shrink: 0; }
+/* Form-area hint (under the profile grid). Bumped from 12px/text-faint
+   to 13.5px/text-muted because at the previous size on a near-black bg
+   the contrast was ~3.1:1 — below WCAG AA for body text. */
+.hint { font-size: 13.5px; color: var(--text-muted); margin: 4px auto 14px; display: flex; align-items: flex-start; justify-content: center; gap: 8px; max-width: 460px; line-height: 1.5; padding: 0 8px; }
+.hint svg, .hint .ti { flex-shrink: 0; margin-top: 1px; }
 .gt { display: flex; gap: 2px; border-bottom: 1px solid var(--border-default); margin-bottom: 20px; overflow-x: auto; overflow-y: hidden; flex-wrap: nowrap; scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; -ms-overflow-style: none; }
 .gt::-webkit-scrollbar { height: 3px; }
 .gt::-webkit-scrollbar-track { background: transparent; }
@@ -241,8 +360,14 @@ a { color: var(--accent); }
 .db em { color: var(--text-faint); font-style: italic; }
 .db a { color: #93c5fd; text-decoration: underline; }
 .db a:hover { color: #bfdbfe; }
-.cg { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; margin-bottom: 20px; }
-.cw { min-height: 320px; }
+/* Charts grid: 2×2 on wide screens (so 4 charts make a balanced square
+   instead of leaving a half-row orphan), 1 column on narrow. Previous
+   `repeat(auto-fit, minmax(360px, 1fr))` rendered 3 columns on common
+   viewport widths, leaving chart #4 sitting alone in a 1/3-width cell
+   while charts #1-3 had room to breathe. */
+.cg { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px; }
+@media (max-width: 760px) { .cg { grid-template-columns: 1fr; } }
+.cw { min-height: 340px; }
 .mb { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
 .pb { height: 10px; background: var(--border-default); border-radius: 5px; overflow: hidden; margin-bottom: 4px; }
 .pf { height: 100%; border-radius: 5px; }
@@ -345,7 +470,7 @@ a { color: var(--accent); }
 .btn-export { background: var(--accent); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; }
 .btn-export:hover { filter: brightness(1.1); }
 .btn-clear { color: var(--text-faint); background: var(--surface-3); border: 1px solid var(--border-strong); padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; }
-.sample-form { margin-top: 10px; }
+.sample-form { margin-top: 6px; }
 .link-sample { background: transparent; color: var(--text-faint); border: none; padding: 4px 8px; font-size: 12px; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; text-decoration: underline; text-underline-offset: 3px; text-decoration-style: dotted; text-decoration-color: var(--border-strong); }
 .link-sample:hover { color: var(--accent); text-decoration-color: var(--accent); }
 /* Translator-required banner (only shown in PT mode without the en->pt model) */
@@ -467,6 +592,26 @@ a { color: var(--accent); }
   .print-header strong { font-size: 13pt; }
   .print-footer { display: block !important; margin-top: 16px; font-size: 8pt; color: #555; text-align: center; }
 }
+
+/* ── Confirm modal (destructive actions) ─────────────────────────────────
+   Replaces browser's window.confirm() for delete-history because the
+   native dialog is platform-styled, breaks the dark-mode visual language,
+   and gives no room to explain WHAT gets deleted (the linked DNA file
+   matters for the privacy promise — users should know it's wiped too). */
+.cmodal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(2px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
+.cmodal-backdrop.open { display: flex; animation: cmodal-fade-in .15s ease-out; }
+@keyframes cmodal-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.cmodal { background: var(--surface-3); border: 1px solid var(--border-default); border-radius: 14px; padding: 24px 26px; max-width: 440px; width: 100%; box-shadow: 0 20px 60px -10px rgba(0,0,0,.6); }
+.cmodal-icon { width: 38px; height: 38px; border-radius: 50%; background: var(--red-soft); display: inline-flex; align-items: center; justify-content: center; color: var(--red); font-size: 19px; margin-bottom: 14px; }
+.cmodal-title { font-size: 16px; font-weight: 600; color: var(--text); margin: 0 0 8px; }
+.cmodal-body { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin: 0 0 22px; }
+.cmodal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.cmodal-btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; border: 1px solid transparent; transition: filter .15s, background .15s, border-color .15s; }
+.cmodal-btn-cancel { background: transparent; color: var(--text-secondary); border-color: var(--border-strong); }
+.cmodal-btn-cancel:hover { color: var(--text); border-color: var(--text-faint); }
+.cmodal-btn-danger { background: var(--red); color: #fff; }
+.cmodal-btn-danger:hover { filter: brightness(1.08); }
+.cmodal-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -602,19 +747,38 @@ a { color: var(--accent); }
       <input type="file" name="genome_file" id="fileInput" accept=".txt,.csv,.tsv,.gz" style="display:none">
     </div>
     <div class="profile-grid">
-      <input type="text" name="subject_name" class="fc full" placeholder="{{ t.upload_name }}" autocomplete="off">
-      <select name="sex" class="fc" autocomplete="off"><option value="">{{ t.profile_sex_default }}</option><option value="M">{{ t.profile_male }}</option><option value="F">{{ t.profile_female }}</option></select>
-      <input type="number" name="age" class="fc" placeholder="{{ t.profile_age }}" min="1" max="120" autocomplete="off">
-      <input type="number" name="weight" class="fc" placeholder="{{ t.profile_weight }}" min="20" max="300" step="0.1" autocomplete="off">
-      <input type="number" name="height" class="fc" placeholder="{{ t.profile_height }}" min="100" max="250" autocomplete="off">
+      <div class="field full">
+        <label for="f-name">{{ t.field_subject_name }}<span class="field-opt">{{ t.field_optional }}</span></label>
+        <input id="f-name" type="text" name="subject_name" class="fc" placeholder="John Doe" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="f-sex">{{ t.field_sex }}<span class="field-opt">{{ t.field_optional }}</span><span class="field-info" tabindex="0" role="button" aria-label="{{ t.field_info_label }}" data-tooltip="{{ t.field_sex_tooltip }}"><i class="ti ti-info-circle"></i></span></label>
+        <select id="f-sex" name="sex" class="fc" autocomplete="off">
+          <option value="">{{ t.profile_sex_default }}</option>
+          <option value="M">{{ t.profile_male }}</option>
+          <option value="F">{{ t.profile_female }}</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-age">{{ t.field_age }}<span class="field-opt">{{ t.field_optional }}</span></label>
+        <input id="f-age" type="number" name="age" class="fc" placeholder="35" min="1" max="120" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="f-weight">{{ t.field_weight }}<span class="field-opt">{{ t.field_optional }}</span></label>
+        <input id="f-weight" type="number" name="weight" class="fc" placeholder="70" min="20" max="300" step="0.1" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="f-height">{{ t.field_height }}<span class="field-opt">{{ t.field_optional }}</span></label>
+        <input id="f-height" type="number" name="height" class="fc" placeholder="175" min="100" max="250" autocomplete="off">
+      </div>
     </div>
-    <div class="hint"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> {{ t.profile_optional }}</div>
+    <div class="hint"><i class="ti ti-info-circle" style="font-size:14px;color:var(--text-muted)"></i> {{ t.profile_optional }}</div>
     <button type="submit" class="btn btn-primary" id="submitBtn" style="background:var(--accent);border:none;padding:14px 40px;font-weight:600;border-radius:10px;font-size:15px;cursor:pointer;transition:background .2s;display:inline-flex;align-items:center;gap:8px"><i class="ti ti-bolt"></i> {{ t.upload_btn }}</button>
   </form>
   <form action="/analyze-sample" method="post" class="sample-form">
     <button type="submit" class="link-sample" title="{{ t.try_sample_hint }}"><i class="ti ti-flask-2"></i> {{ t.try_sample_btn }}</button>
   </form>
-  <p style="color:var(--text-dim);margin-top:12px;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-lock"></i> {{ t.upload_note }}</p>
+  <p style="color:var(--text-dim);margin-top:8px;margin-bottom:0;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-lock"></i> {{ t.upload_note }}</p>
 </div>
 {% if history %}
 <div class="gc" style="max-width:700px;margin:20px auto 0">
@@ -623,7 +787,7 @@ a { color: var(--accent); }
   {% for h in history %}<tr data-href="/history/load/{{ h.id }}">
     <td>{{ h.timestamp[:16].replace('T', ' ') }}</td><td class="fw6">{{ h.genome_info.get('subject_name') or t.history_anonymous }}</td>
     <td>{{ "{:,}".format(h.genome_info.get('snp_count', 0)) }}</td><td>{{ h.summary.get('analyzed_snps', 0) }} {{ t.history_analyzed }}</td><td>{{ h.elapsed }}s</td>
-    <td class="no-nav" onclick="event.stopPropagation()"><form action="/history/delete/{{ h.id }}" method="post" style="display:inline" onsubmit="event.stopPropagation();return confirm('{{ t.history_delete_confirm }}')"><button type="submit" onclick="event.stopPropagation()" style="padding:2px 8px;color:var(--text-faint);background:transparent;border:1px solid var(--border-strong);border-radius:4px;cursor:pointer"><i class="ti ti-x"></i></button></form></td>
+    <td class="no-nav" onclick="event.stopPropagation()"><form action="/history/delete/{{ h.id }}" method="post" style="display:inline" data-confirm-delete onsubmit="event.stopPropagation()"><button type="submit" onclick="event.stopPropagation()" style="padding:2px 8px;color:var(--text-faint);background:transparent;border:1px solid var(--border-strong);border-radius:4px;cursor:pointer" title="{{ t.history_delete_title }}"><i class="ti ti-x"></i></button></form></td>
   </tr>{% endfor %}</tbody></table></div></div>
 {% endif %}
 <div class="db" style="max-width:700px;margin:24px auto 0;background:transparent;border:none;text-align:center"><strong>{{ t.warning_label }}:</strong> {{ t.upload_disclaimer }}</div>
@@ -684,7 +848,7 @@ a { color: var(--accent); }
   {% if conclusions.get('overview') %}<details class="gc acc" style="margin-bottom:16px"><summary style="font-size:13px;color:var(--text-muted)"><i class="ti ti-microscope"></i> {{ t.technical_details }}</summary><div class="acc-body"><div class="cc" style="margin:0"><h4><i class="ti ti-clipboard-text"></i> {{ t.conclusion_overview }}</h4><ul>{% for c in conclusions.overview %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div></div></details>{% endif %}
   {% set high = results.findings|selectattr('magnitude','ge',3)|list %}
   {% if high %}<div class="gc"><div class="gc-h"><h3 class="tr"><i class="ti ti-alert-octagon"></i> {{ t.high_mag_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_category }}</th><th>{{ t.col_magnitude }}</th><th>{{ t.col_details }}</th></tr></thead><tbody>
-  {% for f in high %}<tr><td class="fw6">{{ f.gene }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.genotype }}</code></td><td>{{ CAT_PT.get(f.category, f.category) }}</td><td><span class="bs br">{{ f.magnitude }}/6</span></td><td>{{ f.description[:90] }}</td></tr>{% endfor %}
+  {% for f in high %}{% set _cic = CAT_ICONS.get(f.category, ('', '')) %}<tr><td class="fw6">{{ f.gene }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.genotype }}</code></td><td>{% if _cic[0] %}<i class="ti {{ _cic[0] }} {{ _cic[1] }}"{% if not _cic[1] %} style="color:var(--accent)"{% endif %}></i> {% endif %}{{ CAT_PT.get(f.category, f.category) }}</td><td><span class="bs br">{{ f.magnitude }}/6</span></td><td>{{ f.description[:90] }}</td></tr>{% endfor %}
   </tbody></table></div></div>{% else %}<div class="gc"><div class="gc-b tg">{{ t.high_mag_none|safe }}</div></div>{% endif %}
 
   {% if coverage and coverage.panels %}
@@ -736,7 +900,7 @@ a { color: var(--accent); }
       <div class="acc-body">
         {% if conclusions.get('lifestyle') %}<div class="cc"><h4><i class="ti ti-clipboard-text"></i> {{ t.conclusion_lifestyle }}</h4><ul>{% for c in conclusions.lifestyle %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
         {% for cat, findings in results.by_category.items() %}
-        <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ CAT_PT.get(cat, cat) }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_status }}</th><th>{{ t.col_magnitude }}</th><th>{{ t.col_details }}</th></tr></thead><tbody>
+        {% set _cic = CAT_ICONS.get(cat, ('', '')) %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{% if _cic[0] %}<i class="ti {{ _cic[0] }} {{ _cic[1] }}"{% if not _cic[1] %} style="color:var(--accent)"{% endif %}></i> {% endif %}{{ CAT_PT.get(cat, cat) }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_status }}</th><th>{{ t.col_magnitude }}</th><th>{{ t.col_details }}</th></tr></thead><tbody>
         {% for f in findings|sort(attribute='magnitude',reverse=True) %}<tr><td class="fw6">{{ f.gene }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.genotype }}</code></td><td>{{ f.status.replace('_',' ').title() }}</td><td>{% if f.magnitude>=3 %}<span class="bs br">{{ f.magnitude }}/6</span>{% elif f.magnitude>=2 %}<span class="bs by">{{ f.magnitude }}/6</span>{% else %}<span class="bs bg">{{ f.magnitude }}/6</span>{% endif %}</td><td>{{ f.description[:100] }}</td></tr>{% endfor %}
         </tbody></table></div></div>{% endfor %}
       </div>
@@ -1205,7 +1369,27 @@ const TX = '#a1a1aa';
 if (CD.categories) { const c=echarts.init(document.getElementById('chart-categories')); c.setOption({title:{text:'{{ t.chart_categories }}',textStyle:{color:'#fafafa',fontSize:14,fontFamily:'Geist'}},tooltip:{trigger:'axis'},grid:{left:'40%',right:'8%',top:40,bottom:10},xAxis:{type:'value',axisLabel:{color:TX}},yAxis:{type:'category',data:CD.categories.labels.slice().reverse(),axisLabel:{color:TX,fontSize:11,fontFamily:'Geist'}},series:[{type:'bar',data:CD.categories.values.slice().reverse(),itemStyle:{borderRadius:[0,4,4,0],color:'#3b82f6'}}]}); }
 if (CD.magnitude&&CD.magnitude.length) { const c=echarts.init(document.getElementById('chart-magnitude')); c.setOption({title:{text:'{{ t.chart_magnitude }}',left:'center',textStyle:{color:'#fafafa',fontSize:14,fontFamily:'Geist'}},tooltip:{trigger:'item',formatter:'{b}: {c} ({d}%)'},color:['#22c55e','#eab308','#ef4444'],series:[{type:'pie',radius:['40%','70%'],center:['50%','55%'],data:CD.magnitude,label:{color:TX,fontSize:12,fontFamily:'Geist'},emphasis:{itemStyle:{shadowBlur:10}}}]}); }
 if (CD.drug_levels) { const c=echarts.init(document.getElementById('chart-drugs')); c.setOption({title:{text:'{{ t.chart_drug_levels }}',textStyle:{color:'#fafafa',fontSize:14,fontFamily:'Geist'}},tooltip:{trigger:'axis'},grid:{left:'15%',right:'10%',top:40,bottom:30},xAxis:{type:'category',data:CD.drug_levels.labels,axisLabel:{color:TX}},yAxis:{type:'value',axisLabel:{color:TX}},series:[{type:'bar',data:CD.drug_levels.values,itemStyle:{borderRadius:[4,4,0,0]},color:'#3b82f6'}]}); } else { document.getElementById('chart-drugs').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-dim)">{{ t.chart_no_drug }}</div>'; }
-if (CD.disease&&CD.disease.length) { const c=echarts.init(document.getElementById('chart-disease')); c.setOption({title:{text:'{{ t.chart_disease }}',left:'center',textStyle:{color:'#fafafa',fontSize:14,fontFamily:'Geist'}},tooltip:{trigger:'item',formatter:'{b}: {c} ({d}%)'},color:P,series:[{type:'pie',radius:['40%','70%'],center:['50%','55%'],data:CD.disease,label:{color:TX,fontSize:11,fontFamily:'Geist'},emphasis:{itemStyle:{shadowBlur:10}}}]}); } else { document.getElementById('chart-disease').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-dim)">{{ t.chart_no_clinvar }}</div>'; }
+if (CD.disease&&CD.disease.length) {
+  const c=echarts.init(document.getElementById('chart-disease'));
+  c.setOption({
+    title:{text:'{{ t.chart_disease }}',left:'center',textStyle:{color:'#fafafa',fontSize:14,fontFamily:'Geist'}},
+    tooltip:{trigger:'item',formatter:'{b}: {c} ({d}%)'},
+    color:P,
+    // Smaller radius + longer label lines so multi-word category names
+    // ("Prov. Patogenica", "Fator de Risco") have room to render in full.
+    // labelLayout moveOverlap pushes labels apart when slices crowd one side.
+    series:[{
+      type:'pie',
+      radius:['32%','58%'],
+      center:['50%','58%'],
+      data:CD.disease,
+      label:{color:TX,fontSize:11,fontFamily:'Geist',formatter:'{b}',overflow:'none'},
+      labelLine:{length:14,length2:18,smooth:0.2,lineStyle:{color:'#3f3f46'}},
+      labelLayout:{moveOverlap:'shiftY',hideOverlap:false},
+      emphasis:{itemStyle:{shadowBlur:10}},
+    }],
+  });
+} else { document.getElementById('chart-disease').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-dim)">{{ t.chart_no_clinvar }}</div>'; }
 
 {% if ancestry and ancestry.percentages %}
 let ancI=false; function initAnc(){if(ancI)return;ancI=true;const a={{ ancestry|tojson }};
@@ -1736,6 +1920,76 @@ const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/
 </script>
 {% endif %}
 {% endif %}
+
+<!-- Confirm modal for destructive actions (delete history → secure_delete) -->
+<div class="cmodal-backdrop" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle" aria-hidden="true">
+  <div class="cmodal">
+    <div class="cmodal-icon"><i class="ti ti-alert-triangle"></i></div>
+    <h3 class="cmodal-title" id="confirmModalTitle">{{ t.history_delete_title }}</h3>
+    <p class="cmodal-body">{{ t.history_delete_body }}</p>
+    <div class="cmodal-actions">
+      <button type="button" class="cmodal-btn cmodal-btn-cancel" id="confirmModalCancel">{{ t.history_delete_cancel }}</button>
+      <button type="button" class="cmodal-btn cmodal-btn-danger" id="confirmModalConfirm">{{ t.history_delete_yes }}</button>
+    </div>
+  </div>
+</div>
+<script>
+// Hook every form with [data-confirm-delete]: intercept submit, show the
+// styled modal, only actually submit if the user confirms. Escape and
+// click-on-backdrop both cancel. Keeping this delegated handler at body
+// level means dynamically-rendered history rows (if we ever add live
+// refresh) inherit it without extra wiring.
+(function() {
+  const modal = document.getElementById('confirmModal');
+  const btnConfirm = document.getElementById('confirmModalConfirm');
+  const btnCancel = document.getElementById('confirmModalCancel');
+  let pendingForm = null;
+  let lastFocused = null;
+
+  function open(form) {
+    pendingForm = form;
+    lastFocused = document.activeElement;
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    // Focus the cancel button by default — safer default action for a
+    // destructive dialog (matches macOS / web confirm() convention).
+    setTimeout(() => btnCancel.focus(), 30);
+  }
+  function close() {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    pendingForm = null;
+    if (lastFocused && lastFocused.focus) lastFocused.focus();
+  }
+
+  document.body.addEventListener('submit', function(e) {
+    const form = e.target;
+    if (!form.matches || !form.matches('form[data-confirm-delete]')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    open(form);
+  }, true);
+
+  btnConfirm.addEventListener('click', function() {
+    if (pendingForm) {
+      // Submit programmatically — the data-confirm-delete listener above
+      // would re-intercept if we used .submit() naively, but submit()
+      // bypasses the 'submit' event entirely. Use requestSubmit() so
+      // form validation still runs but our interceptor doesn't fire.
+      const f = pendingForm;
+      pendingForm = null;
+      f.removeAttribute('data-confirm-delete');
+      (f.requestSubmit ? f.requestSubmit() : f.submit());
+    }
+    close();
+  });
+  btnCancel.addEventListener('click', close);
+  modal.addEventListener('click', function(e) { if (e.target === modal) close(); });
+  document.addEventListener('keydown', function(e) {
+    if (modal.classList.contains('open') && e.key === 'Escape') close();
+  });
+})();
+</script>
 
 </body>
 </html>

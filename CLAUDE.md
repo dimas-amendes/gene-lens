@@ -1,8 +1,27 @@
 # Project Rules — Gene Lens
 
+## Language & i18n (MANDATORY)
+
+**EN is the source-of-truth language. PT-BR is the translation.** Every new user-facing string must be wired through the i18n layer at write-time — never hardcoded inline, never "I'll translate it later". Retrofitting i18n costs ~10x the original write and has burned us repeatedly (PT outliers in `snp_database.py`, `analyzer.py`, `GENE_CONTEXT`, wellness panels leaked into the EN-default product).
+
+**Concretely, when you add a new string:**
+
+- **UI label / button / error / table header** → add EN + PT entries to `STRINGS` in `src/i18n.py`, reference via `t["key"]` in the template. Never `{{ "Save" }}` in a Jinja file.
+- **Domain data** (gene description, SNP text, hereditary condition, family-planning detail) → store EN as the **bare key** (`note`, `description`, `text`), PT under the same key + `_pt` suffix (`note_pt`). Accessor function (`get_gene_context(gene, lang)`, `_t(item, key, lang)`, etc.) resolves at call time.
+- **AI prompts** → ship `SYSTEM_PROMPT_EN` and `SYSTEM_PROMPT_PT` as a pair in `src/local_ai.py`, switch by `language` arg.
+- **New analysis function** that emits user-facing text → accept `lang: Lang` (from `src/i18n.py`), default `"en"`, branch internally on it.
+
+**The `Lang` type.** `Lang = Literal["en", "pt"]` lives in `src/i18n.py` alongside `LANGS`, `DEFAULT_LANG = "en"`, and `normalize_lang(value)`. Use `lang: Lang` on every public signature that consumes language. At any untrusted boundary (URL segment, cookie, query param), coerce with `normalize_lang(raw)` — never compare against literals like `if lang == "pt"` before normalization.
+
+**UI ordering.** EN-first everywhere — language toggles, dropdowns, dashboard headers: `EN | PT-BR`, in that order.
+
+**Fallback direction.** If a PT translation is missing, fall back to EN. Never the inverse. If `translate_medical` (Argos neural EN→PT) is unavailable, show the EN source — graceful degradation.
+
+**Definition of done.** A PR adding a new string is not done until both languages render correctly. CI doesn't enforce this — code review does. If you see a hardcoded literal in a PR diff, block it.
+
 ## Efficiency Rules
 
-1. **i18n from the start**: All user-facing text must be bilingual (EN/PT) from the moment it's written. Never add text in one language and translate later — it doubles the work and token cost.
+1. **i18n from the start** — see the dedicated section above; this is rule #1.
 
 2. **Use background agents for large writes**: Translation files, large data dicts, and repetitive code generation should be delegated to background agents. Keep the main context for architecture decisions and integration.
 

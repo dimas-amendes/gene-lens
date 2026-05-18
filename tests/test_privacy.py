@@ -264,3 +264,72 @@ class TestSecureDelete:
 
         assert "bytes" in observed
         assert observed["bytes"] != payload, "file must be overwritten before unlink"
+
+
+class TestDeleteHistoryCascade:
+    """Deleting a history entry must ALSO wipe the raw-DNA input file the
+    entry was generated from. Otherwise the user thinks they removed their
+    analysis but their genotype file is still on disk — a serious privacy
+    regression in a "100% offline" product."""
+
+    def _setup(self, tmp_path: Path, monkeypatch):
+        import dashboard
+        hist = tmp_path / "history"
+        inp = tmp_path / "input"
+        hist.mkdir()
+        inp.mkdir()
+        monkeypatch.setattr(dashboard, "HISTORY_DIR", hist)
+        monkeypatch.setattr(dashboard, "INPUT_DIR", inp)
+        return dashboard, hist, inp
+
+    def test_deletes_linked_input_csv(self, tmp_path: Path, monkeypatch):
+        import json
+        dashboard, hist, inp = self._setup(tmp_path, monkeypatch)
+
+        csv = inp / "user_dna.csv"
+        csv.write_text("RSID,CHROMOSOME,POSITION,RESULT\nrs1,1,100,AA\n")
+        hid = "20260518_141016_Sample"
+        (hist / f"{hid}.json").write_text(json.dumps({
+            "id": hid,
+            "genome_info": {"filename": "user_dna.csv"},
+        }))
+
+        dashboard._delete_history(hid)
+
+        assert not (hist / f"{hid}.json").exists(), "history JSON should be wiped"
+        assert not csv.exists(), "linked input CSV should be wiped"
+
+    def test_missing_input_does_not_crash(self, tmp_path: Path, monkeypatch):
+        """Already-deleted or never-existed input file must not abort the
+        history wipe — the JSON should still go."""
+        import json
+        dashboard, hist, inp = self._setup(tmp_path, monkeypatch)
+
+        hid = "20260101_000000_ghost"
+        (hist / f"{hid}.json").write_text(json.dumps({
+            "id": hid,
+            "genome_info": {"filename": "no_such_file.csv"},
+        }))
+
+        dashboard._delete_history(hid)
+        assert not (hist / f"{hid}.json").exists()
+
+    def test_rejects_path_traversal_in_filename(self, tmp_path: Path, monkeypatch):
+        """A malformed history JSON with `../` in filename must NOT escape
+        INPUT_DIR. The JSON itself still gets wiped."""
+        import json
+        dashboard, hist, inp = self._setup(tmp_path, monkeypatch)
+
+        outside = tmp_path / "outside_secret.txt"
+        outside.write_text("must not be touched")
+
+        hid = "20260101_000001_evil"
+        (hist / f"{hid}.json").write_text(json.dumps({
+            "id": hid,
+            "genome_info": {"filename": "../outside_secret.txt"},
+        }))
+
+        dashboard._delete_history(hid)
+        assert outside.exists(), "path-traversal target must not be deleted"
+        assert outside.read_text() == "must not be touched"
+        assert not (hist / f"{hid}.json").exists()

@@ -451,16 +451,43 @@ def _load_history_full(hid: str) -> dict | None:
 
 
 def _delete_history(hid: str):
-    """Delete a history entry."""
+    """Delete a history entry AND its associated raw-DNA input file.
+
+    The history JSON records `genome_info.filename` — the name of the file
+    that was uploaded to produce this analysis. Apagar só o JSON e deixar
+    o .csv no `input/` é vazamento de dados genéticos: o usuário pensa
+    "removi minha análise" mas o DNA bruto ainda está em disco. Then
+    `secure_delete` both, traversing through random-overwrite passes.
+    """
     hid = _sanitize_hid(hid)
     if not hid:
         return
     p = HISTORY_DIR / f"{hid}.json"
     if not str(p.resolve()).startswith(str(HISTORY_DIR.resolve())):
         return
-    if p.exists():
-        from src.privacy import secure_delete
-        secure_delete(p)
+    if not p.exists():
+        return
+
+    from src.privacy import secure_delete
+
+    # Read the linked input filename BEFORE wiping the JSON.
+    linked_input: Path | None = None
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        fname = (data.get("genome_info") or {}).get("filename")
+        if fname:
+            candidate = INPUT_DIR / fname
+            # Path-traversal defense: must resolve inside INPUT_DIR.
+            if str(candidate.resolve()).startswith(str(INPUT_DIR.resolve())):
+                linked_input = candidate
+    except Exception:
+        # Malformed JSON shouldn't stop us from wiping the JSON itself.
+        pass
+
+    if linked_input is not None and linked_input.exists():
+        secure_delete(linked_input)
+    secure_delete(p)
 
 
 # ── Chart builder ─────────────────────────────────────────────────────────────

@@ -125,8 +125,10 @@ python main.py analyze sample/sample_genome.csv --name "Sample"
 
 ```bash
 pip install argostranslate
-# The model (~100 MB) downloads automatically on first use
+python main.py install-translator-model   # one-time ~100 MB download of the en->pt model
 ```
+
+Only required if you want analyses in Portuguese. English analyses don't need it.
 
 ### Optional: Local AI interpretation
 
@@ -201,6 +203,26 @@ genetic-health-analyzer/
 ├── input/                  # User DNA files (gitignored)
 └── output/                 # Generated reports (gitignored)
 ```
+
+## How to get your raw DNA file
+
+Gene Lens needs the raw genotyping file your testing service generated — not the polished report they show you in their app. Every major consumer service lets you download this for free, but the option is buried in account settings.
+
+| Service | Where to find it | Wait time |
+|---|---|:---:|
+| **23andMe** | Account menu → **Browse Raw Data** → **Download Raw Data**. Re-enter your password to confirm. | Immediate |
+| **AncestryDNA** | **Settings** → **DNA** tab → **Download Raw DNA Data**. Confirm via email link. | ~24 h |
+| **MyHeritage** | **Settings** → **Manage DNA Kits** → ⋯ menu → **Download Raw Data**. | ~24 h |
+| **Genera / MeuDNA** | Resultados → **Exportar dados brutos**. | Immediate |
+
+**Important:**
+
+- The file usually arrives as a `.zip`. **Unzip it** before uploading — Gene Lens reads the inner `.txt` or `.csv`, not the archive. (Files already gzipped as `.gz` are read transparently.)
+- The download is your **private genetic data**. Don't email it, paste it into chat tools, or upload it to other services. Gene Lens never sends it anywhere — keep it that way.
+- Some services email a confirmation link or require 2FA before releasing the file. That's the service protecting you; follow their flow.
+- If your service isn't listed, the **Generic** format below works for any TSV/CSV that exposes RSID, Chromosome, Position, and Genotype columns.
+
+Drop the unzipped file into the dashboard (drag-and-drop on `/`) or into `input/` and run `python main.py analyze input/your_dna.txt`.
 
 ## Supported Formats
 

@@ -202,6 +202,26 @@ gene-lens/
 └── output/                 # Relatórios gerados (gitignored)
 ```
 
+## Como baixar seu arquivo de DNA bruto
+
+O Gene Lens precisa do arquivo bruto de genotipagem que o serviço gerou — não do relatório bonitinho que aparece no app deles. Todo serviço grande deixa você baixar isso de graça, mas a opção fica escondida nas configurações da conta.
+
+| Serviço | Onde encontrar | Tempo de espera |
+|---|---|:---:|
+| **23andMe** | Menu da conta → **Browse Raw Data** → **Download Raw Data**. Confirma com a senha. | Imediato |
+| **AncestryDNA** | **Settings** → aba **DNA** → **Download Raw DNA Data**. Confirma pelo link no email. | ~24h |
+| **MyHeritage** | **Configurações** → **Gerenciar kits de DNA** → menu ⋯ → **Baixar dados brutos**. | ~24h |
+| **Genera / MeuDNA** | Resultados → **Exportar dados brutos**. | Imediato |
+
+**Importante:**
+
+- O arquivo geralmente vem como `.zip`. **Descompacta antes de enviar** — o Gene Lens lê o `.txt` ou `.csv` de dentro, não o arquivo compactado. (Arquivos `.gz` são lidos de forma transparente, sem precisar descompactar.)
+- Esse arquivo é o seu **DNA pessoal**. Não manda por email, não cola em ferramentas de chat, não sobe em outros serviços. O Gene Lens nunca envia ele pra lugar nenhum — mantém assim.
+- Alguns serviços pedem confirmação por email ou 2FA antes de liberar o download. É o serviço te protegendo; segue o fluxo deles.
+- Se o teu serviço não estiver na lista, o formato **Genérico** funciona pra qualquer TSV/CSV que tenha colunas RSID, Cromossomo, Posição e Genótipo.
+
+Arrasta o arquivo já descompactado pro dashboard (drag-and-drop em `/`) ou joga em `input/` e roda `python main.py analyze input/seu_dna.txt`.
+
 ## Formatos Suportados
 
 | Serviço | Formato | Auto-detectado |

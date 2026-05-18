@@ -72,7 +72,20 @@
 
 ## Testing
 
-- **Run the suite**: `.venv/bin/python -m pytest tests/` (~2s, 176 tests at last count). System `python` is missing Flask — always use the venv.
+- **Run the suite**: `.venv/bin/python -m pytest tests/` (~4s, 228 tests at last count). System `python` is missing Flask — always use the venv.
+
+### Severity classification (use when prioritizing test gaps)
+
+When deciding what to test first, classify by what a regression *actually causes*. Same framework we used to triage the original test backlog:
+
+- 🔴 **Critical** — regression causes a safety/clinical/privacy harm.
+  Examples: hereditary-condition sex routing (man receives BRCA female-only guidance), `NetworkBlocker` (data leak during analysis, or the gray-screen loading bug). Must have tests *and* the test must fail before the fix lands.
+- 🟠 **High** — regression silently corrupts analysis output or core data path.
+  Examples: `databases` loaders (mutates every report), `sex_inference` (cascades into the hereditary matrix), `local_ai._build_chat_messages` (system prompt / role sanitization). Should have tests; bug here is hard to spot without them.
+- 🟡 **Medium** — regression degrades UX or content, but doesn't break correctness.
+  Examples: i18n parity (missing label = blank UI element), bilingual protocol dicts (report section without header). Tests are valuable as drift guards, not urgent.
+
+When triaging: hit reds first, then oranges, then yellows. Don't write yellow tests when red gaps exist.
 - **Manual smoke**: `sample/sample_genome.csv` (synthetic, 200+ SNPs) through the dashboard. Verify both languages render after any text change.
 - **Privacy guarantee**: `python main.py privacy-check` after touching `src/privacy.py` or anything that runs inside `NetworkBlocker`.
 - **Don't hit the network in tests.** AI chat tests mock `urllib.request.urlopen`; streaming tests mock `subprocess.Popen`; DB loader tests write synthetic TSVs to `tmp_path`. A test that times out for 80+ seconds is almost certainly trying to reach a real Ollama daemon — fix the mock.

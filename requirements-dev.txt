@@ -1,0 +1,8 @@
+# Development dependencies — install on top of requirements.txt:
+#   pip install -r requirements.txt -r requirements-dev.txt
+#
+# Runtime is kept lean in requirements.txt; anything contributors need to
+# run the test suite, lint, or develop locally goes here. Keeps the
+# end-user install path light (Flask + Tqdm + Requests only).
+
+pytest==9.0.3

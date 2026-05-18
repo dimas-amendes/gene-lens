@@ -69,23 +69,20 @@ For anything beyond a typo fix, please open an Issue to discuss the approach bef
 - Add a test in `tests/test_local_ai_chat.py` for any new error class or output shape
 
 ### 3. Test locally
+
 ```bash
-# Parse sample genome
+# One-time: install dev dependencies (pytest) on top of runtime deps
+pip install -r requirements.txt -r requirements-dev.txt
+
+# Run the full test suite (~5s, currently 269 tests)
+pytest tests/
+
+# Quick manual smoke
 python -c "from src.parsers import load_genome; g,_,f = load_genome('sample/sample_genome.csv'); print(f'{len(g)} SNPs, {f}')"
 
-# Test all panels
-python -c "
-from src.parsers import load_genome
-from src.wellness_panels import analyze_all_panels
-g, _, _ = load_genome('sample/sample_genome.csv')
-w = analyze_all_panels(g)
-for k, v in w.items():
-    print(f'{k}: {len(v.get(\"findings\", []))} findings')
-"
-
-# Run the dashboard
+# Run the dashboard end-to-end
 python run.py
-# Upload sample/sample_genome.csv and verify your changes
+# Then upload sample/sample_genome.csv and verify your changes
 ```
 
 ### 4. Submit a Pull Request

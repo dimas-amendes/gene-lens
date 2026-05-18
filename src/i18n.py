@@ -447,6 +447,7 @@ STRINGS = {
         "ai_export_subtitle": "Gerado offline com Ollama. Não é conselho médico — confirme com um profissional.",
         "ai_export_you": "Você",
         "ai_export_ai": "IA",
+        "ai_tokens_tooltip": "Estimativa local (~4 chars/token): prompt → resposta",
     },
 
     "en": {
@@ -866,6 +867,7 @@ STRINGS = {
         "ai_export_subtitle": "Generated offline with Ollama. Not medical advice — confirm with a professional.",
         "ai_export_you": "You",
         "ai_export_ai": "AI",
+        "ai_tokens_tooltip": "Local estimate (~4 chars/token): prompt → reply",
     },
 }
 

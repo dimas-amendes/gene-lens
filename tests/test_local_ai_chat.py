@@ -135,7 +135,8 @@ class TestChatAboutAnalysis:
         captured = {}
 
         def _capture(args, **kw):
-            captured["prompt"] = kw.get("input", "")
+            raw = kw.get("input", "")
+            captured["prompt"] = raw.decode("utf-8") if isinstance(raw, (bytes, bytearray)) else raw
             return _fake_run(stdout="ok")
 
         with patch("src.local_ai.is_ollama_available", return_value=True), \
@@ -159,7 +160,8 @@ class TestChatAboutAnalysis:
         captured = {}
 
         def _capture(args, **kw):
-            captured["prompt"] = kw.get("input", "")
+            raw = kw.get("input", "")
+            captured["prompt"] = raw.decode("utf-8") if isinstance(raw, (bytes, bytearray)) else raw
             return _fake_run(stdout="ok")
 
         # 12 turns: the first 4 must be dropped.
@@ -189,7 +191,8 @@ class TestChatAboutAnalysis:
         captured = {}
 
         def _capture(args, **kw):
-            captured["prompt"] = kw.get("input", "")
+            raw = kw.get("input", "")
+            captured["prompt"] = raw.decode("utf-8") if isinstance(raw, (bytes, bytearray)) else raw
             return _fake_run(stdout="ok")
 
         with patch("src.local_ai.is_ollama_available", return_value=True), \

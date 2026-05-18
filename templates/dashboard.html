@@ -341,16 +341,33 @@ a { color: var(--accent); }
   .gc-b.np { padding: 0 !important; }
 
   /* Tables: let them flow, repeat the header on every page, no row-locking */
-  table.tb { font-size: 8.5pt; page-break-inside: auto; break-inside: auto; width: 100%; border-collapse: collapse; }
+  table.tb { font-size: 8.5pt; line-height: 1.35; page-break-inside: auto; break-inside: auto; width: 100%; border-collapse: collapse; table-layout: auto; }
   table.tb thead { display: table-header-group; }
   table.tb tbody { display: table-row-group; }
   table.tb tr, table.tb td, table.tb th { page-break-inside: auto; break-inside: auto; }
-  table.tb thead th { background: #f4f4f5 !important; color: #111 !important; border-bottom: 1px solid #999 !important; padding: 5px 8px !important; }
-  table.tb tbody td { padding: 5px 8px !important; border-bottom: 1px solid #e5e5e5 !important; color: #111 !important; vertical-align: top; }
+  table.tb thead th { background: #f4f4f5 !important; color: #111 !important; border-bottom: 1px solid #999 !important; padding: 4px 6px !important; font-size: 7.5pt; }
+  table.tb tbody td { padding: 4px 6px !important; border-bottom: 1px solid #e5e5e5 !important; color: #111 !important; vertical-align: top; word-break: normal; overflow-wrap: anywhere; }
+  /* Give narrow code/gene columns just enough room — last column (details/interpretation) gets the rest */
+  table.tb tbody td:has(code), table.tb thead th:nth-child(1), table.tb thead th:nth-child(2), table.tb thead th:nth-child(3) { white-space: nowrap; }
+  table.tb tbody td:last-child, table.tb thead th:last-child { white-space: normal; width: auto; max-width: none; }
 
   /* Headings: don't leave them as orphans at the bottom of a page */
   h1, h2, h3, h4 { color: #111 !important; page-break-after: avoid; break-after: avoid; }
-  .gc-h, .ctx h4 { page-break-after: avoid; break-after: avoid; }
+  .gc-h, .ctx h4, details summary { page-break-after: avoid; break-after: avoid; }
+
+  /* Keep small atomic blocks from being split across pages */
+  .cov-stat, .cov-panel, .si, .med-banner, .hcw-card, .hcw-empty,
+  .cc, .hc, .tn, .ctx { page-break-inside: avoid; break-inside: avoid; }
+
+  /* Stat-row groups (Markers Analyzed / Normal / Require Attention etc.) */
+  .sr, .cov-summary { page-break-inside: avoid; break-inside: avoid; }
+
+  /* Evidence / Clinical-confirmation flex pair inside hereditary cards */
+  .gc-b > div[style*="display:flex"] > div { page-break-inside: avoid; break-inside: avoid; }
+
+  /* Inner sub-cards (panels inside accordions) — keep header+first content together */
+  .acc-body > .gc { page-break-inside: auto; }
+  .acc-body > .gc > .gc-h + .gc-b { page-break-before: avoid; break-before: avoid; }
 
   a { color: #1d4ed8; text-decoration: underline; }
   code { background: #f4f4f5; color: #111; padding: 0 2px; border-radius: 2px; }
@@ -1249,6 +1266,11 @@ const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/
     if (ms < 1000) return Math.floor(ms) + 'ms';
     return (ms / 1000).toFixed(ms < 10000 ? 1 : 0) + 's';
   }
+  function formatTokens(n) {
+    if (n == null) return '–';
+    if (n < 1000) return String(n);
+    return (n / 1000).toFixed(n < 10000 ? 1 : 0) + 'k';
+  }
 
   // Rotating status phrases ("Brewing…", "Reading the chromosomes…") shown
   // next to the typing dots while the model generates. The list comes from
@@ -1319,10 +1341,19 @@ const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/
       typing.remove();
       if (data.ok) {
         addMsg('assistant', data.reply);
-        // Tiny footer under the reply: model name + how long it took.
+        // Tiny footer under the reply: model name, wall-clock time and a
+        // local token estimate (rough — ~4 chars/token — but accurate enough
+        // to spot when the prompt is approaching the context window).
         const meta = document.createElement('div');
         meta.className = 'ai-meta';
-        meta.innerHTML = '<span class="ai-meta-model">' + modelSel.value + '</span> · ' + formatElapsed(elapsed);
+        const ms = (typeof data.elapsed_ms === 'number') ? data.elapsed_ms : elapsed;
+        let metaHtml = '<span class="ai-meta-model">' + modelSel.value + '</span> · ' + formatElapsed(ms);
+        if (data.tokens) {
+          metaHtml += ' · <span class="ai-meta-tok" title="{{ t.ai_tokens_tooltip }}">'
+            + formatTokens(data.tokens.prompt) + ' → ' + formatTokens(data.tokens.completion)
+            + ' tok</span>';
+        }
+        meta.innerHTML = metaHtml;
         msgs.appendChild(meta);
         msgs.scrollTop = msgs.scrollHeight;
         history.push({ role: 'assistant', content: data.reply });

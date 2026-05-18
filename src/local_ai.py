@@ -45,11 +45,17 @@ def _strip_ansi(text: str) -> str:
 
 def _clean_env() -> dict:
     """Environment that tells Ollama (and anything it spawns) we're not a TTY,
-    so it doesn't emit ANSI cursor/spinner control codes."""
+    so it doesn't emit ANSI cursor/spinner control codes.
+
+    Also pins COLUMNS/LINES to a giant value so Ollama's CLI doesn't
+    soft-wrap mid-word and rewrite with `\\r` (which leaked partials like
+    "CYP2C1\\nCYP2C19" into the rendered chat bubble)."""
     import os
     env = os.environ.copy()
     env["TERM"] = "dumb"
     env["NO_COLOR"] = "1"
+    env["COLUMNS"] = "100000"
+    env["LINES"] = "100000"
     return env
 
 
@@ -330,11 +336,16 @@ def chat_about_analysis(
     prompt = _build_chat_prompt(context, history, question, language)
 
     try:
+        # NOTE: text=False (binary) on purpose. With text=True, Python's
+        # universal-newlines turns Ollama's spinner CRs into LFs, which
+        # smuggles "CYP2C1\nCYP2C19" word-fragments into the rendered
+        # bubble. Decoding manually lets _strip_ansi see the bare \r and
+        # discard the rewritten partials cleanly.
         result = subprocess.run(
             ["ollama", "run", model],
-            input=prompt,
+            input=prompt.encode("utf-8"),
             capture_output=True,
-            text=True,
+            text=False,
             timeout=timeout,
             env=_clean_env(),
         )
@@ -343,10 +354,16 @@ def chat_about_analysis(
     except FileNotFoundError:
         return False, "Ollama binary not found. Install it from https://ollama.com."
 
+    def _to_text(b):
+        if not b:
+            return ""
+        return b.decode("utf-8", errors="replace") if isinstance(b, (bytes, bytearray)) else b
+    stdout = _to_text(result.stdout)
+    stderr = _to_text(result.stderr)
     if result.returncode != 0:
-        return False, _friendly_ollama_error(result.stderr or "", model)
+        return False, _friendly_ollama_error(stderr, model)
 
-    answer = _strip_ansi(result.stdout).strip()
+    answer = _strip_ansi(stdout).strip()
     if not answer:
         return False, "The model produced an empty response. Try rephrasing your question."
     return True, answer

@@ -1474,7 +1474,9 @@ def chat_ask():
     active = _jobs.get("active_result")
     context = _build_chat_context(active, lang)
 
-    from src.local_ai import chat_about_analysis
+    from src.local_ai import chat_about_analysis, estimate_tokens, estimate_prompt_tokens
+    import time as _time
+    started = _time.monotonic()
     ok, reply = chat_about_analysis(
         context=context,
         history=history,
@@ -1482,9 +1484,21 @@ def chat_ask():
         model=model,
         language=lang,
     )
+    elapsed_ms = int((_time.monotonic() - started) * 1000)
     if not ok:
         return {"ok": False, "error": reply}, 503
-    return {"ok": True, "reply": reply}
+    prompt_tokens = estimate_prompt_tokens(context, history, question, language=lang)
+    completion_tokens = estimate_tokens(reply)
+    return {
+        "ok": True,
+        "reply": reply,
+        "elapsed_ms": elapsed_ms,
+        "tokens": {
+            "prompt": prompt_tokens["total"],
+            "completion": completion_tokens,
+            "total": prompt_tokens["total"] + completion_tokens,
+        },
+    }
 
 
 @app.route("/settings")

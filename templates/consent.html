@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ t.consent_title }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/halfmoon.min.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tabler-icons.min.css') }}">
 <style>
@@ -11,22 +12,22 @@
 @font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-500.woff2') }}") format('woff2'); font-weight:500; font-display:swap; }
 @font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-600.woff2') }}") format('woff2'); font-weight:600; font-display:swap; }
 @font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-700.woff2') }}") format('woff2'); font-weight:700; font-display:swap; }
-:root { --bs-body-font-family: 'Geist', -apple-system, system-ui, sans-serif; --bs-body-bg: #09090b; --red: #ef4444; --green: #22c55e; --accent: #3b82f6; }
-body { font-family: var(--bs-body-font-family); background: var(--bs-body-bg); color: #fafafa; }
+:root { --bs-body-font-family: 'Geist', -apple-system, system-ui, sans-serif; }
+body { font-family: var(--bs-body-font-family); background: var(--bs-body-bg); color: var(--text); }
 .consent-box { max-width: 700px; margin: 16px auto 48px; padding: 0 12px; }
-.terms { background: #18181b; border: 2px solid rgba(239,68,68,.3); border-radius: 16px; padding: 24px 28px; }
+.terms { background: var(--surface-3); border: 2px solid rgba(239,68,68,.3); border-radius: 16px; padding: 24px 28px; }
 .terms h1 { font-size: 20px; font-weight: 700; color: var(--red); margin: 0 0 16px; text-align: center; }
-.terms h2 { font-size: 15px; font-weight: 600; color: #e4e4e7; margin: 20px 0 10px; }
-.terms p, .terms li { font-size: 14px; line-height: 1.8; color: #d4d4d8; }
+.terms h2 { font-size: 15px; font-weight: 600; color: var(--text-bright); margin: 20px 0 10px; }
+.terms p, .terms li { font-size: 14px; line-height: 1.8; color: var(--text-secondary); }
 .terms ul { padding-left: 20px; }
 .terms li { margin-bottom: 8px; }
 .terms .highlight { color: var(--red); font-weight: 600; }
-.terms .ref { font-size: 12px; color: #71717a; font-style: italic; }
-.accept-area { text-align: center; margin-top: 28px; padding-top: 24px; border-top: 1px solid #27272a; }
-.accept-btn { background: var(--green); color: #09090b; border: none; padding: 14px 40px; font-weight: 700; border-radius: 10px; font-size: 15px; cursor: pointer; transition: background .2s; }
+.terms .ref { font-size: 12px; color: var(--text-faint); font-style: italic; }
+.accept-area { text-align: center; margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--border-default); }
+.accept-btn { background: var(--green); color: var(--bg); border: none; padding: 14px 40px; font-weight: 700; border-radius: 10px; font-size: 15px; cursor: pointer; transition: background .2s; }
 .accept-btn:hover { background: #16a34a; }
-.back-link { display: block; margin-top: 16px; color: #71717a; font-size: 13px; text-decoration: none; }
-.back-link:hover { color: #a1a1aa; }
+.back-link { display: block; margin-top: 16px; color: var(--text-faint); font-size: 13px; text-decoration: none; }
+.back-link:hover { color: var(--text-muted); }
 </style>
 </head>
 <body>
@@ -49,7 +50,7 @@ body { font-family: var(--bs-body-font-family); background: var(--bs-body-bg); c
     <p>{{ t.consent_counselor }} <a href="https://findageneticcounselor.nsgc.org" target="_blank" style="color:var(--accent)">findageneticcounselor.nsgc.org</a></p>
 
     <div class="accept-area">
-      <p style="font-size:13px;color:#a1a1aa;margin-bottom:16px">{{ t.consent_confirm }}</p>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">{{ t.consent_confirm }}</p>
       <form method="post">
         <button type="submit" class="accept-btn">{{ t.consent_accept_btn }}</button>
       </form>

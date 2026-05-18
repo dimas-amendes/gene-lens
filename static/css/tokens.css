@@ -1,0 +1,51 @@
+/* ── Gene Lens design tokens ──────────────────────────────────────────────
+   Single source of truth for color across every dark-themed template
+   (dashboard, settings, consent, loading). One file = one place to edit
+   when adding a light mode or high-contrast variant in the future.
+
+   Naming is semantic: tokens describe INTENT (a "muted" text role) not
+   value (a specific zinc shade). Values happen to live on Tailwind's
+   zinc scale today; that's an implementation detail, not a contract.
+
+   The report.html template intentionally maintains its own theme tokens
+   because it has an A4-print light-mode requirement with different
+   semantics (--fg, --muted, --rule etc.). Don't merge that file with
+   this one without re-validating the print stylesheet. */
+
+:root,
+[data-bs-theme="dark"] {
+  /* Surfaces — page background, then card layers stacked toward the user */
+  --bg: #09090b;                /* zinc-950 — page base */
+  --surface-1: #0a0a0c;         /* drawers, sticky panels */
+  --surface-2: #111113;         /* sub-cards, footer panel */
+  --surface-3: #18181b;         /* main cards (.gc, .si, assistant msg) */
+
+  /* Borders — default for separators, strong for focus/hover */
+  --border-default: #27272a;    /* zinc-800 */
+  --border-strong: #3f3f46;     /* zinc-700 */
+
+  /* Text scale — brightest to dimmest. Bottom two are deliberately small
+     to discourage low-contrast labels; use --text-faint for footnotes and
+     --text-dim only when contrast against --bg is verified AA-passable. */
+  --text: #fafafa;              /* zinc-50  — primary body + headings */
+  --text-bright: #e4e4e7;       /* zinc-200 — emphasized on dark cards */
+  --text-secondary: #d4d4d8;    /* zinc-300 — secondary body */
+  --text-muted: #a1a1aa;        /* zinc-400 — labels, captions */
+  --text-faint: #71717a;        /* zinc-500 — placeholders, footnotes */
+  --text-dim: #52525b;          /* zinc-600 — use SPARINGLY, audit contrast */
+
+  /* Bootstrap shim — halfmoon reads these. Keep them aliased so upstream
+     framework picks up our scale without forking halfmoon. */
+  --bs-body-bg: var(--bg);
+  --bs-tertiary-bg: var(--surface-3);
+  --bs-secondary-bg: var(--border-default);
+  --bs-border-color: var(--border-default);
+
+  /* Accents — saturated color + matching soft (12% alpha) fill */
+  --accent: #3b82f6;  --accent-soft: rgba(59,130,246,.12);
+  --green:  #22c55e;  --green-soft:  rgba(34,197,94,.12);
+  --yellow: #eab308;  --yellow-soft: rgba(234,179,8,.12);
+  --red:    #ef4444;  --red-soft:    rgba(239,68,68,.12);
+  --cyan:   #38bdf8;  --cyan-soft:   rgba(56,189,248,.12);
+  --purple: #a855f7;  --purple-soft: rgba(168,85,247,.12);
+}

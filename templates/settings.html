@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ t.settings_title }} · {{ t.app_title }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/halfmoon.min.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tabler-icons.min.css') }}">
 <style>
@@ -12,40 +13,40 @@
 @font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-600.woff2') }}") format('woff2'); font-weight:600; font-display:swap; }
 @font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-700.woff2') }}") format('woff2'); font-weight:700; font-display:swap; }
 @font-face { font-family:'Geist Mono'; src:url("{{ url_for('static', filename='fonts/geist-mono-400.woff2') }}") format('woff2'); font-weight:400; font-display:swap; }
-:root { --bs-body-bg: #09090b; --red: #ef4444; --green: #22c55e; --green-soft: rgba(34,197,94,.1); --accent: #3b82f6; --accent-soft: rgba(59,130,246,.1); --yellow: #eab308; }
-body { font-family: 'Geist', -apple-system, system-ui, sans-serif; background: var(--bs-body-bg); color: #fafafa; margin: 0; }
-.site-header { background: #09090b; border-bottom: 1px solid #27272a; padding: 16px 0; }
+
+body { font-family: 'Geist', -apple-system, system-ui, sans-serif; background: var(--bs-body-bg); color: var(--text); margin: 0; }
+.site-header { background: var(--bg); border-bottom: 1px solid var(--border-default); padding: 16px 0; }
 .site-header .container { display: flex; justify-content: space-between; align-items: center; max-width: 1100px; margin: 0 auto; padding: 0 16px; }
 .logo { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
 .logo-icon { color: var(--accent); font-size: 22px; }
-.back-link { color: #a1a1aa; text-decoration: none; font-size: 13px; display: inline-flex; align-items: center; gap: 4px; }
-.back-link:hover { color: #d4d4d8; }
+.back-link { color: var(--text-muted); text-decoration: none; font-size: 13px; display: inline-flex; align-items: center; gap: 4px; }
+.back-link:hover { color: var(--text-secondary); }
 .wrap { max-width: 880px; margin: 32px auto; padding: 0 16px; }
 h1.page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
-.subtitle { color: #71717a; font-size: 14px; margin-bottom: 28px; }
-.card { background: #18181b; border: 1px solid #27272a; border-radius: 12px; padding: 20px 22px; margin-bottom: 14px; }
+.subtitle { color: var(--text-faint); font-size: 14px; margin-bottom: 28px; }
+.card { background: var(--surface-3); border: 1px solid var(--border-default); border-radius: 12px; padding: 20px 22px; margin-bottom: 14px; }
 .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .card-title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin: 0 0 4px; }
-.card-meta { font-size: 12px; color: #71717a; font-family: 'Geist Mono', monospace; }
+.card-meta { font-size: 12px; color: var(--text-faint); font-family: 'Geist Mono', monospace; }
 .badge { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .badge.ok { color: var(--green); background: var(--green-soft); }
 .badge.missing { color: var(--red); background: rgba(239,68,68,.1); }
 .badge.required { color: var(--yellow); background: rgba(234,179,8,.1); margin-left: 6px; }
-.commands { background: #0a0a0c; border: 1px solid #27272a; border-radius: 8px; padding: 12px 14px; margin-top: 14px; font-family: 'Geist Mono', monospace; font-size: 12px; line-height: 1.8; color: #d4d4d8; overflow-x: auto; }
-.commands .cmt { color: #52525b; }
-.commands button { background: transparent; border: 1px solid #3f3f46; color: #a1a1aa; font-size: 10px; padding: 2px 8px; border-radius: 4px; cursor: pointer; float: right; font-family: 'Geist', sans-serif; }
-.commands button:hover { color: #fafafa; border-color: #71717a; }
+.commands { background: var(--surface-1); border: 1px solid var(--border-default); border-radius: 8px; padding: 12px 14px; margin-top: 14px; font-family: 'Geist Mono', monospace; font-size: 12px; line-height: 1.8; color: var(--text-secondary); overflow-x: auto; }
+.commands .cmt { color: var(--text-dim); }
+.commands button { background: transparent; border: 1px solid var(--border-strong); color: var(--text-muted); font-size: 10px; padding: 2px 8px; border-radius: 4px; cursor: pointer; float: right; font-family: 'Geist', sans-serif; }
+.commands button:hover { color: var(--text); border-color: var(--text-faint); }
 .docs-link { font-size: 12px; color: var(--accent); text-decoration: none; margin-top: 10px; display: inline-flex; align-items: center; gap: 4px; }
 .docs-link:hover { text-decoration: underline; }
 .note { background: rgba(59,130,246,.05); border: 1px solid rgba(59,130,246,.2); border-radius: 10px; padding: 14px 18px; font-size: 13px; color: #cbd5e1; margin-bottom: 24px; }
 .note .ti { color: var(--accent); margin-right: 6px; }
-.ai-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; padding: 12px 14px; background: #0a0a0c; border: 1px solid #27272a; border-radius: 8px; }
-.ai-toggle-text { font-size: 13px; color: #d4d4d8; }
+.ai-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; padding: 12px 14px; background: var(--surface-1); border: 1px solid var(--border-default); border-radius: 8px; }
+.ai-toggle-text { font-size: 13px; color: var(--text-secondary); }
 .ai-toggle-title { font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.ai-toggle-desc { color: #a1a1aa; font-size: 12px; line-height: 1.5; }
+.ai-toggle-desc { color: var(--text-muted); font-size: 12px; line-height: 1.5; }
 .ai-toggle-warn { color: var(--yellow); font-size: 12px; margin-top: 6px; }
 .ai-toggle-btn { background: var(--accent); color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
-.ai-toggle-btn.is-on { background: transparent; color: #fafafa; border: 1px solid #3f3f46; }
+.ai-toggle-btn.is-on { background: transparent; color: var(--text); border: 1px solid var(--border-strong); }
 .ai-toggle-btn:hover:not(:disabled) { filter: brightness(1.1); }
 .ai-toggle-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>

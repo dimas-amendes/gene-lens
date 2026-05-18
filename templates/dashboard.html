@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ t.app_title }}</title>
 <meta name="csrf-token" content="{{ session.get('csrf_token', '') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/halfmoon.min.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tabler-icons.min.css') }}">
 <script src="{{ url_for('static', filename='js/echarts.min.js') }}"></script>
@@ -15,35 +16,55 @@
 @font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-700.woff2') }}") format('woff2'); font-weight:700; font-display:swap; }
 @font-face { font-family:'Geist Mono'; src:url("{{ url_for('static', filename='fonts/geist-mono-400.woff2') }}") format('woff2'); font-weight:400; font-display:swap; }
 
-:root,[data-bs-theme="dark"] {
-  --bs-body-font-family: 'Geist', -apple-system, system-ui, sans-serif;
-  --bs-body-bg: #09090b; --bs-tertiary-bg: #18181b; --bs-secondary-bg: #27272a; --bs-border-color: #27272a;
-  --accent: #3b82f6; --accent-soft: rgba(59,130,246,.12);
-  --green: #22c55e; --green-soft: rgba(34,197,94,.12);
-  --yellow: #eab308; --yellow-soft: rgba(234,179,8,.12);
-  --red: #ef4444; --red-soft: rgba(239,68,68,.12);
-  --purple: #a855f7; --purple-soft: rgba(168,85,247,.12);
-}
-body { font-family: var(--bs-body-font-family); background: var(--bs-body-bg); color: #fafafa; -webkit-font-smoothing: antialiased; }
+/* ── DESIGN TOKENS ────────────────────────────────────────────────────────
+   Semantic names map to zinc palette values. Decoupling intent from value
+   means a future theme swap (light mode, high-contrast, etc.) only touches
+   this block instead of 80 scattered hex literals. Use these tokens for
+   every new color decision. */
+:root,[data-bs-theme="dark"] { --bs-body-font-family: 'Geist', -apple-system, system-ui, sans-serif; /* Surfaces — page background, then card layers stacked toward the user */
+  --bg: #09090b; /* zinc-950 — page base */
+  --surface-1: #0a0a0c; /* drawers, sticky panels */
+  --surface-2: #111113; /* sub-cards, footer panel */
+  --surface-3: #18181b; /* main cards (.gc, .si, assistant msg) */
+
+  /* Borders — default for separators, strong for focus/hover */
+  --border-default: #27272a; /* zinc-800 */
+  --border-strong: #3f3f46; /* zinc-700 */
+
+  /* Text scale — brightest to dimmest. Bottom two are deliberately small
+     to discourage low-contrast labels; use --text-faint for footnotes and
+     --text-dim only when contrast against --bg is verified AA-passable. */
+  --text: #fafafa; /* zinc-50  — primary body + headings */
+  --text-bright: #e4e4e7; /* zinc-200 — emphasized on dark cards */
+  --text-secondary: #d4d4d8; /* zinc-300 — secondary body */
+  --text-muted: #a1a1aa; /* zinc-400 — labels, captions */
+  --text-faint: #71717a; /* zinc-500 — placeholders, footnotes */
+  --text-dim: #52525b; /* zinc-600 — use SPARINGLY, audit contrast */
+
+  /* Bootstrap shim — halfmoon reads these. Keep them aliased so upstream
+     framework picks up our scale without forking halfmoon. */
+  --bs-body-bg: var(--bg); /* Accents — saturated color + matching soft (12% alpha) fill */
+  --accent: #3b82f6; }
+body { font-family: var(--bs-body-font-family); background: var(--bs-body-bg); color: var(--text); -webkit-font-smoothing: antialiased; }
 code { font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--accent); background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; }
 a { color: var(--accent); }
-.site-header { background: #09090b; border-bottom: 1px solid #27272a; padding: 16px 0; }
+.site-header { background: var(--bg); border-bottom: 1px solid var(--border-default); padding: 16px 0; }
 .site-header .container { display: flex; justify-content: space-between; align-items: center; }
-.logo { font-size: 18px; font-weight: 600; color: #fafafa; display: flex; align-items: center; gap: 10px; }
+.logo { font-size: 18px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 10px; }
 .logo-icon { color: var(--accent); font-size: 22px; }
-.lang-sw a { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none; color: #a1a1aa; transition: color .2s; }
-.lang-sw a:hover { color: #d4d4d8; }
+.lang-sw a { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none; color: var(--text-muted); transition: color .2s; }
+.lang-sw a:hover { color: var(--text-secondary); }
 .lang-sw a.active { background: var(--accent-soft); color: var(--accent); }
 .priv-pill { font-size: 11px; color: var(--green); background: var(--green-soft); padding: 4px 12px; border-radius: 20px; font-weight: 500; margin-left: 12px; }
 
 /* ── AI chat drawer ────────────────────────────────────────────────────── */
-.ai-fab { position: fixed; bottom: 24px; right: 24px; z-index: 40; background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%); color: #fff; border: none; border-radius: 999px; padding: 13px 22px 13px 18px; font-size: 14px; font-weight: 600; font-family: 'Geist', sans-serif; box-shadow: 0 10px 30px -8px rgba(59,130,246,.5), 0 4px 12px -2px rgba(0,0,0,.4); cursor: pointer; display: inline-flex; align-items: center; gap: 9px; transition: transform .18s ease-out, box-shadow .2s; backdrop-filter: blur(8px); }
+.ai-fab { position: fixed; bottom: 24px; right: 24px; z-index: 40; background: linear-gradient(135deg, var(--accent) 0%, #6366f1 100%); color: #fff; border: none; border-radius: 999px; padding: 13px 22px 13px 18px; font-size: 14px; font-weight: 600; font-family: 'Geist', sans-serif; box-shadow: 0 10px 30px -8px rgba(59,130,246,.5), 0 4px 12px -2px rgba(0,0,0,.4); cursor: pointer; display: inline-flex; align-items: center; gap: 9px; transition: transform .18s ease-out, box-shadow .2s; backdrop-filter: blur(8px); }
 .ai-fab .ai-fab-icon { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,.18); font-size: 15px; }
 .ai-fab .ai-fab-dot { position: absolute; top: -1px; right: 3px; width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #6ee7b7 0%, #10b981 55%, #047857 100%); box-shadow: 0 0 0 2px #2c44d4, 0 0 6px rgba(16,185,129,.55); }
 .ai-fab .ai-fab-dot::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; background: rgba(16,185,129,.45); animation: ai-fab-pulse 2.2s ease-out infinite; z-index: -1; }
 .ai-fab:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 16px 40px -10px rgba(59,130,246,.65), 0 6px 16px -2px rgba(0,0,0,.5); }
 .ai-fab:active { transform: translateY(0) scale(.99); }
-.ai-fab[disabled] { background: #27272a; color: #71717a; cursor: not-allowed; box-shadow: none; }
+.ai-fab[disabled] { background: var(--border-default); color: var(--text-faint); cursor: not-allowed; box-shadow: none; }
 .ai-fab[disabled]:hover { transform: none; box-shadow: none; }
 .ai-fab[disabled] .ai-fab-icon { background: rgba(255,255,255,.04); }
 .ai-fab[disabled] .ai-fab-dot { display: none; }
@@ -56,92 +77,102 @@ a { color: var(--accent); }
 .ai-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 49; opacity: 0; pointer-events: none; transition: opacity .2s; }
 .ai-backdrop.open { opacity: 1; pointer-events: auto; }
 
-.ai-drawer { position: fixed; top: 0; right: 0; height: 100vh; width: min(560px, 92vw); background: #0a0a0c; border-left: 1px solid #27272a; z-index: 50; transform: translateX(100%); transition: transform .25s ease-out; display: flex; flex-direction: column; }
+.ai-drawer { position: fixed; top: 0; right: 0; height: 100vh; width: min(560px, 92vw); background: var(--surface-1); border-left: 1px solid var(--border-default); z-index: 50; transform: translateX(100%); transition: transform .25s ease-out; display: flex; flex-direction: column; }
 .ai-drawer.open { transform: translateX(0); }
-.ai-drawer-head { padding: 16px 20px; border-bottom: 1px solid #27272a; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.ai-drawer-head { padding: 16px 20px; border-bottom: 1px solid var(--border-default); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .ai-drawer-head h3 { margin: 0; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-.ai-drawer-head .sub { font-size: 11px; color: #71717a; margin-top: 2px; }
-.ai-close { background: transparent; border: 1px solid #3f3f46; color: #a1a1aa; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
-.ai-close:hover { color: #fafafa; border-color: #71717a; }
+.ai-drawer-head .sub { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+.ai-close { background: transparent; border: 1px solid var(--border-strong); color: var(--text-muted); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.ai-close:hover { color: var(--text); border-color: var(--text-faint); }
 
-.ai-disclaimer { background: rgba(234,179,8,.05); border-bottom: 1px solid rgba(234,179,8,.2); padding: 10px 20px; font-size: 11px; color: #d4d4d8; display: flex; align-items: center; gap: 6px; }
-.ai-disclaimer .ti { color: var(--yellow, #eab308); flex-shrink: 0; }
+.ai-disclaimer { background: rgba(234,179,8,.05); border-bottom: 1px solid rgba(234,179,8,.2); padding: 10px 20px; font-size: 11px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+.ai-disclaimer .ti { color: var(--yellow, var(--yellow)); flex-shrink: 0; }
 
 .ai-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
 .ai-msg { max-width: 88%; padding: 10px 14px; border-radius: 12px; font-size: 13.5px; line-height: 1.55; word-wrap: break-word; white-space: pre-wrap; }
 .ai-msg.user { background: var(--accent-soft); color: #cbd5e1; align-self: flex-end; border: 1px solid rgba(59,130,246,.25); }
-.ai-msg.assistant { background: #18181b; color: #e4e4e7; align-self: flex-start; border: 1px solid #27272a; white-space: normal; }
+.ai-msg.assistant { background: var(--surface-3); color: var(--text-bright); align-self: flex-start; border: 1px solid var(--border-default); white-space: normal; }
 .ai-msg.assistant p { margin: 0 0 8px; }
 .ai-msg.assistant p:last-child { margin-bottom: 0; }
 .ai-msg.assistant ul, .ai-msg.assistant ol { margin: 6px 0 8px; padding-left: 22px; }
 .ai-msg.assistant li { margin-bottom: 3px; }
-.ai-msg.assistant h2, .ai-msg.assistant h3, .ai-msg.assistant h4 { font-size: 14px; font-weight: 600; margin: 10px 0 4px; color: #fafafa; }
-.ai-msg.assistant code { background: #0a0a0c; border: 1px solid #27272a; border-radius: 4px; padding: 1px 5px; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--accent); }
-.ai-msg.assistant pre { background: #0a0a0c; border: 1px solid #27272a; border-radius: 6px; padding: 10px 12px; overflow-x: auto; margin: 6px 0; }
-.ai-msg.assistant pre code { background: transparent; border: none; padding: 0; color: #d4d4d8; }
-.ai-msg.assistant strong { color: #fafafa; font-weight: 600; }
+.ai-msg.assistant h2, .ai-msg.assistant h3, .ai-msg.assistant h4 { font-size: 14px; font-weight: 600; margin: 10px 0 4px; color: var(--text); }
+.ai-msg.assistant code { background: var(--surface-1); border: 1px solid var(--border-default); border-radius: 4px; padding: 1px 5px; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--accent); }
+.ai-msg.assistant pre { background: var(--surface-1); border: 1px solid var(--border-default); border-radius: 6px; padding: 10px 12px; overflow-x: auto; margin: 6px 0; }
+.ai-msg.assistant pre code { background: transparent; border: none; padding: 0; color: var(--text-secondary); }
+.ai-msg.assistant strong { color: var(--text); font-weight: 600; }
 .ai-msg.assistant { position: relative; padding-right: 38px; }
-.ai-msg-copy { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 6px; background: transparent; border: 1px solid transparent; color: #71717a; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; opacity: 0; transition: opacity .15s, background .15s, color .15s, border-color .15s; }
+.ai-msg-copy { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 6px; background: transparent; border: 1px solid transparent; color: var(--text-faint); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; opacity: 0; transition: opacity .15s, background .15s, color .15s, border-color .15s; }
 .ai-msg.assistant:hover .ai-msg-copy { opacity: 1; }
-.ai-msg-copy:hover { background: #27272a; color: #fafafa; border-color: #3f3f46; }
+.ai-msg-copy:hover { background: var(--border-default); color: var(--text); border-color: var(--border-strong); }
 .ai-msg-copy.copied { color: var(--green); opacity: 1; }
-.ai-msg.assistant em { color: #d4d4d8; font-style: italic; }
+.ai-msg.assistant em { color: var(--text-secondary); font-style: italic; }
 .ai-msg.assistant .rsid-chip { background: var(--accent-soft); border: 1px solid rgba(59,130,246,.3); color: var(--accent); font-family: 'Geist Mono', monospace; font-size: 12px; padding: 1px 6px; border-radius: 4px; cursor: pointer; transition: background .15s; }
 .ai-msg.assistant .rsid-chip:hover { background: rgba(59,130,246,.18); }
 .rsid-flash { animation: rsid-flash .9s ease-out; }
 @keyframes rsid-flash { 0% { background: rgba(59,130,246,.4); } 100% { background: transparent; } }
-.ai-msg.error { background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.3); color: #fecaca; align-self: stretch; max-width: 100%; }
-.ai-msg.empty { color: #71717a; text-align: center; align-self: stretch; max-width: 100%; padding: 24px; font-style: normal; }
+.ai-msg.error { background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.3); color: #fecaca; align-self: stretch; max-width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.ai-msg.error .ai-error-text { white-space: pre-wrap; }
+.ai-msg.error .ai-retry-btn { align-self: flex-start; background: rgba(239,68,68,.18); border: 1px solid rgba(239,68,68,.4); color: #fafafa; font-family: 'Geist', sans-serif; font-size: 12px; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background .15s; }
+.ai-msg.error .ai-retry-btn:hover { background: rgba(239,68,68,.3); }
+.ai-msg.error .ai-retry-btn i { font-size: 14px; }
+.ai-msg.empty { color: var(--text-faint); text-align: center; align-self: stretch; max-width: 100%; padding: 24px; font-style: normal; }
 .ai-msg.empty > div:first-child { font-style: italic; margin-bottom: 14px; }
 .ai-suggestions { display: flex; flex-direction: column; gap: 6px; align-items: stretch; max-width: 380px; margin: 0 auto; }
-.ai-suggestion { background: #18181b; border: 1px solid #27272a; color: #d4d4d8; font-family: 'Geist', sans-serif; font-size: 12.5px; padding: 9px 12px; border-radius: 8px; text-align: left; cursor: pointer; transition: border-color .15s, color .15s; }
-.ai-suggestion:hover { border-color: var(--accent); color: #fafafa; }
-.ai-typing { background: #18181b !important; border: 1px solid #27272a; border-radius: 12px; padding: 12px 16px !important; align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; }
+.ai-suggestion { background: var(--surface-3); border: 1px solid var(--border-default); color: var(--text-secondary); font-family: 'Geist', sans-serif; font-size: 12.5px; padding: 9px 12px; border-radius: 8px; text-align: left; cursor: pointer; transition: border-color .15s, color .15s; }
+.ai-suggestion:hover { border-color: var(--accent); color: var(--text); }
+.ai-typing { background: var(--surface-3) !important; border: 1px solid var(--border-default); border-radius: 12px; padding: 12px 16px !important; align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; }
 .ai-typing .ai-dots { display: inline-flex; gap: 4px; }
-.ai-typing .ai-dot { width: 6px; height: 6px; background: #71717a; border-radius: 50%; animation: ai-bounce 1.2s ease-in-out infinite; }
+.ai-typing .ai-dot { width: 6px; height: 6px; background: var(--text-faint); border-radius: 50%; animation: ai-bounce 1.2s ease-in-out infinite; }
 .ai-typing .ai-dot:nth-child(2) { animation-delay: .15s; }
 .ai-typing .ai-dot:nth-child(3) { animation-delay: .30s; }
-.ai-typing .ai-elapsed { font-family: 'Geist Mono', monospace; font-size: 11px; color: #71717a; min-width: 32px; }
-.ai-typing .ai-status { font-size: 12px; color: #a1a1aa; font-style: italic; transition: opacity .18s ease-out; min-width: 100px; }
-.ai-meta { font-size: 11px; color: #52525b; font-family: 'Geist Mono', monospace; margin: -6px 0 8px; align-self: flex-start; padding: 0 4px; }
-.ai-meta .ai-meta-model { color: #71717a; }
+.ai-typing .ai-elapsed { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--text-faint); min-width: 32px; }
+.ai-typing .ai-status { font-size: 12px; color: var(--text-muted); font-style: italic; transition: opacity .18s ease-out; min-width: 100px; }
+.ai-meta { font-size: 11px; color: var(--text-dim); font-family: 'Geist Mono', monospace; margin: -6px 0 8px; align-self: flex-start; padding: 0 4px; }
+.ai-meta .ai-meta-model { color: var(--text-faint); }
 @keyframes ai-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: .4; } 30% { transform: translateY(-4px); opacity: 1; } }
 
-.ai-form { border-top: 1px solid #27272a; padding: 14px 16px; display: flex; gap: 8px; align-items: flex-end; background: #0a0a0c; }
-.ai-form textarea { flex: 1; background: #18181b; border: 1px solid #3f3f46; color: #fafafa; border-radius: 10px; padding: 10px 12px; font-size: 13px; font-family: 'Geist', sans-serif; resize: none; min-height: 42px; max-height: 140px; line-height: 1.4; transition: height .14s cubic-bezier(.2,.0,.2,1), border-color .15s; overflow-y: auto; }
+.ai-form { border-top: 1px solid var(--border-default); padding: 14px 16px; display: flex; gap: 8px; align-items: flex-end; background: var(--surface-1); }
+.ai-form textarea { flex: 1; background: var(--surface-3); border: 1px solid var(--border-strong); color: var(--text); border-radius: 10px; padding: 10px 12px; font-size: 13px; font-family: 'Geist', sans-serif; resize: none; min-height: 42px; max-height: 140px; line-height: 1.4; transition: height .14s cubic-bezier(.2,.0,.2,1), border-color .15s; overflow-y: auto; }
 .ai-form textarea:focus { outline: none; border-color: var(--accent); }
-.ai-form button { background: var(--accent); color: #09090b; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 600; font-family: 'Geist', sans-serif; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.ai-form button { background: var(--accent); color: var(--bg); border: none; padding: 10px 16px; border-radius: 10px; font-weight: 600; font-family: 'Geist', sans-serif; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
 .ai-form button[disabled] { opacity: .5; cursor: not-allowed; }
-.ai-form button.ai-stop { background: #ef4444; color: #fafafa; animation: ai-stop-pulse 1.4s ease-in-out infinite; }
+.ai-form button.ai-stop { background: var(--red); color: var(--text); animation: ai-stop-pulse 1.4s ease-in-out infinite; }
 .ai-form button.ai-stop:hover { background: #dc2626; }
 @keyframes ai-stop-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.45); } 50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); } }
-.ai-meta .ai-meta-stopped { color: #ef4444; }
+.ai-meta .ai-meta-stopped { color: var(--red); }
 
-.ai-model { background: #18181b; border: 1px solid #3f3f46; color: #d4d4d8; border-radius: 8px; padding: 4px 8px; font-size: 11px; font-family: 'Geist Mono', monospace; }
-.gc { background: #18181b; border: 1px solid #27272a; border-radius: 12px; }
+.ai-model { background: var(--surface-3); border: 1px solid var(--border-strong); color: var(--text-secondary); border-radius: 8px; padding: 4px 8px; font-size: 11px; font-family: 'Geist Mono', monospace; }
+.gc { background: var(--surface-3); border: 1px solid var(--border-default); border-radius: 12px; }
 .gc.acc { overflow: visible; }
-.gc-h { padding: 16px 20px; border-bottom: 1px solid #27272a; }
-.gc-h h3 { font-size: 14px; font-weight: 600; margin: 0; color: #e4e4e7; }
+.gc-h { padding: 16px 20px; border-bottom: 1px solid var(--border-default); }
+.gc-h h3 { font-size: 14px; font-weight: 600; margin: 0; color: var(--text-bright); }
 .gc-b { padding: 20px; }
 .gc-b.np { padding: 0; }
 .gc + .gc { margin-top: 16px; }
 .sr { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
-.si { background: #18181b; border: 1px solid #27272a; border-radius: 10px; padding: 18px 16px; text-align: center; }
-.sn { font-size: 28px; font-weight: 700; line-height: 1; letter-spacing: -1px; }
-.sl { font-size: 11px; color: #a1a1aa; text-transform: uppercase; letter-spacing: .5px; margin-top: 6px; font-weight: 500; }
-.uz { background: #18181b; border: 2px dashed #3f3f46; border-radius: 16px; padding: 32px 40px 40px; text-align: center; max-width: 560px; margin: 24px auto 20px; transition: border-color .3s, background .3s; }
+.si { background: var(--surface-3); border: 1px solid var(--border-default); border-radius: 10px; padding: 18px 16px; text-align: center; }
+/* Stat numbers — Geist 700, larger size, tight tracking, tabular figures.
+   Bigger than the previous 28px so the strip reads as a "headline row" and
+   not a stat-card grid. tabular-nums keeps digits from jittering on sort. */
+.sn { font-size: 34px; font-weight: 700; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.sl { font-family: 'Geist Mono', monospace; font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.18em; margin-top: 8px; font-weight: 400; }
+/* Tabular figures everywhere numbers live in rows/cells — prevents
+   width jitter when sorting tables or polling DB status. */
+.tb td, .tb th, code, .cov-stat-n, .cov-panel-ratio { font-variant-numeric: tabular-nums; }
+.uz { background: var(--surface-3); border: 2px dashed var(--border-strong); border-radius: 16px; padding: 32px 40px 40px; text-align: center; max-width: 560px; margin: 24px auto 20px; transition: border-color .3s, background .3s; }
 .uz:hover { border-color: var(--accent); }
 .uz.drag-over { border-color: var(--accent); background: rgba(59,130,246,.06); }
 .uz h2 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
-.uz .fc { background: #27272a; border: 1px solid #3f3f46; color: #fafafa; border-radius: 8px; padding: 10px 14px; width: 100%; }
+.uz .fc { background: var(--border-default); border: 1px solid var(--border-strong); color: var(--text); border-radius: 8px; padding: 10px 14px; width: 100%; }
 .uz .fc:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,.2); }
 .uz select.fc { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2371717a' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
-.dropzone { cursor: pointer; padding: 28px 20px; margin-bottom: 16px; border: 2px dashed #3f3f46; border-radius: 12px; transition: border-color .2s, background .2s; position: relative; }
+.dropzone { cursor: pointer; padding: 28px 20px; margin-bottom: 16px; border: 2px dashed var(--border-strong); border-radius: 12px; transition: border-color .2s, background .2s; position: relative; }
 .dropzone:hover { border-color: var(--accent); background: rgba(59,130,246,.04); }
 .dropzone.has-file { border-color: var(--green); border-style: solid; background: rgba(34,197,94,.04); }
 .dropzone-icon { font-size: 36px; margin-bottom: 8px; opacity: .6; }
-.dropzone-text { font-size: 14px; color: #a1a1aa; margin-bottom: 4px; }
-.dropzone-sub { font-size: 12px; color: #52525b; }
+.dropzone-text { font-size: 14px; color: var(--text-muted); margin-bottom: 4px; }
+.dropzone-sub { font-size: 12px; color: var(--text-dim); }
 .dropzone-file { font-size: 13px; color: var(--green); font-weight: 600; margin-top: 6px; }
 .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 420px; margin: 0 auto 12px; }
 .profile-grid .full { grid-column: 1 / -1; }
@@ -154,133 +185,158 @@ a { color: var(--accent); }
 .flash-toast.flash-dragging { transition: none; cursor: grabbing; }
 .flash-toast.flash-out { animation: flash-fade .25s ease-out forwards; }
 @keyframes flash-fade { to { opacity: 0; transform: translateX(120%); height: 0; margin: 0; padding: 0; border-width: 0; } }
-.hint { font-size: 12px; color: #71717a; margin-bottom: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.hint { font-size: 12px; color: var(--text-faint); margin-bottom: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; }
 .hint svg { flex-shrink: 0; }
-.gt { display: flex; gap: 2px; border-bottom: 1px solid #27272a; margin-bottom: 20px; overflow-x: auto; overflow-y: hidden; flex-wrap: nowrap; scrollbar-width: thin; scrollbar-color: #3f3f46 transparent; -ms-overflow-style: none; }
+.gt { display: flex; gap: 2px; border-bottom: 1px solid var(--border-default); margin-bottom: 20px; overflow-x: auto; overflow-y: hidden; flex-wrap: nowrap; scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; -ms-overflow-style: none; }
 .gt::-webkit-scrollbar { height: 3px; }
 .gt::-webkit-scrollbar-track { background: transparent; }
-.gt::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
-.gt button { padding: 8px 12px; font-size: 12px; font-weight: 500; color: #a1a1aa; cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; flex-shrink: 0; transition: all .2s; }
-.gt button:hover { color: #fafafa; background: rgba(59,130,246,.06); }
+.gt::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+.gt button { padding: 8px 12px; font-size: 12px; font-weight: 500; color: var(--text-muted); cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; flex-shrink: 0; transition: all .2s; display: inline-flex; align-items: center; gap: 6px; }
+.gt button i { font-size: 14px; line-height: 1; }
+.gt button:hover { color: var(--text); background: rgba(59,130,246,.06); }
 .gt button.active { color: var(--accent); border-bottom-color: var(--accent); }
 .tp { display: none; }
 .tp.active { display: block; }
 .tb { width: 100%; border-collapse: collapse; font-size: 13px; }
-.tb thead th { background: #111113; color: #71717a; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; padding: 10px 14px; text-align: left; border-bottom: 1px solid #27272a; }
-.tb tbody td { padding: 10px 14px; border-bottom: 1px solid rgba(39,39,42,.5); color: #d4d4d8; vertical-align: top; }
+.tb thead th { background: var(--surface-2); color: var(--text-faint); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border-default); }
+.tb tbody td { padding: 10px 14px; border-bottom: 1px solid rgba(39,39,42,.5); color: var(--text-secondary); vertical-align: top; }
 .tb tbody tr:hover { background: rgba(59,130,246,.04); }
 .tb tbody tr[data-href] { cursor: pointer; }
 .bs { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
 .br { background: var(--red-soft); color: var(--red); }
 .by { background: var(--yellow-soft); color: var(--yellow); }
 .bg { background: var(--green-soft); color: var(--green); }
-.bn { background: rgba(161,161,170,.12); color: #a1a1aa; }
+.bn { background: rgba(161,161,170,.12); color: var(--text-muted); }
+/* Local pill variants for blue/cyan to complement .by/.bg/.br/.bn above.
+   Bootstrap's .bg-warning / .bg-info / .bg-primary in halfmoon ship with
+   solid colored backgrounds + white text (~2.6:1 WCAG against yellow —
+   unreadable). Instead of fighting !important specificity wars we map
+   the Bootstrap color tokens to these local classes at render time. */
+.bb { background: var(--accent-soft); color: var(--accent); }
+.bc { background: rgba(56,189,248,.12); color: var(--cyan); }
 .hc { background: linear-gradient(135deg, rgba(34,197,94,.06), rgba(34,197,94,.02)); border: 1px solid rgba(34,197,94,.15); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
 .hc h4 { font-size: 14px; font-weight: 600; color: var(--green); margin-bottom: 12px; }
 .hc ul { list-style: none; padding: 0; margin: 0; }
-.hc li { padding: 12px 0 12px 18px; position: relative; font-size: 14px; line-height: 1.9; color: #e4e4e7; border-bottom: 1px solid rgba(34,197,94,.06); margin-bottom: 2px; }
+.hc li { padding: 12px 0 12px 18px; position: relative; font-size: 14px; line-height: 1.9; color: var(--text-bright); border-bottom: 1px solid rgba(34,197,94,.06); margin-bottom: 2px; }
 .hc li:last-child { border: none; }
 .hc li::before { content: "\2714"; position: absolute; left: 0; color: var(--green); font-size: 12px; top: 12px; }
 .cc { background: linear-gradient(135deg, rgba(59,130,246,.06), rgba(168,85,247,.04)); border: 1px solid rgba(59,130,246,.15); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
 .cc h4 { font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 12px; }
 .cc ul { list-style: none; padding: 0; margin: 0; }
-.cc li { padding: 12px 0 12px 18px; position: relative; font-size: 13px; line-height: 1.8; color: #d4d4d8; border-bottom: 1px solid rgba(59,130,246,.06); margin-bottom: 2px; }
+.cc li { padding: 12px 0 12px 18px; position: relative; font-size: 13px; line-height: 1.8; color: var(--text-secondary); border-bottom: 1px solid rgba(59,130,246,.06); margin-bottom: 2px; }
 .cc li:last-child { border: none; }
 .cc li::before { content: "\25B8"; position: absolute; left: 0; color: var(--accent); font-size: 11px; top: 10px; }
-.tc-toggle { font-size: 12px; color: #71717a; cursor: pointer; background: none; border: 1px solid #3f3f46; padding: 4px 12px; border-radius: 6px; margin-bottom: 12px; }
-.tc-toggle:hover { color: #a1a1aa; border-color: #52525b; }
+.tc-toggle { font-size: 12px; color: var(--text-faint); cursor: pointer; background: none; border: 1px solid var(--border-strong); padding: 4px 12px; border-radius: 6px; margin-bottom: 12px; }
+.tc-toggle:hover { color: var(--text-muted); border-color: var(--text-dim); }
 .med-banner { background: linear-gradient(135deg, rgba(239,68,68,.08), rgba(239,68,68,.03)); border: 1px solid rgba(239,68,68,.25); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 14px; }
 .med-banner .med-icon { font-size: 28px; flex-shrink: 0; line-height: 1; }
 .med-banner .med-title { font-size: 13px; font-weight: 700; color: var(--red); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .5px; }
-.med-banner .med-text { font-size: 13px; line-height: 1.7; color: #d4d4d8; }
-.tn { background: #111113; border: 1px solid #27272a; border-radius: 8px; padding: 14px 18px; font-size: 12px; color: #71717a; margin-bottom: 16px; }
-.db { background: #111113; border-top: 1px solid #27272a; padding: 16px 0; margin-top: 40px; font-size: 12px; color: #52525b; line-height: 1.7; }
+.med-banner .med-text { font-size: 13px; line-height: 1.7; color: var(--text-secondary); }
+.tn { background: var(--surface-2); border: 1px solid var(--border-default); border-radius: 8px; padding: 14px 18px; font-size: 12px; color: var(--text-faint); margin-bottom: 16px; }
+/* Disclaimer footer. Previous color var(--text-dim) on var(--surface-2) sat at ~3.1:1 —
+   below WCAG AA (4.5 needed for body text). Bumped to zinc-400 for body
+   and zinc-500 for the trailing italic, both above AA on this surface. */
+.db { background: var(--surface-2); border-top: 1px solid var(--border-default); padding: 16px 0; margin-top: 40px; font-size: 12.5px; color: var(--text-muted); line-height: 1.7; }
 .db strong { color: var(--red); }
+.db em { color: var(--text-faint); font-style: italic; }
+.db a { color: #93c5fd; text-decoration: underline; }
+.db a:hover { color: #bfdbfe; }
 .cg { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; margin-bottom: 20px; }
 .cw { min-height: 320px; }
-.mb { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #a1a1aa; margin-bottom: 16px; }
-.pb { height: 10px; background: #27272a; border-radius: 5px; overflow: hidden; margin-bottom: 4px; }
+.mb { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+.pb { height: 10px; background: var(--border-default); border-radius: 5px; overflow: hidden; margin-bottom: 4px; }
 .pf { height: 100%; border-radius: 5px; }
-.nt { font-size: 12px; color: #71717a; margin-bottom: 14px; }
+.nt { font-size: 12px; color: var(--text-faint); margin-bottom: 14px; }
 .tr { color: var(--red); }
 .tg { color: var(--green); }
 .ty { color: var(--yellow); }
 .ta { color: var(--accent); cursor: pointer; }
-.tm { color: #71717a; }
+.tm { color: var(--text-faint); }
 .fw6 { font-weight: 600; }
 .acc { margin-bottom: 12px; }
-.acc summary { padding: 16px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 600; color: #e4e4e7; list-style: none; border-bottom: 1px solid transparent; transition: background .2s; }
+.acc summary { padding: 16px 20px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text-bright); list-style: none; border-bottom: 1px solid transparent; transition: background .2s; }
 .acc summary:hover { background: rgba(59,130,246,.04); }
 .acc summary::-webkit-details-marker { display: none; }
-.acc summary::after { content: "+"; font-size: 18px; color: #71717a; font-weight: 400; }
-.acc[open] summary { border-bottom-color: #27272a; }
+/* Icon + title left-align as a group; badge and the trailing "+" anchor right.
+   Subtle gotcha: in flexbox, when TWO items both have `margin-left: auto`,
+   the leftover space is DIVIDED between them — which made the title look
+   centered. So we use exactly one auto-margin per row:
+   - If there's a .badge-count, it gets the auto and pushes itself right;
+     the ::after "+" follows it with the natural 8px gap.
+   - If there's no badge, the ::after itself takes the auto and floats right.
+   `:has()` is supported in all modern browsers (Chrome/Safari/Firefox 121+). */
+.acc summary > .badge-count { margin-left: auto; }
+.acc summary:not(:has(> .badge-count))::after { margin-left: auto; }
+.acc summary::after { content: "+"; font-size: 18px; color: var(--text-faint); font-weight: 400; }
+.acc summary > i { flex-shrink: 0; }
+.acc[open] summary { border-bottom-color: var(--border-default); }
 .acc[open] summary::after { content: "\2212"; }
 .acc-body { padding: 20px; }
-.ctx { background: linear-gradient(135deg, rgba(59,130,246,.06), rgba(59,130,246,.02)); border: 1px solid rgba(59,130,246,.12); border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; font-size: 13px; line-height: 1.7; color: #a1a1aa; }
+.ctx { background: linear-gradient(135deg, rgba(59,130,246,.06), rgba(59,130,246,.02)); border: 1px solid rgba(59,130,246,.12); border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; font-size: 13px; line-height: 1.7; color: var(--text-muted); }
 .ctx h4 { font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
 .ctx-warn { border-color: rgba(234,179,8,.2); background: linear-gradient(135deg, rgba(234,179,8,.04), rgba(234,179,8,.01)); }
 .ctx-danger { border-color: rgba(239,68,68,.15); background: linear-gradient(135deg, rgba(239,68,68,.04), rgba(239,68,68,.01)); }
 .badge-count { font-size: 11px; padding: 3px 10px; border-radius: 10px; font-weight: 600; }
-.stars { color: #eab308; letter-spacing: 1px; }
+.stars { color: var(--yellow); letter-spacing: 1px; }
 
 /* Coverage report */
 .cov-card { margin-top: 16px; }
-.cov-intro { font-size: 13px; color: #a1a1aa; margin: 0 0 14px; line-height: 1.5; }
+.cov-intro { font-size: 13px; color: var(--text-muted); margin: 0 0 14px; line-height: 1.5; }
 .cov-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
-.cov-stat { background: #0a0a0c; border: 1px solid #27272a; border-radius: 8px; padding: 12px; text-align: center; }
-.cov-stat-n { font-size: 20px; font-weight: 700; color: #fafafa; font-family: 'Geist Mono', monospace; }
-.cov-stat-l { font-size: 11px; color: #71717a; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-.cov-stat-ok .cov-stat-n { color: #22c55e; }
-.cov-stat-mid .cov-stat-n { color: #eab308; }
-.cov-stat-low .cov-stat-n { color: #ef4444; }
-.cov-details > summary { cursor: pointer; font-size: 13px; color: #d4d4d8; padding: 8px 0; user-select: none; }
+.cov-stat { background: var(--surface-1); border: 1px solid var(--border-default); border-radius: 8px; padding: 12px; text-align: center; }
+.cov-stat-n { font-size: 20px; font-weight: 700; color: var(--text); font-family: 'Geist Mono', monospace; }
+.cov-stat-l { font-size: 11px; color: var(--text-faint); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.cov-stat-ok .cov-stat-n { color: var(--green); }
+.cov-stat-mid .cov-stat-n { color: var(--yellow); }
+.cov-stat-low .cov-stat-n { color: var(--red); }
+.cov-details > summary { cursor: pointer; font-size: 13px; color: var(--text-secondary); padding: 8px 0; user-select: none; }
 .cov-details > summary:hover { color: var(--accent); }
 .cov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-top: 12px; }
-.cov-panel { background: #0a0a0c; border: 1px solid #27272a; border-radius: 8px; padding: 10px 12px; }
+.cov-panel { background: var(--surface-1); border: 1px solid var(--border-default); border-radius: 8px; padding: 10px 12px; }
 .cov-panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.cov-panel-name { font-size: 12px; font-weight: 600; color: #fafafa; }
-.cov-panel-ratio { font-size: 11px; color: #a1a1aa; font-family: 'Geist Mono', monospace; }
-.cov-bar { height: 4px; background: #27272a; border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
+.cov-panel-name { font-size: 12px; font-weight: 600; color: var(--text); }
+.cov-panel-ratio { font-size: 11px; color: var(--text-muted); font-family: 'Geist Mono', monospace; }
+.cov-bar { height: 4px; background: var(--border-default); border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
 .cov-bar-fill { height: 100%; transition: width 0.3s; }
-.cov-high .cov-bar-fill { background: #22c55e; }
-.cov-partial .cov-bar-fill { background: #eab308; }
-.cov-low .cov-bar-fill { background: #ef4444; }
+.cov-high .cov-bar-fill { background: var(--green); }
+.cov-partial .cov-bar-fill { background: var(--yellow); }
+.cov-low .cov-bar-fill { background: var(--red); }
 .cov-panel-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 10px; }
 .cov-badge { padding: 1px 6px; border-radius: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
-.cov-badge-high { color: #22c55e; background: rgba(34,197,94,.1); }
-.cov-badge-partial { color: #eab308; background: rgba(234,179,8,.1); }
-.cov-badge-low { color: #ef4444; background: rgba(239,68,68,.1); }
-.cov-missing { color: #71717a; font-family: 'Geist Mono', monospace; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
+.cov-badge-high { color: var(--green); background: rgba(34,197,94,.1); }
+.cov-badge-partial { color: var(--yellow); background: rgba(234,179,8,.1); }
+.cov-badge-low { color: var(--red); background: rgba(239,68,68,.1); }
+.cov-missing { color: var(--text-faint); font-family: 'Geist Mono', monospace; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
 
 /* Hereditary cancer chip-limit warning */
 .hcw-card { border-color: rgba(239,68,68,.3); background: linear-gradient(135deg, rgba(239,68,68,.06), rgba(239,68,68,.01)); margin-top: 12px; }
 .hcw-head { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--red); margin-bottom: 8px; }
-.hcw-body { font-size: 13px; line-height: 1.6; color: #d4d4d8; margin: 0 0 10px; }
-.hcw-cta { font-size: 13px; line-height: 1.6; color: #fafafa; margin: 0; font-weight: 500; }
+.hcw-body { font-size: 13px; line-height: 1.6; color: var(--text-secondary); margin: 0 0 10px; }
+.hcw-cta { font-size: 13px; line-height: 1.6; color: var(--text); margin: 0; font-weight: 500; }
 .hcw-empty { border-color: rgba(234,179,8,.25); background: rgba(234,179,8,.04); margin-top: 12px; }
 .hcw-empty-title { font-size: 13px; color: var(--yellow); margin: 0 0 6px; display: flex; align-items: center; gap: 6px; font-weight: 600; }
-.hcw-empty-body { font-size: 12px; line-height: 1.6; color: #a1a1aa; margin: 0; }
+.hcw-empty-body { font-size: 12px; line-height: 1.6; color: var(--text-muted); margin: 0; }
 
 /* Composite Risk Index cards */
 .prs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
-.prs-card { background: #0a0a0c; border: 1px solid #27272a; border-radius: 10px; padding: 14px; }
+.prs-card { background: var(--surface-1); border: 1px solid var(--border-default); border-radius: 10px; padding: 14px; }
 .prs-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; }
-.prs-head h4 { margin: 0; font-size: 13px; font-weight: 600; color: #fafafa; }
+.prs-head h4 { margin: 0; font-size: 13px; font-weight: 600; color: var(--text); }
 .prs-band-badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
-.prs-band-elevated-badge { color: #ef4444; background: rgba(239,68,68,.12); }
-.prs-band-average-badge { color: #eab308; background: rgba(234,179,8,.12); }
-.prs-band-below_average-badge { color: #22c55e; background: rgba(34,197,94,.12); }
-.prs-band-insufficient-badge { color: #71717a; background: rgba(113,113,122,.15); }
+.prs-band-elevated-badge { color: var(--red); background: rgba(239,68,68,.12); }
+.prs-band-average-badge { color: var(--yellow); background: rgba(234,179,8,.12); }
+.prs-band-below_average-badge { color: var(--green); background: rgba(34,197,94,.12); }
+.prs-band-insufficient-badge { color: var(--text-faint); background: rgba(113,113,122,.15); }
 .prs-score { display: flex; align-items: baseline; gap: 4px; margin: 8px 0 8px; font-family: 'Geist Mono', monospace; }
-.prs-score-n { font-size: 28px; font-weight: 700; color: #fafafa; }
-.prs-score-d { font-size: 16px; color: #71717a; margin-right: 8px; }
-.prs-score-l { font-size: 11px; color: #a1a1aa; margin-left: auto; text-align: right; line-height: 1.3; }
-.prs-bar { height: 6px; background: #27272a; border-radius: 3px; overflow: hidden; }
-.prs-bar-fill { height: 100%; background: linear-gradient(90deg, #22c55e 0%, #eab308 50%, #ef4444 100%); }
+.prs-score-n { font-size: 28px; font-weight: 700; color: var(--text); }
+.prs-score-d { font-size: 16px; color: var(--text-faint); margin-right: 8px; }
+.prs-score-l { font-size: 11px; color: var(--text-muted); margin-left: auto; text-align: right; line-height: 1.3; }
+.prs-bar { height: 6px; background: var(--border-default); border-radius: 3px; overflow: hidden; }
+.prs-bar-fill { height: 100%; background: linear-gradient(90deg, var(--green) 0%, var(--yellow) 50%, var(--red) 100%); }
 .prs-band-elevated { border-color: rgba(239,68,68,.35); }
-.prs-insufficient { font-size: 12px; color: #a1a1aa; margin: 6px 0 4px; }
+.prs-insufficient { font-size: 12px; color: var(--text-muted); margin: 6px 0 4px; }
 .prs-detail { margin-top: 12px; }
-.prs-detail > summary { cursor: pointer; font-size: 11px; color: #71717a; text-transform: uppercase; letter-spacing: 0.4px; }
+.prs-detail > summary { cursor: pointer; font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.4px; }
 .prs-detail > summary:hover { color: var(--accent); }
 .prs-tb { margin-top: 8px; font-size: 11px; }
 .prs-missing-row { opacity: 0.45; }
@@ -288,25 +344,25 @@ a { color: var(--accent); }
 .mb-actions { display: inline-flex; gap: 8px; align-items: center; }
 .btn-export { background: var(--accent); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; }
 .btn-export:hover { filter: brightness(1.1); }
-.btn-clear { color: #71717a; background: #18181b; border: 1px solid #3f3f46; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; }
+.btn-clear { color: var(--text-faint); background: var(--surface-3); border: 1px solid var(--border-strong); padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; }
 .sample-form { margin-top: 10px; }
-.link-sample { background: transparent; color: #71717a; border: none; padding: 4px 8px; font-size: 12px; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; text-decoration: underline; text-underline-offset: 3px; text-decoration-style: dotted; text-decoration-color: #3f3f46; }
+.link-sample { background: transparent; color: var(--text-faint); border: none; padding: 4px 8px; font-size: 12px; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; text-decoration: underline; text-underline-offset: 3px; text-decoration-style: dotted; text-decoration-color: var(--border-strong); }
 .link-sample:hover { color: var(--accent); text-decoration-color: var(--accent); }
 /* Translator-required banner (only shown in PT mode without the en->pt model) */
 .translator-needed { max-width: 560px; margin: 24px auto 0; padding: 18px 20px; background: linear-gradient(135deg, rgba(234,179,8,.08), rgba(234,179,8,.02)); border: 1px solid rgba(234,179,8,.3); border-radius: 12px; display: flex; gap: 14px; align-items: flex-start; }
-.pharmgkb-warn { max-width: 560px; margin: 16px auto 0; padding: 11px 16px; background: rgba(234,179,8,.06); border: 1px solid rgba(234,179,8,.25); border-radius: 10px; display: flex; gap: 12px; align-items: center; font-size: 12.5px; color: #e4e4e7; }
+.pharmgkb-warn { max-width: 560px; margin: 16px auto 0; padding: 11px 16px; background: rgba(234,179,8,.06); border: 1px solid rgba(234,179,8,.25); border-radius: 10px; display: flex; gap: 12px; align-items: center; font-size: 12.5px; color: var(--text-bright); }
 .pharmgkb-warn i { color: var(--yellow); font-size: 16px; flex-shrink: 0; }
-.pharmgkb-warn strong { color: #fafafa; font-weight: 600; }
+.pharmgkb-warn strong { color: var(--text); font-weight: 600; }
 .pharmgkb-warn a { color: var(--accent); text-decoration: none; font-weight: 500; }
 .pharmgkb-warn a:hover { text-decoration: underline; }
 .translator-needed-icon { font-size: 22px; color: var(--yellow); flex-shrink: 0; }
 .translator-needed-body { flex: 1; }
-.translator-needed-body h3 { margin: 0 0 6px; font-size: 14px; color: #fafafa; font-weight: 600; }
-.translator-needed-body p { margin: 0 0 12px; font-size: 12px; color: #d4d4d8; line-height: 1.55; }
+.translator-needed-body h3 { margin: 0 0 6px; font-size: 14px; color: var(--text); font-weight: 600; }
+.translator-needed-body p { margin: 0 0 12px; font-size: 12px; color: var(--text-secondary); line-height: 1.55; }
 .translator-needed-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .btn-translator-cta { background: var(--accent); color: #fff; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
 .btn-translator-cta:hover { filter: brightness(1.1); }
-.btn-translator-alt { color: #a1a1aa; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; text-decoration-style: dotted; }
+.btn-translator-alt { color: var(--text-muted); font-size: 12px; text-decoration: underline; text-underline-offset: 3px; text-decoration-style: dotted; }
 .btn-translator-alt:hover { color: var(--accent); }
 .uz-blocked { opacity: 0.45; pointer-events: none; }
 .print-only { display: none; }
@@ -317,7 +373,7 @@ a { color: var(--accent); }
   @page { size: A4; margin: 12mm 10mm; }
   /* Force A4 width — prevent right-edge clipping caused by default viewport widths */
   html, body { width: 190mm !important; max-width: 190mm !important; margin: 0 !important; padding: 0 !important; overflow-x: hidden !important; }
-  body { background: #fff !important; color: #111 !important; font-size: 9.5pt; }
+  body { background: #fff !important; color: var(--surface-2) !important; font-size: 9.5pt; }
   * { box-sizing: border-box !important; }
   .site-header, .ai-fab, .ai-drawer, .ai-backdrop, .mb-actions, .tabs, .lang-toggle, form, button { display: none !important; }
   .container { padding: 0 !important; margin: 0 !important; max-width: 100% !important; width: 100% !important; }
@@ -347,10 +403,10 @@ a { color: var(--accent); }
   .cw, .cg, .cov-bar { display: none !important; }
 
   /* Flatten dark card chrome */
-  .gc, .cc, .hc, .tn, .ctx, .med-banner, .hcw-card, .hcw-empty, .cov-card, .cov-stat, .cov-panel { background: #fff !important; color: #111 !important; border: 1px solid #d4d4d8 !important; box-shadow: none !important; }
+  .gc, .cc, .hc, .tn, .ctx, .med-banner, .hcw-card, .hcw-empty, .cov-card, .cov-stat, .cov-panel { background: #fff !important; color: var(--surface-2) !important; border: 1px solid var(--text-secondary) !important; box-shadow: none !important; }
   .gc { margin-bottom: 10px !important; }
   .gc + .gc { margin-top: 10px; }
-  .gc-h { padding: 8px 12px !important; border-bottom: 1px solid #d4d4d8 !important; }
+  .gc-h { padding: 8px 12px !important; border-bottom: 1px solid var(--text-secondary) !important; }
   .gc-h h3 { font-size: 11pt; }
   .gc-b { padding: 10px 12px !important; }
   .gc-b.np { padding: 0 !important; }
@@ -360,14 +416,14 @@ a { color: var(--accent); }
   table.tb thead { display: table-header-group; }
   table.tb tbody { display: table-row-group; }
   table.tb tr, table.tb td, table.tb th { page-break-inside: auto; break-inside: auto; }
-  table.tb thead th { background: #f4f4f5 !important; color: #111 !important; border-bottom: 1px solid #999 !important; padding: 4px 6px !important; font-size: 7.5pt; }
-  table.tb tbody td { padding: 4px 6px !important; border-bottom: 1px solid #e5e5e5 !important; color: #111 !important; vertical-align: top; word-break: normal; overflow-wrap: anywhere; }
+  table.tb thead th { background: #f4f4f5 !important; color: var(--surface-2) !important; border-bottom: 1px solid #999 !important; padding: 4px 6px !important; font-size: 7.5pt; }
+  table.tb tbody td { padding: 4px 6px !important; border-bottom: 1px solid #e5e5e5 !important; color: var(--surface-2) !important; vertical-align: top; word-break: normal; overflow-wrap: anywhere; }
   /* Give narrow code/gene columns just enough room — last column (details/interpretation) gets the rest */
   table.tb tbody td:has(code), table.tb thead th:nth-child(1), table.tb thead th:nth-child(2), table.tb thead th:nth-child(3) { white-space: nowrap; }
   table.tb tbody td:last-child, table.tb thead th:last-child { white-space: normal; width: auto; max-width: none; }
 
   /* Headings: don't leave them as orphans at the bottom of a page */
-  h1, h2, h3, h4 { color: #111 !important; page-break-after: avoid; break-after: avoid; }
+  h1, h2, h3, h4 { color: var(--surface-2) !important; page-break-after: avoid; break-after: avoid; }
   .gc-h, .ctx h4, details summary { page-break-after: avoid; break-after: avoid; }
 
   /* Keep small atomic blocks from being split across pages */
@@ -396,7 +452,7 @@ a { color: var(--accent); }
   .gc > .gc-h + .gc-b { page-break-before: avoid; break-before: avoid; }
 
   a { color: #1d4ed8; text-decoration: underline; }
-  code { background: #f4f4f5; color: #111; padding: 0 2px; border-radius: 2px; }
+  code { background: #f4f4f5; color: var(--surface-2); padding: 0 2px; border-radius: 2px; }
 
   /* Coverage panel grid: keep tight */
   .cov-summary { display: flex !important; gap: 8px; margin: 8px 0; }
@@ -405,9 +461,9 @@ a { color: var(--accent); }
   .cov-panel { margin-bottom: 4px !important; padding: 6px 8px !important; }
 
   /* Status pills/badges: make them readable in B&W */
-  .bs, .badge-count { background: #f4f4f5 !important; color: #111 !important; border: 1px solid #ccc !important; padding: 1px 6px !important; }
+  .bs, .badge-count { background: #f4f4f5 !important; color: var(--surface-2) !important; border: 1px solid #ccc !important; padding: 1px 6px !important; }
 
-  .print-header { display: flex !important; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #111; padding-bottom: 6px; margin-bottom: 12px; }
+  .print-header { display: flex !important; justify-content: space-between; align-items: baseline; border-bottom: 2px solid var(--surface-2); padding-bottom: 6px; margin-bottom: 12px; }
   .print-header strong { font-size: 13pt; }
   .print-footer { display: block !important; margin-top: 16px; font-size: 8pt; color: #555; text-align: center; }
 }
@@ -415,12 +471,32 @@ a { color: var(--accent); }
 </head>
 <body>
 
+{# Wellness panel → (icon, semantic color class) map. Defined at template top
+   so both tab-wellness AND tab-advanced loops resolve the same entries.
+   Empty color → falls back to inline style="color:var(--accent)" at render. #}
+{% set panel_icons = {
+  'nutri':      ('ti-apple', 'tg'),
+  'fit':        ('ti-barbell', ''),
+  'skin':       ('ti-sparkles', ''),
+  'aging':      ('ti-hourglass', ''),
+  'sensory':    ('ti-ear', ''),
+  'sleep':      ('ti-moon', ''),
+  'longevity':  ('ti-hourglass-high', 'tg'),
+  'mental':     ('ti-brain', ''),
+  'food':       ('ti-bowl', 'ty'),
+  'thyroid':    ('ti-atom', 'ty'),
+  'eyes':       ('ti-eye', ''),
+  'bones':      ('ti-bone', ''),
+  'allergy':    ('ti-flower', 'ty'),
+  'autoimmune': ('ti-shield-x', 'tr'),
+} %}
+
 <header class="site-header">
   <div class="container">
     <div class="logo"><span class="logo-icon"><i class="ti ti-flask"></i></span> {{ t.app_title }} <span class="priv-pill"><i class="ti ti-lock"></i> {{ t.privacy_badge|safe }}</span></div>
     <div class="d-flex align-items-center gap-2">
-      <a href="/settings" class="lang-sw" style="margin-right:8px;color:#a1a1aa;text-decoration:none;font-size:13px;display:inline-flex;align-items:center;gap:4px" title="{{ t.settings_link }}"><i class="ti ti-settings"></i> {{ t.settings_link }}</a>
-      <div class="lang-sw"><a href="/lang/en" class="{% if lang == 'en' %}active{% endif %}">EN</a> <a href="/lang/pt" class="{% if lang == 'pt' %}active{% endif %}">PT-BR</a></div>
+      <a href="/settings" class="lang-sw" style="margin-right:8px;color:var(--text-muted);text-decoration:none;font-size:13px;display:inline-flex;align-items:center;gap:4px" title="{{ t.settings_link }}"><i class="ti ti-settings"></i> {{ t.settings_link }}</a>
+      <div class="lang-sw"><a href="/lang/en?next={{ request.path }}" class="{% if lang == 'en' %}active{% endif %}">EN</a> <a href="/lang/pt?next={{ request.path }}" class="{% if lang == 'pt' %}active{% endif %}">PT-BR</a></div>
     </div>
   </div>
 </header>
@@ -516,7 +592,7 @@ a { color: var(--accent); }
 {% endif %}
 <div class="uz {% if needs_translator or needs_clinvar %}uz-blocked{% endif %}" id="uploadZone">
   <h2>{{ t.upload_title }}</h2>
-  <p style="color:#a1a1aa;margin-bottom:24px;font-size:14px">{{ t.upload_desc }}</p>
+  <p style="color:var(--text-muted);margin-bottom:24px;font-size:14px">{{ t.upload_desc }}</p>
   <form action="/analyze" method="post" enctype="multipart/form-data" id="uploadForm" autocomplete="off">
     <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
       <div class="dropzone-icon"><i class="ti ti-microscope"></i></div>
@@ -538,7 +614,7 @@ a { color: var(--accent); }
   <form action="/analyze-sample" method="post" class="sample-form">
     <button type="submit" class="link-sample" title="{{ t.try_sample_hint }}"><i class="ti ti-flask-2"></i> {{ t.try_sample_btn }}</button>
   </form>
-  <p style="color:#52525b;margin-top:12px;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-lock"></i> {{ t.upload_note }}</p>
+  <p style="color:var(--text-dim);margin-top:12px;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-lock"></i> {{ t.upload_note }}</p>
 </div>
 {% if history %}
 <div class="gc" style="max-width:700px;margin:20px auto 0">
@@ -547,7 +623,7 @@ a { color: var(--accent); }
   {% for h in history %}<tr data-href="/history/load/{{ h.id }}">
     <td>{{ h.timestamp[:16].replace('T', ' ') }}</td><td class="fw6">{{ h.genome_info.get('subject_name') or t.history_anonymous }}</td>
     <td>{{ "{:,}".format(h.genome_info.get('snp_count', 0)) }}</td><td>{{ h.summary.get('analyzed_snps', 0) }} {{ t.history_analyzed }}</td><td>{{ h.elapsed }}s</td>
-    <td class="no-nav" onclick="event.stopPropagation()"><form action="/history/delete/{{ h.id }}" method="post" style="display:inline" onsubmit="event.stopPropagation();return confirm('{{ t.history_delete_confirm }}')"><button type="submit" onclick="event.stopPropagation()" style="padding:2px 8px;color:#71717a;background:transparent;border:1px solid #3f3f46;border-radius:4px;cursor:pointer"><i class="ti ti-x"></i></button></form></td>
+    <td class="no-nav" onclick="event.stopPropagation()"><form action="/history/delete/{{ h.id }}" method="post" style="display:inline" onsubmit="event.stopPropagation();return confirm('{{ t.history_delete_confirm }}')"><button type="submit" onclick="event.stopPropagation()" style="padding:2px 8px;color:var(--text-faint);background:transparent;border:1px solid var(--border-strong);border-radius:4px;cursor:pointer"><i class="ti ti-x"></i></button></form></td>
   </tr>{% endfor %}</tbody></table></div></div>
 {% endif %}
 <div class="db" style="max-width:700px;margin:24px auto 0;background:transparent;border:none;text-align:center"><strong>{{ t.warning_label }}:</strong> {{ t.upload_disclaimer }}</div>
@@ -559,7 +635,7 @@ a { color: var(--accent); }
   <strong>Gene Lens — {{ t.coverage_title if t.coverage_title else 'Report' }}</strong>
   <span>{{ genome_info.filename }}{% if genome_info.subject_name %} · {{ genome_info.subject_name }}{% endif %}</span>
 </div>
-<div class="mb"><span><strong style="color:#fafafa">{{ genome_info.filename }}</strong> &middot; {{ genome_info.format }} &middot; {{ "{:,}".format(genome_info.snp_count) }} SNPs &middot; {{ elapsed }}s{% if genome_info.subject_name %} &middot; <strong style="color:#fafafa">{{ genome_info.subject_name }}</strong>{% endif %}{% if prof %} &middot; <span class="tm">{% if prof.sex %}{{ prof.sex }}{% endif %}{% if prof.age %} {{ prof.age }}{{ t.profile_years }}{% endif %}{% if prof.bmi %} IMC {{ prof.bmi }}{% endif %}</span>{% endif %}</span>
+<div class="mb"><span><strong style="color:var(--text)">{{ genome_info.filename }}</strong> &middot; {{ genome_info.format }} &middot; {{ "{:,}".format(genome_info.snp_count) }} SNPs &middot; {{ elapsed }}s{% if genome_info.subject_name %} &middot; <strong style="color:var(--text)">{{ genome_info.subject_name }}</strong>{% endif %}{% if prof %} &middot; <span class="tm">{% if prof.sex %}{{ prof.sex }}{% endif %}{% if prof.age %} {{ prof.age }}{{ t.profile_years }}{% endif %}{% if prof.bmi %} IMC {{ prof.bmi }}{% endif %}</span>{% endif %}</span>
 <div class="mb-actions">
   <button type="button" onclick="exportPdf()" class="btn-export" title="{{ t.export_pdf_tooltip }}"><i class="ti ti-file-download"></i> {{ t.export_pdf }}</button>
   <form action="/clear" method="post" style="display:inline"><button type="submit" class="btn-clear">{{ t.new_analysis }}</button></form>
@@ -578,8 +654,8 @@ a { color: var(--accent); }
 {% endif %}
 
 <div class="sr">
-  <div class="si"><div class="sn" style="color:#fafafa">{{ "{:,}".format(results.summary.total_snps) }}</div><div class="sl">{{ t.stat_snps }}</div></div>
-  <div class="si"><div class="sn" style="color:#fafafa">{{ results.summary.analyzed_snps }}</div><div class="sl">{{ t.stat_analyzed }}</div></div>
+  <div class="si"><div class="sn" style="color:var(--text)">{{ "{:,}".format(results.summary.total_snps) }}</div><div class="sl">{{ t.stat_snps }}</div></div>
+  <div class="si"><div class="sn" style="color:var(--text)">{{ results.summary.analyzed_snps }}</div><div class="sl">{{ t.stat_analyzed }}</div></div>
   <div class="si"><div class="sn tr">{{ results.summary.high_impact }}</div><div class="sl">{{ t.stat_high }}</div></div>
   <div class="si"><div class="sn ty">{{ results.summary.moderate_impact }}</div><div class="sl">{{ t.stat_moderate }}</div></div>
   <div class="si"><div class="sn tg">{{ results.pharmgkb_findings|length }}</div><div class="sl">{{ t.stat_drug }}</div></div>
@@ -587,12 +663,12 @@ a { color: var(--accent); }
 </div>
 
 <div class="gt" id="mainTabs">
-  <button class="active" onclick="showTab('overview',this)">{{ t.tab_overview }}</button>
-  <button onclick="showTab('health',this)">{{ t.tab_health_risks }}</button>
-  <button onclick="showTab('drugs',this)">{{ t.tab_drugs }}</button>
-  <button onclick="showTab('wellness',this)">{{ t.tab_wellness }}</button>
-  <button onclick="showTab('advanced',this)">{{ t.tab_advanced }}</button>
-  <button onclick="showTab('heritage',this)">{{ t.tab_heritage }}</button>
+  <button class="active" onclick="showTab('overview',this)"><i class="ti ti-layout-grid"></i> {{ t.tab_overview }}</button>
+  <button onclick="showTab('health',this)"><i class="ti ti-heartbeat"></i> {{ t.tab_health_risks }}</button>
+  <button onclick="showTab('drugs',this)"><i class="ti ti-pill"></i> {{ t.tab_drugs }}</button>
+  <button onclick="showTab('wellness',this)"><i class="ti ti-leaf"></i> {{ t.tab_wellness }}</button>
+  <button onclick="showTab('advanced',this)"><i class="ti ti-microscope"></i> {{ t.tab_advanced }}</button>
+  <button onclick="showTab('heritage',this)"><i class="ti ti-world"></i> {{ t.tab_heritage }}</button>
 </div>
 
 <!-- ═══ TAB 1: OVERVIEW ═══ -->
@@ -605,9 +681,9 @@ a { color: var(--accent); }
     <div class="gc"><div class="gc-b"><div class="cw" id="chart-disease"></div></div></div>
   </div>
   {% if human.get('overview') %}<div class="hc"><h4><i class="ti ti-circle-check"></i> {{ t.human_overview }}</h4><ul>{% for c in human.overview %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
-  {% if conclusions.get('overview') %}<details class="gc acc" style="margin-bottom:16px"><summary style="font-size:13px;color:#71717a">{{ t.technical_details }}</summary><div class="acc-body"><div class="cc" style="margin:0"><h4><i class="ti ti-clipboard-text"></i> {{ t.conclusion_overview }}</h4><ul>{% for c in conclusions.overview %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div></div></details>{% endif %}
+  {% if conclusions.get('overview') %}<details class="gc acc" style="margin-bottom:16px"><summary style="font-size:13px;color:var(--text-muted)"><i class="ti ti-microscope"></i> {{ t.technical_details }}</summary><div class="acc-body"><div class="cc" style="margin:0"><h4><i class="ti ti-clipboard-text"></i> {{ t.conclusion_overview }}</h4><ul>{% for c in conclusions.overview %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div></div></details>{% endif %}
   {% set high = results.findings|selectattr('magnitude','ge',3)|list %}
-  {% if high %}<div class="gc"><div class="gc-h"><h3 class="tr">{{ t.high_mag_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_category }}</th><th>{{ t.col_magnitude }}</th><th>{{ t.col_details }}</th></tr></thead><tbody>
+  {% if high %}<div class="gc"><div class="gc-h"><h3 class="tr"><i class="ti ti-alert-octagon"></i> {{ t.high_mag_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_category }}</th><th>{{ t.col_magnitude }}</th><th>{{ t.col_details }}</th></tr></thead><tbody>
   {% for f in high %}<tr><td class="fw6">{{ f.gene }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.genotype }}</code></td><td>{{ CAT_PT.get(f.category, f.category) }}</td><td><span class="bs br">{{ f.magnitude }}/6</span></td><td>{{ f.description[:90] }}</td></tr>{% endfor %}
   </tbody></table></div></div>{% else %}<div class="gc"><div class="gc-b tg">{{ t.high_mag_none|safe }}</div></div>{% endif %}
 
@@ -623,7 +699,7 @@ a { color: var(--accent); }
         <div class="cov-stat cov-stat-low"><div class="cov-stat-n">{{ coverage.summary.panels_low }}</div><div class="cov-stat-l">{{ t.coverage_low }}</div></div>
       </div>
       <details class="cov-details">
-        <summary>{{ t.coverage_breakdown }}</summary>
+        <summary><i class="ti ti-list-check tg"></i> {{ t.coverage_breakdown }}</summary>
         <div class="cov-grid">
           {% for p in coverage.panels %}
           <div class="cov-panel cov-{{ p.confidence }}">
@@ -656,7 +732,7 @@ a { color: var(--accent); }
   <!-- Accordion: Lifestyle -->
   <div class="gc acc">
     <details>
-      <summary>{{ t.acc_lifestyle }} <span class="badge-count bg">{{ results.summary.analyzed_snps }} {{ t.acc_findings }}</span></summary>
+      <summary><i class="ti ti-flask" style="color:var(--accent)"></i> {{ t.acc_lifestyle }} <span class="badge-count bg">{{ results.summary.analyzed_snps }} {{ t.acc_findings }}</span></summary>
       <div class="acc-body">
         {% if conclusions.get('lifestyle') %}<div class="cc"><h4><i class="ti ti-clipboard-text"></i> {{ t.conclusion_lifestyle }}</h4><ul>{% for c in conclusions.lifestyle %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
         {% for cat, findings in results.by_category.items() %}
@@ -670,19 +746,19 @@ a { color: var(--accent); }
   <!-- Accordion: Disease -->
   <div class="gc acc">
     <details>
-      <summary>{{ t.acc_disease }} {% if disease %}<span class="badge-count br">{{ (disease.pathogenic|length + disease.likely_pathogenic|length) }} {{ t.acc_variants }}</span>{% endif %}</summary>
+      <summary><i class="ti ti-alert-triangle tr"></i> {{ t.acc_disease }} {% if disease %}<span class="badge-count br">{{ (disease.pathogenic|length + disease.likely_pathogenic|length) }} {{ t.acc_variants }}</span>{% endif %}</summary>
       <div class="acc-body">
         {% if disease %}
         {% if conclusions.get('disease') %}<div class="cc"><h4><i class="ti ti-clipboard-text"></i> {{ t.conclusion_disease }}</h4><ul>{% for c in conclusions.disease %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
         {% if conclusions.get('disease_technical') %}<div class="tn">{% for n in conclusions.disease_technical %}<p style="margin:0">{{ n|bold|safe }}</p>{% endfor %}</div>{% endif %}
         {% set patho = disease.pathogenic + disease.likely_pathogenic %}
-        {% if patho %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.pathogenic_variants_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_zygosity }}</th><th>{{ t.col_confidence }}</th><th>{{ t.col_condition }}</th></tr></thead><tbody>
+        {% if patho %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3><i class="ti ti-alert-octagon tr"></i> {{ t.pathogenic_variants_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_zygosity }}</th><th>{{ t.col_confidence }}</th><th>{{ t.col_condition }}</th></tr></thead><tbody>
         {% for f in patho %}<tr><td class="fw6">{{ f.gene or '---' }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.user_genotype }}</code></td><td><span class="bs {% if f.zygosity_status=='AFFECTED' %}br{% elif f.zygosity_status=='CARRIER' %}by{% else %}bn{% endif %}">{{ ZYG_PT.get(f.zygosity_status, f.zygosity_status) }}</span></td><td><span class="stars">{{ ("★" * f.gold_stars ~ "☆" * (4 - f.gold_stars))|safe }}</span> <span class="tm" style="font-size:11px">{{ f.gold_stars }}/4</span></td><td>{{ traits_label(f.traits) }}</td></tr>{% endfor %}
         </tbody></table></div></div>{% endif %}
-        {% if disease.risk_factor %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.risk_factors_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_confidence }}</th><th>{{ t.col_condition }}</th></tr></thead><tbody>
+        {% if disease.risk_factor %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3><i class="ti ti-alert-triangle ty"></i> {{ t.risk_factors_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_confidence }}</th><th>{{ t.col_condition }}</th></tr></thead><tbody>
         {% for f in disease.risk_factor[:40] %}<tr><td class="fw6">{{ f.gene or '---' }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.user_genotype }}</code></td><td><span class="stars">{{ ("★" * f.gold_stars ~ "☆" * (4 - f.gold_stars))|safe }}</span> <span class="tm" style="font-size:11px">{{ f.gold_stars }}/4</span></td><td>{{ traits_label(f.traits) }}</td></tr>{% endfor %}
         </tbody></table></div></div>{% endif %}
-        {% if disease.protective %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3 class="tg">{{ t.protective_variants_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_protective_effect }}</th></tr></thead><tbody>
+        {% if disease.protective %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3 class="tg"><i class="ti ti-shield-check"></i> {{ t.protective_variants_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_protective_effect }}</th></tr></thead><tbody>
         {% for f in disease.protective %}<tr><td class="fw6">{{ f.gene or '---' }}</td><td><code>{{ f.rsid }}</code></td><td>{{ (f.traits or 'Protetor').split(';')[0][:70] }}</td></tr>{% endfor %}
         </tbody></table></div></div>{% endif %}
         {% else %}<p class="tm">{{ t.clinvar_not_loaded }}</p>{% endif %}
@@ -703,17 +779,17 @@ a { color: var(--accent); }
   {% if hereditary and hereditary.conditions %}
   <div class="gc acc">
     <details>
-      <summary>{{ t.acc_hereditary }} <span class="badge-count br">{{ hereditary.conditions|length }} {{ t.acc_findings }}</span>{% if hereditary.sex %} <span class="tm" style="font-size:11px;margin-left:8px">{% if hereditary.sex_inferred %}{{ t.sex_inferred }}{% endif %} {{ hereditary.sex }}</span>{% endif %}</summary>
+      <summary><i class="ti ti-dna tr"></i> {{ t.acc_hereditary }} <span class="badge-count br">{{ hereditary.conditions|length }} {{ t.acc_findings }}</span>{% if hereditary.sex %} <span class="tm" style="font-size:11px;margin-left:8px">{% if hereditary.sex_inferred %}{{ t.sex_inferred }}{% endif %} {{ hereditary.sex }}</span>{% endif %}</summary>
       <div class="acc-body">
         <div class="tn" style="border-color:rgba(239,68,68,.2);margin-bottom:16px"><strong>{{ t.warning_label }}:</strong> {{ t.hereditary_disclaimer }}</div>
         {% for cond in hereditary.conditions %}
-        <div class="gc" style="margin-bottom:12px;border-color:{% if cond.priority <= 1 %}rgba(239,68,68,.3){% elif cond.priority <= 2 %}rgba(234,179,8,.3){% else %}#27272a{% endif %}">
+        <div class="gc" style="margin-bottom:12px;border-color:{% if cond.priority <= 1 %}rgba(239,68,68,.3){% elif cond.priority <= 2 %}rgba(234,179,8,.3){% else %}var(--border-default){% endif %}">
           <div class="gc-h"><h3>{{ cond.name }} <span class="tm" style="font-size:11px;font-weight:400">{{ cond.genes_found|join(', ') }} &middot; {{ cond.max_stars }}/4 {{ t.stars }}</span></h3></div>
           <div class="gc-b">
-            <p style="font-size:13px;line-height:1.8;color:#d4d4d8;margin-bottom:12px">{{ cond.text|bold|safe }}</p>
+            <p style="font-size:13px;line-height:1.8;color:var(--text-secondary);margin-bottom:12px">{{ cond.text|bold|safe }}</p>
             <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-              <div style="flex:1;min-width:250px;background:#111113;border:1px solid #27272a;border-radius:8px;padding:12px"><p class="tm" style="font-size:11px;text-transform:uppercase;margin-bottom:4px">{{ t.hereditary_evidence }}</p><p style="font-size:12px;color:#d4d4d8;margin:0">{{ cond.evidence }}</p></div>
-              <div style="flex:1;min-width:250px;background:#111113;border:1px solid #27272a;border-radius:8px;padding:12px"><p class="tm" style="font-size:11px;text-transform:uppercase;margin-bottom:4px">{{ t.hereditary_confirm }}</p><p style="font-size:12px;color:#d4d4d8;margin:0">{{ cond.confirm }}</p></div>
+              <div style="flex:1;min-width:250px;background:var(--surface-2);border:1px solid var(--border-default);border-radius:8px;padding:12px"><p class="tm" style="font-size:11px;text-transform:uppercase;margin-bottom:4px">{{ t.hereditary_evidence }}</p><p style="font-size:12px;color:var(--text-secondary);margin:0">{{ cond.evidence }}</p></div>
+              <div style="flex:1;min-width:250px;background:var(--surface-2);border:1px solid var(--border-default);border-radius:8px;padding:12px"><p class="tm" style="font-size:11px;text-transform:uppercase;margin-bottom:4px">{{ t.hereditary_confirm }}</p><p style="font-size:12px;color:var(--text-secondary);margin:0">{{ cond.confirm }}</p></div>
             </div>
             {% if cond.gene_details %}
             <table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>rsID</th><th>{{ t.col_genotype }}</th><th>{{ t.col_confidence }}</th><th>{{ t.col_zygosity }}</th><th>{{ t.col_condition }}</th></tr></thead><tbody>
@@ -740,7 +816,7 @@ a { color: var(--accent); }
   {% if prs and prs.panels %}
   <div class="gc acc">
     <details>
-      <summary><i class="ti ti-chart-radar"></i> {{ t.prs_title }} <span class="tm" style="font-size:11px;margin-left:8px">{{ t.prs_subtitle }}</span></summary>
+      <summary><i class="ti ti-target-arrow"></i> {{ t.prs_title }} <span class="tm" style="font-size:11px;margin-left:8px">{{ t.prs_subtitle }}</span></summary>
       <div class="acc-body">
         <div class="tn" style="margin-bottom:14px"><strong>{{ t.warning_label }}:</strong> {{ t.prs_disclaimer }}</div>
         <div class="prs-grid">
@@ -785,16 +861,16 @@ a { color: var(--accent); }
   <!-- Accordion: Protocol -->
   <div class="gc acc">
     <details>
-      <summary>{{ t.acc_protocol }}</summary>
+      <summary><i class="ti ti-clipboard-text" style="color:var(--accent)"></i> {{ t.acc_protocol }}</summary>
       <div class="acc-body">
         <div class="tn" style="border-color:rgba(234,179,8,.2);margin-bottom:16px"><strong>{{ t.warning_label }}:</strong> {{ t.protocol_disclaimer }}</div>
         {% if conclusions.get('protocol') %}<div class="cc"><h4><i class="ti ti-clipboard-text"></i> {{ t.conclusion_protocol }}</h4><ul>{% for c in conclusions.protocol %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
         {% if protocol %}
-        {% if protocol.affected %}<div class="gc" style="border-color:rgba(239,68,68,.3);margin-bottom:12px"><div class="gc-h"><h3 class="tr">{{ t.pathogenic_confirm_title }}</h3></div><div class="gc-b"><p class="nt">{{ t.pathogenic_fp_short }}</p>{% for f in protocol.affected %}<p style="margin-bottom:6px"><strong>{{ f.gene or '---' }}:</strong> {{ (f.traits or '?').split(';')[0] }} <span class="tm">({{ f.gold_stars }}/4 {{ t.stars }})</span></p>{% endfor %}</div></div>{% endif %}
-        {% if protocol.supplements %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.supplements_title }}</h3></div><p class="nt" style="padding:0 20px;margin-top:8px">{{ t.not_prescriptions_short }}</p><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_supplement }}</th><th>{{ t.col_dose }}</th><th>{{ t.col_reason }}</th></tr></thead><tbody>{% for s in protocol.supplements %}<tr><td>{{ s.name }}</td><td>{{ s.dose }}</td><td>{{ s.reason }}</td></tr>{% endfor %}</tbody></table></div></div>{% endif %}
-        {% if protocol.diet %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.diet_title }}</h3></div><div class="gc-b">{% for r in protocol.diet %}<p style="font-size:13px;line-height:1.7;margin-bottom:8px">{{ r|bold|safe }}</p>{% endfor %}</div></div>{% endif %}
-        {% if protocol.exercise %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.exercise_title }}</h3></div><div class="gc-b">{% for r in protocol.exercise %}<p style="font-size:13px;line-height:1.7;margin-bottom:8px">{{ r|bold|safe }}</p>{% endfor %}</div></div>{% endif %}
-        {% if protocol.monitoring %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.monitoring_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_test }}</th><th>{{ t.col_frequency }}</th><th>{{ t.col_genetic_basis }}</th></tr></thead><tbody>{% for m in protocol.monitoring %}<tr><td>{{ m.test }}</td><td>{{ m.freq }}</td><td>{{ m.reason }}</td></tr>{% endfor %}</tbody></table></div></div>{% endif %}
+        {% if protocol.affected %}<div class="gc" style="border-color:rgba(239,68,68,.3);margin-bottom:12px"><div class="gc-h"><h3 class="tr"><i class="ti ti-alert-octagon"></i> {{ t.pathogenic_confirm_title }}</h3></div><div class="gc-b"><p class="nt">{{ t.pathogenic_fp_short }}</p>{% for f in protocol.affected %}<p style="margin-bottom:6px"><strong>{{ f.gene or '---' }}:</strong> {{ (f.traits or '?').split(';')[0] }} <span class="tm">({{ f.gold_stars }}/4 {{ t.stars }})</span></p>{% endfor %}</div></div>{% endif %}
+        {% if protocol.supplements %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3><i class="ti ti-pill" style="color:var(--accent)"></i> {{ t.supplements_title }}</h3></div><p class="nt" style="padding:0 20px;margin-top:8px">{{ t.not_prescriptions_short }}</p><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_supplement }}</th><th>{{ t.col_dose }}</th><th>{{ t.col_reason }}</th></tr></thead><tbody>{% for s in protocol.supplements %}<tr><td>{{ s.name }}</td><td>{{ s.dose }}</td><td>{{ s.reason }}</td></tr>{% endfor %}</tbody></table></div></div>{% endif %}
+        {% if protocol.diet %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3><i class="ti ti-salad tg"></i> {{ t.diet_title }}</h3></div><div class="gc-b">{% for r in protocol.diet %}<p style="font-size:13px;line-height:1.7;margin-bottom:8px">{{ r|bold|safe }}</p>{% endfor %}</div></div>{% endif %}
+        {% if protocol.exercise %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3><i class="ti ti-stretching" style="color:var(--accent)"></i> {{ t.exercise_title }}</h3></div><div class="gc-b">{% for r in protocol.exercise %}<p style="font-size:13px;line-height:1.7;margin-bottom:8px">{{ r|bold|safe }}</p>{% endfor %}</div></div>{% endif %}
+        {% if protocol.monitoring %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3><i class="ti ti-stethoscope" style="color:var(--accent)"></i> {{ t.monitoring_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_test }}</th><th>{{ t.col_frequency }}</th><th>{{ t.col_genetic_basis }}</th></tr></thead><tbody>{% for m in protocol.monitoring %}<tr><td>{{ m.test }}</td><td>{{ m.freq }}</td><td>{{ m.reason }}</td></tr>{% endfor %}</tbody></table></div></div>{% endif %}
         {% endif %}
       </div>
     </details>
@@ -805,18 +881,18 @@ a { color: var(--accent); }
 <div class="tp" id="tab-drugs">
   <div class="ctx ctx-danger"><h4>{{ t.tab_drugs }}</h4>{{ t.ctx_drugs }}</div>
   {% if human.get('drugs') %}<div class="hc"><h4><i class="ti ti-circle-check"></i> {{ t.human_drugs }}</h4><ul>{% for c in human.drugs %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
-  {% if conclusions.get('drugs') %}<details class="gc acc" style="margin-bottom:16px"><summary style="font-size:13px;color:#71717a">{{ t.technical_details }}</summary><div class="acc-body"><div class="cc" style="margin:0"><h4><i class="ti ti-clipboard-text"></i> {{ t.conclusion_drugs }}</h4><ul>{% for c in conclusions.drugs %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div></div></details>{% endif %}
+  {% if conclusions.get('drugs') %}<details class="gc acc" style="margin-bottom:16px"><summary style="font-size:13px;color:var(--text-muted)"><i class="ti ti-microscope"></i> {{ t.technical_details }}</summary><div class="acc-body"><div class="cc" style="margin:0"><h4><i class="ti ti-clipboard-text"></i> {{ t.conclusion_drugs }}</h4><ul>{% for c in conclusions.drugs %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div></div></details>{% endif %}
   {% if results.pharmgkb_findings %}
   {% set l1 = results.pharmgkb_findings|selectattr('level','in',['1A','1B'])|list %}
   {% set l2 = results.pharmgkb_findings|selectattr('level','in',['2A','2B'])|list %}
   {% if l1 %}<div class="gc acc" style="margin-bottom:12px">
     <details>
-      <summary>{{ t.level1_title }} <span class="badge-count br">{{ l1|length }}</span></summary>
+      <summary><i class="ti ti-pill tr"></i> {{ t.level1_title }} <span class="badge-count br">{{ l1|length }}</span></summary>
       <div class="acc-body">
         <p class="nt">CPIC = Clinical Pharmacogenetics Implementation Consortium</p>
         <table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_level }}</th><th>{{ t.col_drugs }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_annotation }}</th></tr></thead><tbody>
   {% for f in l1 %}<tr><td class="fw6">{{ f.gene }}</td><td><span class="bs br">{{ f.level }}</span></td><td>{{ f.drugs[:60] }}</td><td><code>{{ f.genotype }}</code></td>
-  <td style="font-size:12px;max-width:450px">{% if f.annotation|length > 120 %}<span>{{ f.annotation[:120] }}... </span><a href="#" class="ta" style="font-size:11px" onclick="this.previousElementSibling.style.display='none';this.nextElementSibling.style.display='inline';this.style.display='none';return false">{{ t.see_more }}</a><span style="display:none">{{ f.annotation }}{% if f.annotation_original %}<br><small class="tm" style="display:block;border-top:1px solid #27272a;padding-top:4px;margin-top:4px"><em>Original: {{ f.annotation_original[:200] }}</em></small>{% endif %} <a href="#" class="tm" style="font-size:11px" onclick="this.parentElement.style.display='none';this.parentElement.previousElementSibling.style.display='inline';this.parentElement.previousElementSibling.previousElementSibling.style.display='inline';return false">{{ t.see_less }}</a></span>{% else %}{{ f.annotation }}{% endif %}</td>
+  <td style="font-size:12px;max-width:450px">{% if f.annotation|length > 120 %}<span>{{ f.annotation[:120] }}... </span><a href="#" class="ta" style="font-size:11px" onclick="this.previousElementSibling.style.display='none';this.nextElementSibling.style.display='inline';this.style.display='none';return false">{{ t.see_more }}</a><span style="display:none">{{ f.annotation }}{% if f.annotation_original %}<br><small class="tm" style="display:block;border-top:1px solid var(--border-default);padding-top:4px;margin-top:4px"><em>Original: {{ f.annotation_original[:200] }}</em></small>{% endif %} <a href="#" class="tm" style="font-size:11px" onclick="this.parentElement.style.display='none';this.parentElement.previousElementSibling.style.display='inline';this.parentElement.previousElementSibling.previousElementSibling.style.display='inline';return false">{{ t.see_less }}</a></span>{% else %}{{ f.annotation }}{% endif %}</td>
   </tr>{% endfor %}
   </tbody></table>
       </div>
@@ -824,11 +900,11 @@ a { color: var(--accent); }
   </div>{% endif %}
   {% if l2 %}<div class="gc acc" style="margin-bottom:12px">
     <details>
-      <summary>{{ t.level2_title }} <span class="badge-count by">{{ l2|length }}</span></summary>
+      <summary><i class="ti ti-pill ty"></i> {{ t.level2_title }} <span class="badge-count by">{{ l2|length }}</span></summary>
       <div class="acc-body">
         <table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_level }}</th><th>{{ t.col_drugs }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_annotation }}</th></tr></thead><tbody>
   {% for f in l2[:25] %}<tr><td class="fw6">{{ f.gene }}</td><td><span class="bs by">{{ f.level }}</span></td><td>{{ f.drugs[:60] }}</td><td><code>{{ f.genotype }}</code></td>
-  <td style="font-size:12px;max-width:450px">{% if f.annotation|length > 120 %}<span>{{ f.annotation[:120] }}... </span><a href="#" class="ta" style="font-size:11px" onclick="this.previousElementSibling.style.display='none';this.nextElementSibling.style.display='inline';this.style.display='none';return false">{{ t.see_more }}</a><span style="display:none">{{ f.annotation }}{% if f.annotation_original %}<br><small class="tm" style="display:block;border-top:1px solid #27272a;padding-top:4px;margin-top:4px"><em>Original: {{ f.annotation_original[:200] }}</em></small>{% endif %} <a href="#" class="tm" style="font-size:11px" onclick="this.parentElement.style.display='none';this.parentElement.previousElementSibling.style.display='inline';this.parentElement.previousElementSibling.previousElementSibling.style.display='inline';return false">{{ t.see_less }}</a></span>{% else %}{{ f.annotation }}{% endif %}</td>
+  <td style="font-size:12px;max-width:450px">{% if f.annotation|length > 120 %}<span>{{ f.annotation[:120] }}... </span><a href="#" class="ta" style="font-size:11px" onclick="this.previousElementSibling.style.display='none';this.nextElementSibling.style.display='inline';this.style.display='none';return false">{{ t.see_more }}</a><span style="display:none">{{ f.annotation }}{% if f.annotation_original %}<br><small class="tm" style="display:block;border-top:1px solid var(--border-default);padding-top:4px;margin-top:4px"><em>Original: {{ f.annotation_original[:200] }}</em></small>{% endif %} <a href="#" class="tm" style="font-size:11px" onclick="this.parentElement.style.display='none';this.parentElement.previousElementSibling.style.display='inline';this.parentElement.previousElementSibling.previousElementSibling.style.display='inline';return false">{{ t.see_less }}</a></span>{% else %}{{ f.annotation }}{% endif %}</td>
   </tr>{% endfor %}
   </tbody></table>
       </div>
@@ -847,16 +923,16 @@ a { color: var(--accent); }
   {% if panel and panel.findings %}
   <div class="gc acc">
     <details>
-      <summary>{{ t[acc_key] }} <span class="badge-count {% if panel.summary.alerta > 0 %}br{% else %}bg{% endif %}">{{ panel.summary.total }} {{ t.acc_markers }}</span></summary>
+      <summary>{% set _ic = panel_icons.get(pk, ('ti-circle', '')) %}<i class="ti {{ _ic[0] }} {{ _ic[1] }}"{% if not _ic[1] %} style="color:var(--accent)"{% endif %}></i> {{ t[acc_key] }} <span class="badge-count {% if panel.summary.alerta > 0 %}br{% else %}bg{% endif %}">{{ panel.summary.total }} {{ t.acc_markers }}</span></summary>
       <div class="acc-body">
         <div class="sr" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
-          <div class="si"><div class="sn" style="color:#fafafa">{{ panel.summary.total }}</div><div class="sl">{{ t.markers_analyzed }}</div></div>
+          <div class="si"><div class="sn" style="color:var(--text)">{{ panel.summary.total }}</div><div class="sl">{{ t.markers_analyzed }}</div></div>
           <div class="si"><div class="sn tg">{{ panel.summary.normal }}</div><div class="sl">{{ t.normal_favorable }}</div></div>
           <div class="si"><div class="sn {% if panel.summary.alerta > 0 %}tr{% else %}ty{% endif %}">{{ panel.summary.atencao + panel.summary.alerta }}</div><div class="sl">{{ t.require_attention }}</div></div>
         </div>
         {% if panel.conclusions %}<div class="cc"><h4><i class="ti ti-clipboard-text"></i> {{ pn }}</h4><ul>{% for c in panel.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
         <table class="tb"><thead><tr><th>{{ t.col_marker }}</th><th>{{ t.col_gene }}</th><th>rsID</th><th>{{ t.col_genotype }}</th><th>{{ t.col_result }}</th><th>{{ t.col_interpretation }}</th></tr></thead><tbody>
-        {% for f in panel.findings %}<tr><td class="fw6">{{ f.trait }}</td><td>{{ f.gene }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.genotype }}</code></td><td><span class="bs bg-{{ f.color }}">{{ f.label }}</span></td><td style="font-size:12px;max-width:400px;line-height:1.6">{{ f.text|bold|safe }}</td></tr>{% endfor %}
+        {% for f in panel.findings %}<tr><td class="fw6">{{ f.trait }}</td><td>{{ f.gene }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.genotype }}</code></td><td><span class="bs {{ {'success':'bg','warning':'by','danger':'br','primary':'bb','info':'bc','secondary':'bn'}.get(f.color, 'bn') }}">{{ f.label }}</span></td><td style="font-size:12px;max-width:400px;line-height:1.6">{{ f.text|bold|safe }}</td></tr>{% endfor %}
         </tbody></table>
       </div>
     </details>
@@ -875,10 +951,10 @@ a { color: var(--accent); }
   {% if panel and panel.findings %}
   <div class="gc acc">
     <details>
-      <summary>{{ t[acc_key] }} <span class="badge-count {% if panel.summary.alerta > 0 %}br{% else %}bg{% endif %}">{{ panel.summary.total }} {{ t.acc_markers }}</span></summary>
+      <summary>{% set _ic = panel_icons.get(pk, ('ti-circle', '')) %}<i class="ti {{ _ic[0] }} {{ _ic[1] }}"{% if not _ic[1] %} style="color:var(--accent)"{% endif %}></i> {{ t[acc_key] }} <span class="badge-count {% if panel.summary.alerta > 0 %}br{% else %}bg{% endif %}">{{ panel.summary.total }} {{ t.acc_markers }}</span></summary>
       <div class="acc-body">
         <div class="sr" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
-          <div class="si"><div class="sn" style="color:#fafafa">{{ panel.summary.total }}</div><div class="sl">{{ t.markers_analyzed }}</div></div>
+          <div class="si"><div class="sn" style="color:var(--text)">{{ panel.summary.total }}</div><div class="sl">{{ t.markers_analyzed }}</div></div>
           <div class="si"><div class="sn tg">{{ panel.summary.normal }}</div><div class="sl">{{ t.normal_favorable }}</div></div>
           <div class="si"><div class="sn {% if panel.summary.alerta > 0 %}tr{% else %}ty{% endif %}">{{ panel.summary.atencao + panel.summary.alerta }}</div><div class="sl">{{ t.require_attention }}</div></div>
         </div>
@@ -886,7 +962,7 @@ a { color: var(--accent); }
         {% if pk == 'autoimmune' %}<div class="tn" style="border-color:rgba(234,179,8,.2)"><strong>{{ t.warning_label }}:</strong> {{ t.autoimmune_disclaimer }}</div>{% endif %}
         {% if panel.conclusions %}<div class="cc"><h4><i class="ti ti-clipboard-text"></i> {{ pn }}</h4><ul>{% for c in panel.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
         <table class="tb"><thead><tr><th>{{ t.col_marker }}</th><th>{{ t.col_gene }}</th><th>rsID</th><th>{{ t.col_genotype }}</th><th>{{ t.col_result }}</th><th>{{ t.col_interpretation }}</th></tr></thead><tbody>
-        {% for f in panel.findings %}<tr><td class="fw6">{{ f.trait }}</td><td>{{ f.gene }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.genotype }}</code></td><td><span class="bs bg-{{ f.color }}">{{ f.label }}</span></td><td style="font-size:12px;max-width:400px;line-height:1.6">{{ f.text|bold|safe }}</td></tr>{% endfor %}
+        {% for f in panel.findings %}<tr><td class="fw6">{{ f.trait }}</td><td>{{ f.gene }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.genotype }}</code></td><td><span class="bs {{ {'success':'bg','warning':'by','danger':'br','primary':'bb','info':'bc','secondary':'bn'}.get(f.color, 'bn') }}">{{ f.label }}</span></td><td style="font-size:12px;max-width:400px;line-height:1.6">{{ f.text|bold|safe }}</td></tr>{% endfor %}
         </tbody></table>
       </div>
     </details>
@@ -904,7 +980,7 @@ a { color: var(--accent); }
   {% if ancestry and ancestry.percentages %}
   <div class="gc acc">
     <details>
-      <summary>{{ t.acc_ancestry }} <span class="badge-count bg">{{ ancestry.markers_used }} {{ t.acc_markers }}</span></summary>
+      <summary><i class="ti ti-world tg"></i> {{ t.acc_ancestry }} <span class="badge-count bg">{{ ancestry.markers_used }} {{ t.acc_markers }}</span></summary>
       <div class="acc-body" id="ancestry-acc-body">
         {% if ancestry.conclusions %}
         <div class="cc"><h4><i class="ti ti-clipboard-text"></i> {{ t.acc_ancestry }}</h4><ul>{% for c in ancestry.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>
@@ -913,10 +989,10 @@ a { color: var(--accent); }
           <div class="gc"><div class="gc-b"><div class="cw" id="chart-ancestry-donut"></div></div></div>
           <div class="gc"><div class="gc-b"><div class="cw" id="chart-ancestry-map"></div></div></div>
         </div>
-        <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.continental_composition }}</h3></div><div class="gc-b">
+        <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3><i class="ti ti-world" style="color:var(--accent)"></i> {{ t.continental_composition }}</h3></div><div class="gc-b">
         {% for pop, pct in ancestry.percentages.items()|sort(attribute='1', reverse=True) %}<div style="margin-bottom:14px"><div class="d-flex justify-content-between" style="margin-bottom:4px"><span class="fw6" style="font-size:13px">{{ ancestry.labels.get(pop, pop) }}</span><span style="font-size:13px">{{ pct }}%</span></div><div class="pb"><div class="pf" style="width:{{ pct }}%;background:{{ ancestry.colors.get(pop, '#666') }}"></div></div></div>{% endfor %}
         </div></div>
-        <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.markers_used }} ({{ ancestry.markers_used }}/{{ ancestry.markers_total }})</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>rsID</th><th>{{ t.col_gene }}</th><th>{{ t.col_trait }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_eur }}</th><th>{{ t.col_afr }}</th><th>{{ t.col_amr }}</th><th>{{ t.col_eas }}</th></tr></thead><tbody>
+        <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3><i class="ti ti-test-pipe" style="color:var(--accent)"></i> {{ t.markers_used }} ({{ ancestry.markers_used }}/{{ ancestry.markers_total }})</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>rsID</th><th>{{ t.col_gene }}</th><th>{{ t.col_trait }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_eur }}</th><th>{{ t.col_afr }}</th><th>{{ t.col_amr }}</th><th>{{ t.col_eas }}</th></tr></thead><tbody>
         {% for m in ancestry.marker_details %}<tr><td><code>{{ m.rsid }}</code></td><td>{{ m.gene }}</td><td>{{ m.trait }}</td><td><code>{{ m.genotype }}</code></td><td>{{ m.freqs.EUR }}</td><td>{{ m.freqs.AFR }}</td><td>{{ m.freqs.AMR }}</td><td>{{ m.freqs.EAS }}</td></tr>{% endfor %}
         </tbody></table></div></div>
         <div class="tn"><strong>{{ t.warning_label }}:</strong> {{ t.ancestry_disclaimer }}</div>
@@ -929,26 +1005,26 @@ a { color: var(--accent); }
   {% if family and family.summary.total_relevant > 0 %}
   <div class="gc acc">
     <details>
-      <summary>{{ t.acc_family }} <span class="badge-count by">{{ family.summary.total_relevant }} {{ t.acc_variants }}</span></summary>
+      <summary><i class="ti ti-users ty"></i> {{ t.acc_family }} <span class="badge-count by">{{ family.summary.total_relevant }} {{ t.acc_variants }}</span></summary>
       <div class="acc-body">
         {% if human.get('family') %}<div class="hc"><h4><i class="ti ti-circle-check"></i> {{ t.human_family }}</h4><ul>{% for c in human.family %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
-        {% if family.conclusions %}<details class="gc acc" style="margin-bottom:16px"><summary style="font-size:13px;color:#71717a">{{ t.technical_details }}</summary><div class="acc-body"><div class="cc" style="margin:0"><h4><i class="ti ti-clipboard-text"></i> {{ t.family_conclusion_title }}</h4><ul>{% for c in family.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div></div></details>{% endif %}
+        {% if family.conclusions %}<details class="gc acc" style="margin-bottom:16px"><summary style="font-size:13px;color:var(--text-muted)"><i class="ti ti-microscope"></i> {{ t.technical_details }}</summary><div class="acc-body"><div class="cc" style="margin:0"><h4><i class="ti ti-clipboard-text"></i> {{ t.family_conclusion_title }}</h4><ul>{% for c in family.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div></div></details>{% endif %}
         {% if family.dominant_findings %}
-        <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.family_dominant_title }}</h3></div><div class="gc-b">
+        <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3><i class="ti ti-alert-triangle ty"></i> {{ t.family_dominant_title }}</h3></div><div class="gc-b">
           {% for f in family.dominant_findings %}
-          <div style="padding:14px 0;border-bottom:1px solid #27272a">
+          <div style="padding:14px 0;border-bottom:1px solid var(--border-default)">
             <div style="display:flex;justify-content:space-between"><div><strong>{{ f.gene }}</strong> <code>{{ f.rsid }}</code> <span class="bs by">{{ f.inheritance }}</span></div><span class="bs br">{{ f.severity }}</span></div>
             <p class="tm" style="margin:6px 0 0;font-size:13px">{{ f.condition_pt }}</p>
-            <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:#d4d4d8">{{ f.carrier_risk|bold|safe }}</p>
+            <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text-secondary)">{{ f.carrier_risk|bold|safe }}</p>
             <p class="tm" style="margin:4px 0 0;font-size:12px"><strong>{{ t.family_partner }}:</strong> {{ f.partner_test }}</p>
           </div>{% endfor %}
         </div></div>{% endif %}
         {% if family.carrier_findings %}
-        <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.family_carrier_title }}</h3></div><div class="gc-b"><p class="nt">{{ t.family_carrier_note }}</p>
+        <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3><i class="ti ti-dna ty"></i> {{ t.family_carrier_title }}</h3></div><div class="gc-b"><p class="nt">{{ t.family_carrier_note }}</p>
           {% for f in family.carrier_findings %}
-          <div style="padding:14px 0;border-bottom:1px solid #27272a">
+          <div style="padding:14px 0;border-bottom:1px solid var(--border-default)">
             <div style="display:flex;justify-content:space-between"><div><strong>{{ f.gene }}</strong> <code>{{ f.rsid }}</code> <span class="bs bg">{{ t.family_carrier_label }}</span></div><span class="bs by">{{ f.severity }}</span></div>
-            <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:#d4d4d8">{{ f.carrier_risk|bold|safe }}</p>
+            <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text-secondary)">{{ f.carrier_risk|bold|safe }}</p>
             <p style="margin:4px 0 0;font-size:12px;color:var(--accent)"><strong>{{ t.family_partner_test }}:</strong> {{ f.partner_test }}</p>
           </div>{% endfor %}
         </div></div>{% endif %}
@@ -956,10 +1032,10 @@ a { color: var(--accent); }
         <div class="gc" style="margin-bottom:12px;border-color:rgba(234,179,8,.3)"><div class="gc-h"><h3 class="ty"><i class="ti ti-alert-triangle"></i> {{ t.family_gestational_title }}</h3></div><div class="gc-b">
           <p class="nt">{{ t.family_gestational_note }}</p>
           {% for f in family.gestational_risks %}
-          <div style="padding:14px 0;border-bottom:1px solid #27272a">
+          <div style="padding:14px 0;border-bottom:1px solid var(--border-default)">
             <div><strong>{{ f.gene }}</strong> <code>{{ f.rsid }}</code> <code>{{ f.genotype }}</code></div>
             <p style="margin:6px 0 0;font-size:13px;font-weight:600;color:var(--yellow)">{{ f.risk_pt }}</p>
-            <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:#d4d4d8">{{ f.detail|bold|safe }}</p>
+            <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text-secondary)">{{ f.detail|bold|safe }}</p>
             <p style="margin:6px 0 0;font-size:13px;color:var(--green)"><strong>{{ t.family_action }}:</strong> {{ f.action }}</p>
           </div>{% endfor %}
         </div></div>{% endif %}
@@ -967,16 +1043,16 @@ a { color: var(--accent); }
         <div class="gc" style="margin-bottom:12px;border-color:rgba(168,85,247,.3)"><div class="gc-h"><h3 style="color:var(--purple)"><i class="ti ti-dna"></i> {{ t.family_xlinked_title }}</h3></div><div class="gc-b">
           <p class="nt">{{ t.family_xlinked_note }}</p>
           {% for f in family.x_linked_findings %}
-          <div style="padding:14px 0;border-bottom:1px solid #27272a">
+          <div style="padding:14px 0;border-bottom:1px solid var(--border-default)">
             <div style="display:flex;justify-content:space-between"><div><strong>{{ f.gene }}</strong> <code>{{ f.rsid }}</code></div><span class="bs by">{{ f.severity }}</span></div>
             <p style="margin:6px 0 0;font-size:13px;font-weight:600;color:var(--purple)">{{ f.condition_pt }}</p>
-            <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:#d4d4d8">{{ f.detail|bold|safe }}</p>
+            <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text-secondary)">{{ f.detail|bold|safe }}</p>
             <p class="tm" style="margin:4px 0 0;font-size:12px">{{ t.family_prevalence }}: {{ f.prevalence }}</p>
           </div>{% endfor %}
         </div></div>{% endif %}
         {% if family.recommendations %}
-        <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.family_recs_title }}</h3></div><div class="gc-b">
-          {% for r in family.recommendations %}<p style="font-size:13px;line-height:1.7;margin-bottom:8px;padding-left:16px;position:relative;color:#d4d4d8"><span style="position:absolute;left:0;color:var(--accent)"><i class="ti ti-chevron-right"></i></span> {{ r|bold|safe }}</p>{% endfor %}
+        <div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3><i class="ti ti-clipboard-list" style="color:var(--accent)"></i> {{ t.family_recs_title }}</h3></div><div class="gc-b">
+          {% for r in family.recommendations %}<p style="font-size:13px;line-height:1.7;margin-bottom:8px;padding-left:16px;position:relative;color:var(--text-secondary)"><span style="position:absolute;left:0;color:var(--accent)"><i class="ti ti-chevron-right"></i></span> {{ r|bold|safe }}</p>{% endfor %}
         </div></div>{% endif %}
       </div>
     </details>
@@ -988,58 +1064,58 @@ a { color: var(--accent); }
   {% set pheno = family.phenotype %}
   <div class="gc acc">
     <details>
-      <summary>{{ t.acc_phenotype }} <span class="badge-count bg">{{ pheno.markers_found }} {{ t.acc_markers }}</span></summary>
+      <summary><i class="ti ti-palette" style="color:var(--accent)"></i> {{ t.acc_phenotype }} <span class="badge-count bg">{{ pheno.markers_found }} {{ t.acc_markers }}</span></summary>
       <div class="acc-body">
         <p class="nt">{{ t.phenotype_note.format(found=pheno.markers_found, total=pheno.markers_total) }}</p>
 
         <!-- Eye color -->
-        <h4 style="font-size:14px;margin-bottom:12px;color:#e4e4e7">{{ t.phenotype_eye }}</h4>
+        <h4 style="font-size:14px;margin-bottom:12px;color:var(--text-bright)"><i class="ti ti-eye" style="color:var(--accent)"></i> {{ t.phenotype_eye }}</h4>
         <div style="display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap">
           {% for color, pct in pheno.eye_color.predictions.items()|sort(attribute='1', reverse=True) %}
           {% set meta = pheno.eye_colors_meta.get(color, {}) %}
-          <div style="flex:1;min-width:120px;background:#111113;border:1px solid #27272a;border-radius:10px;padding:16px;text-align:center">
-            <div style="width:40px;height:40px;border-radius:50%;background:{{ meta.get('hex','#666') }};margin:0 auto 8px;border:2px solid #3f3f46"></div>
-            <div style="font-size:22px;font-weight:700;color:#fafafa">{{ pct }}%</div>
+          <div style="flex:1;min-width:120px;background:var(--surface-2);border:1px solid var(--border-default);border-radius:10px;padding:16px;text-align:center">
+            <div style="width:40px;height:40px;border-radius:50%;background:{{ meta.get('hex','#666') }};margin:0 auto 8px;border:2px solid var(--border-strong)"></div>
+            <div style="font-size:22px;font-weight:700;color:var(--text)">{{ pct }}%</div>
             <div class="tm" style="font-size:12px;margin-top:2px">{{ meta.get(lang, color) }}</div>
           </div>{% endfor %}
         </div>
-        {% if pheno.eye_color.details %}<details style="margin-bottom:20px"><summary style="font-size:12px;color:#52525b;cursor:pointer;padding:6px 0">{{ t.phenotype_basis }} ({{ pheno.eye_color.details|length }} SNPs)</summary><div style="margin-top:8px">{% for d in pheno.eye_color.details %}<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(39,39,42,.3)"><code style="min-width:90px">{{ d.rsid }}</code><span class="tm" style="min-width:80px">{{ d.gene }}</span><code>{{ d.genotype }}</code><span style="color:#a1a1aa;flex:1">{{ d.desc }}</span></div>{% endfor %}</div></details>{% endif %}
+        {% if pheno.eye_color.details %}<details style="margin-bottom:20px"><summary style="font-size:12px;color:var(--text-dim);cursor:pointer;padding:6px 0">{{ t.phenotype_basis }} ({{ pheno.eye_color.details|length }} SNPs)</summary><div style="margin-top:8px">{% for d in pheno.eye_color.details %}<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(39,39,42,.3)"><code style="min-width:90px">{{ d.rsid }}</code><span class="tm" style="min-width:80px">{{ d.gene }}</span><code>{{ d.genotype }}</code><span style="color:var(--text-muted);flex:1">{{ d.desc }}</span></div>{% endfor %}</div></details>{% endif %}
 
         <!-- Hair color -->
-        <h4 style="font-size:14px;margin-bottom:12px;color:#e4e4e7">{{ t.phenotype_hair }}</h4>
+        <h4 style="font-size:14px;margin-bottom:12px;color:var(--text-bright)"><i class="ti ti-scissors" style="color:var(--accent)"></i> {{ t.phenotype_hair }}</h4>
         <div style="display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap">
           {% for color, pct in pheno.hair_color.predictions.items()|sort(attribute='1', reverse=True) %}
           {% set meta = pheno.hair_colors_meta.get(color, {}) %}
-          <div style="flex:1;min-width:100px;background:#111113;border:1px solid #27272a;border-radius:10px;padding:16px;text-align:center">
-            <div style="width:40px;height:40px;border-radius:50%;background:{{ meta.get('hex','#666') }};margin:0 auto 8px;border:2px solid #3f3f46"></div>
-            <div style="font-size:22px;font-weight:700;color:#fafafa">{{ pct }}%</div>
+          <div style="flex:1;min-width:100px;background:var(--surface-2);border:1px solid var(--border-default);border-radius:10px;padding:16px;text-align:center">
+            <div style="width:40px;height:40px;border-radius:50%;background:{{ meta.get('hex','#666') }};margin:0 auto 8px;border:2px solid var(--border-strong)"></div>
+            <div style="font-size:22px;font-weight:700;color:var(--text)">{{ pct }}%</div>
             <div class="tm" style="font-size:12px;margin-top:2px">{{ meta.get(lang, color) }}</div>
           </div>{% endfor %}
         </div>
-        {% if pheno.hair_color.details %}<details style="margin-bottom:20px"><summary style="font-size:12px;color:#52525b;cursor:pointer;padding:6px 0">{{ t.phenotype_basis }} ({{ pheno.hair_color.details|length }} SNPs)</summary><div style="margin-top:8px">{% for d in pheno.hair_color.details %}<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(39,39,42,.3)"><code style="min-width:90px">{{ d.rsid }}</code><span class="tm" style="min-width:80px">{{ d.gene }}</span><code>{{ d.genotype }}</code><span style="color:#a1a1aa;flex:1">{{ d.desc }}</span></div>{% endfor %}</div></details>{% endif %}
+        {% if pheno.hair_color.details %}<details style="margin-bottom:20px"><summary style="font-size:12px;color:var(--text-dim);cursor:pointer;padding:6px 0">{{ t.phenotype_basis }} ({{ pheno.hair_color.details|length }} SNPs)</summary><div style="margin-top:8px">{% for d in pheno.hair_color.details %}<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(39,39,42,.3)"><code style="min-width:90px">{{ d.rsid }}</code><span class="tm" style="min-width:80px">{{ d.gene }}</span><code>{{ d.genotype }}</code><span style="color:var(--text-muted);flex:1">{{ d.desc }}</span></div>{% endfor %}</div></details>{% endif %}
 
         <!-- Texture + Freckles -->
         <div style="display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap">
-          <div style="flex:1;min-width:200px;background:#111113;border:1px solid #27272a;border-radius:10px;padding:16px"><h4 style="font-size:13px;color:#e4e4e7;margin-bottom:6px">{{ t.phenotype_texture }}</h4><p style="font-size:13px;color:#d4d4d8;margin:0">{{ pheno.hair_texture.description }}</p></div>
-          <div style="flex:1;min-width:200px;background:#111113;border:1px solid #27272a;border-radius:10px;padding:16px"><h4 style="font-size:13px;color:#e4e4e7;margin-bottom:6px">{{ t.phenotype_freckles }}</h4><p style="font-size:13px;color:#d4d4d8;margin:0">{{ pheno.freckling.tendency }}</p></div>
+          <div style="flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--border-default);border-radius:10px;padding:16px"><h4 style="font-size:13px;color:var(--text-bright);margin-bottom:6px"><i class="ti ti-wave-saw-tool" style="color:var(--accent)"></i> {{ t.phenotype_texture }}</h4><p style="font-size:13px;color:var(--text-secondary);margin:0">{{ pheno.hair_texture.description }}</p></div>
+          <div style="flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--border-default);border-radius:10px;padding:16px"><h4 style="font-size:13px;color:var(--text-bright);margin-bottom:6px"><i class="ti ti-sun ty"></i> {{ t.phenotype_freckles }}</h4><p style="font-size:13px;color:var(--text-secondary);margin:0">{{ pheno.freckling.tendency }}</p></div>
         </div>
         {% set tex_frk = (pheno.hair_texture.details or []) + (pheno.freckling.details or []) %}
-        {% if tex_frk %}<details style="margin-bottom:20px"><summary style="font-size:12px;color:#52525b;cursor:pointer;padding:6px 0">{{ t.phenotype_basis }} ({{ tex_frk|length }} SNPs)</summary><div style="margin-top:8px">{% for d in tex_frk %}<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(39,39,42,.3)"><code style="min-width:90px">{{ d.rsid }}</code><span class="tm" style="min-width:80px">{{ d.gene }}</span><code>{{ d.genotype }}</code><span style="color:#a1a1aa;flex:1">{{ d.desc }}</span></div>{% endfor %}</div></details>{% endif %}
+        {% if tex_frk %}<details style="margin-bottom:20px"><summary style="font-size:12px;color:var(--text-dim);cursor:pointer;padding:6px 0">{{ t.phenotype_basis }} ({{ tex_frk|length }} SNPs)</summary><div style="margin-top:8px">{% for d in tex_frk %}<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(39,39,42,.3)"><code style="min-width:90px">{{ d.rsid }}</code><span class="tm" style="min-width:80px">{{ d.gene }}</span><code>{{ d.genotype }}</code><span style="color:var(--text-muted);flex:1">{{ d.desc }}</span></div>{% endfor %}</div></details>{% endif %}
 
         <!-- Baldness -->
         {% if pheno.baldness and pheno.baldness.details %}
-        <h4 style="font-size:14px;margin-bottom:12px;color:#e4e4e7">{{ t.phenotype_baldness }}</h4>
+        <h4 style="font-size:14px;margin-bottom:12px;color:var(--text-bright)">{{ t.phenotype_baldness }}</h4>
         <div style="display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap;align-items:stretch">
-          <div style="flex:1;min-width:180px;max-width:220px;background:#111113;border:1px solid {% if pheno.baldness.risk_pct >= 60 %}rgba(239,68,68,.3){% elif pheno.baldness.risk_pct >= 35 %}rgba(234,179,8,.3){% else %}#27272a{% endif %};border-radius:10px;padding:20px;text-align:center">
+          <div style="flex:1;min-width:180px;max-width:220px;background:var(--surface-2);border:1px solid {% if pheno.baldness.risk_pct >= 60 %}rgba(239,68,68,.3){% elif pheno.baldness.risk_pct >= 35 %}rgba(234,179,8,.3){% else %}var(--border-default){% endif %};border-radius:10px;padding:20px;text-align:center">
             <div style="font-size:32px;font-weight:700;{% if pheno.baldness.risk_pct >= 60 %}color:var(--red){% elif pheno.baldness.risk_pct >= 35 %}color:var(--yellow){% else %}color:var(--green){% endif %}">{{ pheno.baldness.risk_pct }}%</div>
             <div class="tm" style="font-size:12px;margin-top:4px">{{ t.phenotype_baldness_risk }}</div>
-            <div style="font-size:13px;margin-top:8px;color:#d4d4d8">{{ pheno.baldness.risk }}</div>
+            <div style="font-size:13px;margin-top:8px;color:var(--text-secondary)">{{ pheno.baldness.risk }}</div>
           </div>
           <div style="flex:2;min-width:280px">
-            {% if pheno.baldness.ar_note %}<p style="font-size:12px;color:var(--accent);margin:0 0 10px;line-height:1.6;background:#111113;border:1px solid rgba(59,130,246,.15);border-radius:8px;padding:10px 14px">{{ pheno.baldness.ar_note }}</p>{% endif %}
+            {% if pheno.baldness.ar_note %}<p style="font-size:12px;color:var(--accent);margin:0 0 10px;line-height:1.6;background:var(--surface-2);border:1px solid rgba(59,130,246,.15);border-radius:8px;padding:10px 14px">{{ pheno.baldness.ar_note }}</p>{% endif %}
           </div>
         </div>
-        <details style="margin-bottom:20px"><summary style="font-size:12px;color:#52525b;cursor:pointer;padding:6px 0">{{ t.phenotype_basis }} ({{ pheno.baldness.details|length }} SNPs)</summary><div style="margin-top:8px">{% for d in pheno.baldness.details %}<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(39,39,42,.3)"><code style="min-width:90px">{{ d.rsid }}</code><span class="tm" style="min-width:100px">{{ d.gene }}</span><code>{{ d.genotype }}</code><span class="bs {% if d.impact == 'alto' %}by{% else %}bn{% endif %}" style="font-size:10px">{{ d.impact }}</span><span style="color:#a1a1aa;flex:1;margin-left:8px">{{ d.desc }}</span></div>{% endfor %}</div></details>
+        <details style="margin-bottom:20px"><summary style="font-size:12px;color:var(--text-dim);cursor:pointer;padding:6px 0">{{ t.phenotype_basis }} ({{ pheno.baldness.details|length }} SNPs)</summary><div style="margin-top:8px">{% for d in pheno.baldness.details %}<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(39,39,42,.3)"><code style="min-width:90px">{{ d.rsid }}</code><span class="tm" style="min-width:100px">{{ d.gene }}</span><code>{{ d.genotype }}</code><span class="bs {% if d.impact == 'alto' %}by{% else %}bn{% endif %}" style="font-size:10px">{{ d.impact }}</span><span style="color:var(--text-muted);flex:1;margin-left:8px">{{ d.desc }}</span></div>{% endfor %}</div></details>
         {% endif %}
 
         <p class="nt">{{ t.phenotype_children_note }}</p>
@@ -1112,12 +1188,24 @@ window.addEventListener('resize', () => { document.querySelectorAll('.cw').forEa
 
 {% if results %}
 const CD = {{ charts_json|safe }};
-const P = ['#3b82f6','#ef4444','#a855f7','#f97316','#22c55e','#eab308','#06b6d4','#ec4899','#84cc16','#14b8a6'];
+// Single-hue blue ramp ordered light→dark. Replaces the previous 10-color
+// rainbow because color was carrying no information on bar/pie charts where
+// each datum already labels itself — the rainbow just made every visualization
+// scream "lots of categories!" without ordering them. With a single-hue ramp
+// the length/angle of the geometry carries the signal; luminance differentiates
+// adjacent slices without competing for attention. Semantic charts (magnitude)
+// keep their explicit green/yellow/red palette inline below.
+const P = ['#1e3a8a','#1d4ed8','#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#dbeafe'];
 const TX = '#a1a1aa';
-if (CD.categories) { const c=echarts.init(document.getElementById('chart-categories')); c.setOption({title:{text:'{{ t.chart_categories }}',textStyle:{color:'#fafafa',fontSize:14,fontFamily:'Geist'}},tooltip:{trigger:'axis'},grid:{left:'40%',right:'8%',top:40,bottom:10},xAxis:{type:'value',axisLabel:{color:TX}},yAxis:{type:'category',data:CD.categories.labels.slice().reverse(),axisLabel:{color:TX,fontSize:11,fontFamily:'Geist'}},series:[{type:'bar',data:CD.categories.values.slice().reverse(),itemStyle:{borderRadius:[0,4,4,0]},colorBy:'data',color:P}]}); }
+// Findings by Category: single accent color across all bars. The bars are
+// already sorted by magnitude, so the LENGTH carries the signal — using a
+// gradient ramp here previously caused visual disorder because `colorBy:'data'`
+// walks the source array order, not the reversed display order, mapping
+// colors out of sync with the bars.
+if (CD.categories) { const c=echarts.init(document.getElementById('chart-categories')); c.setOption({title:{text:'{{ t.chart_categories }}',textStyle:{color:'#fafafa',fontSize:14,fontFamily:'Geist'}},tooltip:{trigger:'axis'},grid:{left:'40%',right:'8%',top:40,bottom:10},xAxis:{type:'value',axisLabel:{color:TX}},yAxis:{type:'category',data:CD.categories.labels.slice().reverse(),axisLabel:{color:TX,fontSize:11,fontFamily:'Geist'}},series:[{type:'bar',data:CD.categories.values.slice().reverse(),itemStyle:{borderRadius:[0,4,4,0],color:'#3b82f6'}}]}); }
 if (CD.magnitude&&CD.magnitude.length) { const c=echarts.init(document.getElementById('chart-magnitude')); c.setOption({title:{text:'{{ t.chart_magnitude }}',left:'center',textStyle:{color:'#fafafa',fontSize:14,fontFamily:'Geist'}},tooltip:{trigger:'item',formatter:'{b}: {c} ({d}%)'},color:['#22c55e','#eab308','#ef4444'],series:[{type:'pie',radius:['40%','70%'],center:['50%','55%'],data:CD.magnitude,label:{color:TX,fontSize:12,fontFamily:'Geist'},emphasis:{itemStyle:{shadowBlur:10}}}]}); }
-if (CD.drug_levels) { const c=echarts.init(document.getElementById('chart-drugs')); c.setOption({title:{text:'{{ t.chart_drug_levels }}',textStyle:{color:'#fafafa',fontSize:14,fontFamily:'Geist'}},tooltip:{trigger:'axis'},grid:{left:'15%',right:'10%',top:40,bottom:30},xAxis:{type:'category',data:CD.drug_levels.labels,axisLabel:{color:TX}},yAxis:{type:'value',axisLabel:{color:TX}},series:[{type:'bar',data:CD.drug_levels.values,itemStyle:{borderRadius:[4,4,0,0]},color:'#3b82f6'}]}); } else { document.getElementById('chart-drugs').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#52525b">{{ t.chart_no_drug }}</div>'; }
-if (CD.disease&&CD.disease.length) { const c=echarts.init(document.getElementById('chart-disease')); c.setOption({title:{text:'{{ t.chart_disease }}',left:'center',textStyle:{color:'#fafafa',fontSize:14,fontFamily:'Geist'}},tooltip:{trigger:'item',formatter:'{b}: {c} ({d}%)'},color:P,series:[{type:'pie',radius:['40%','70%'],center:['50%','55%'],data:CD.disease,label:{color:TX,fontSize:11,fontFamily:'Geist'},emphasis:{itemStyle:{shadowBlur:10}}}]}); } else { document.getElementById('chart-disease').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#52525b">{{ t.chart_no_clinvar }}</div>'; }
+if (CD.drug_levels) { const c=echarts.init(document.getElementById('chart-drugs')); c.setOption({title:{text:'{{ t.chart_drug_levels }}',textStyle:{color:'#fafafa',fontSize:14,fontFamily:'Geist'}},tooltip:{trigger:'axis'},grid:{left:'15%',right:'10%',top:40,bottom:30},xAxis:{type:'category',data:CD.drug_levels.labels,axisLabel:{color:TX}},yAxis:{type:'value',axisLabel:{color:TX}},series:[{type:'bar',data:CD.drug_levels.values,itemStyle:{borderRadius:[4,4,0,0]},color:'#3b82f6'}]}); } else { document.getElementById('chart-drugs').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-dim)">{{ t.chart_no_drug }}</div>'; }
+if (CD.disease&&CD.disease.length) { const c=echarts.init(document.getElementById('chart-disease')); c.setOption({title:{text:'{{ t.chart_disease }}',left:'center',textStyle:{color:'#fafafa',fontSize:14,fontFamily:'Geist'}},tooltip:{trigger:'item',formatter:'{b}: {c} ({d}%)'},color:P,series:[{type:'pie',radius:['40%','70%'],center:['50%','55%'],data:CD.disease,label:{color:TX,fontSize:11,fontFamily:'Geist'},emphasis:{itemStyle:{shadowBlur:10}}}]}); } else { document.getElementById('chart-disease').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-dim)">{{ t.chart_no_clinvar }}</div>'; }
 
 {% if ancestry and ancestry.percentages %}
 let ancI=false; function initAnc(){if(ancI)return;ancI=true;const a={{ ancestry|tojson }};
@@ -1358,10 +1446,17 @@ const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/
     }
   }
 
+  // `send` is the public entrypoint — it records the user's question once
+  // and then delegates the actual stream to `attemptStream`. Splitting these
+  // lets the retry button re-run the stream WITHOUT duplicating the user
+  // message in the bubble list or the history array.
   async function send(question) {
     addMsg('user', question);
     history.push({ role: 'user', content: question });
+    await attemptStream(question);
+  }
 
+  async function attemptStream(question) {
     // Typing placeholder — replaced in-place with the streamed bubble once
     // the first chunk arrives.
     const typing = document.createElement('div');
@@ -1489,10 +1584,11 @@ const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/
     }
 
     if (errorMsg && !fullText) {
-      addMsg('error', errorMsg);
+      addErrorWithRetry(errorMsg, question);
       return;
     }
     if (aborted && !fullText) {
+      // User-initiated stop — no retry button here. They'll just ask again.
       addMsg('error', '{{ t.ai_stopped }}');
       return;
     }
@@ -1514,8 +1610,36 @@ const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/
       meta.innerHTML = metaHtml;
       msgs.appendChild(meta);
       msgs.scrollTop = msgs.scrollHeight;
-      if (errorMsg) addMsg('error', errorMsg);
+      // Mid-stream error AFTER partial text — offer retry so the user can
+      // try to get a complete answer without re-typing the question.
+      if (errorMsg) addErrorWithRetry(errorMsg, question);
     }
+  }
+
+  // Renders an error bubble with a retry button. Clicking retry removes
+  // the error bubble in-place and re-runs `attemptStream(question)` — the
+  // user message is NOT re-pushed (it's already in history), so retry
+  // doesn't duplicate the question chain.
+  function addErrorWithRetry(message, question) {
+    const empty = msgs.querySelector('.ai-msg.empty');
+    if (empty) empty.remove();
+    const el = document.createElement('div');
+    el.className = 'ai-msg error';
+    const textEl = document.createElement('div');
+    textEl.className = 'ai-error-text';
+    textEl.textContent = message;
+    el.appendChild(textEl);
+    const retryBtn = document.createElement('button');
+    retryBtn.type = 'button';
+    retryBtn.className = 'ai-retry-btn';
+    retryBtn.innerHTML = '<i class="ti ti-refresh"></i> {{ t.ai_retry }}';
+    retryBtn.addEventListener('click', () => {
+      el.remove();
+      attemptStream(question);
+    });
+    el.appendChild(retryBtn);
+    msgs.appendChild(el);
+    msgs.scrollTop = msgs.scrollHeight;
   }
 
   form.addEventListener('submit', e => {

@@ -2,6 +2,26 @@
 Localização (i18n) — strings da interface em PT-BR e EN.
 Usado pelo dashboard para trocar idioma sem reprocessar dados.
 """
+from typing import Literal, get_args
+
+# Canonical language type. EN is the source-of-truth language; PT-BR is the
+# secondary/translated language. New strings should always be written in EN
+# first. Use this alias on function signatures (`lang: Lang`) for static
+# type-checking without changing any runtime behavior — values stay as plain
+# strings everywhere (Flask routes, cookies, Jinja templates).
+Lang = Literal["en", "pt"]
+
+# Tuple form for runtime validation (`if value in LANGS`). Kept in sync with
+# `Lang` via get_args so we don't drift.
+LANGS: tuple[Lang, ...] = get_args(Lang)
+DEFAULT_LANG: Lang = "en"
+
+
+def normalize_lang(value: str | None) -> Lang:
+    """Coerce an untrusted string (URL segment, cookie, query param) to a
+    valid Lang, falling back to the default when unrecognized."""
+    return value if value in LANGS else DEFAULT_LANG  # type: ignore[return-value]
+
 
 STRINGS = {
     "pt": {
@@ -872,6 +892,6 @@ STRINGS = {
 }
 
 
-def get_strings(lang: str = "pt") -> dict:
-    """Get all strings for a language. Defaults to PT-BR."""
-    return STRINGS.get(lang, STRINGS["pt"])
+def get_strings(lang: Lang = DEFAULT_LANG) -> dict:
+    """Get all strings for a language. Defaults to EN."""
+    return STRINGS.get(lang, STRINGS[DEFAULT_LANG])

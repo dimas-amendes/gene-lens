@@ -14,6 +14,16 @@ history/
 # Logs
 *.log
 
+# Exported reports (may contain full genetic data — NEVER commit)
+*.pdf
+*.PDF
+exports/
+reports/
+report-*.html
+*-report.html
+*-report.pdf
+gene-lens-report*.*
+
 # Consent flag (user-specific)
 # Note: ~/.genetics_consent is outside repo, but just in case
 .genetics_consent

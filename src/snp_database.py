@@ -535,19 +535,19 @@ CURATED_SNPS = {
     "rs429358": {
         "gene": "APOE", "category": "Longevity",
         "variants": {
-            "TT": {"status": "no_e4", "desc": "Sem alelo APOE e4 — risco basal de Alzheimer", "magnitude": 0},
-            "TC": {"status": "e4_carrier", "desc": "APOE e4 heterozigoto — isoforma combinada determinada com rs7412", "magnitude": 3},
-            "CT": {"status": "e4_carrier", "desc": "APOE e4 heterozigoto — isoforma combinada determinada com rs7412", "magnitude": 3},
-            "CC": {"status": "e4e4", "desc": "APOE e4/e4 — risco ~12-15x de Alzheimer de inicio tardio", "magnitude": 4},
+            "TT": {"status": "no_e4", "desc": "No APOE e4 allele — baseline Alzheimer risk", "magnitude": 0},
+            "TC": {"status": "e4_carrier", "desc": "APOE e4 heterozygous — combined isoform determined with rs7412", "magnitude": 3},
+            "CT": {"status": "e4_carrier", "desc": "APOE e4 heterozygous — combined isoform determined with rs7412", "magnitude": 3},
+            "CC": {"status": "e4e4", "desc": "APOE e4/e4 — ~12-15x risk of late-onset Alzheimer's", "magnitude": 4},
         },
     },
     "rs7412": {
         "gene": "APOE", "category": "Longevity",
         "variants": {
-            "CC": {"status": "no_e2", "desc": "Sem alelo APOE e2 — isoforma E3 ou E4 dependendo do rs429358", "magnitude": 0},
-            "CT": {"status": "e2_carrier", "desc": "APOE e2 heterozigoto — efeito protetor se sem e4", "magnitude": 0},
-            "TC": {"status": "e2_carrier", "desc": "APOE e2 heterozigoto", "magnitude": 0},
-            "TT": {"status": "e2e2", "desc": "APOE e2/e2 — risco reduzido de Alzheimer", "magnitude": 1},
+            "CC": {"status": "no_e2", "desc": "No APOE e2 allele — isoform E3 or E4 depending on rs429358", "magnitude": 0},
+            "CT": {"status": "e2_carrier", "desc": "APOE e2 heterozygous — protective effect if no e4", "magnitude": 0},
+            "TC": {"status": "e2_carrier", "desc": "APOE e2 heterozygous", "magnitude": 0},
+            "TT": {"status": "e2e2", "desc": "APOE e2/e2 — reduced Alzheimer risk", "magnitude": 1},
         },
     },
 

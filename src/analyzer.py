@@ -14,17 +14,17 @@ from src.snp_database import CURATED_SNPS
 
 APOE_ISOFORMS = {
     # (rs429358, rs7412) -> (isoform, description, magnitude)
-    ("TT", "TT"): ("E2/E2", "Risco REDUZIDO de Alzheimer. Possivel risco de hiperlipoproteinemia tipo III. Colesterol tende a ser mais baixo.", 1),
-    ("TT", "CT"): ("E2/E3", "Risco reduzido de Alzheimer. Isoforma protetora.", 0),
-    ("TT", "TC"): ("E2/E3", "Risco reduzido de Alzheimer. Isoforma protetora.", 0),
-    ("TT", "CC"): ("E3/E3", "Genotipo mais comum (~60% da populacao). Risco basal de Alzheimer.", 0),
-    ("CT", "CC"): ("E3/E4", "Risco ~3x de Alzheimer de inicio tardio. Exercicio regular, dieta mediterranea, sono de qualidade e controle cardiovascular sao as melhores estrategias preventivas.", 3),
-    ("TC", "CC"): ("E3/E4", "Risco ~3x de Alzheimer de inicio tardio. Prevencao: exercicio, dieta, sono, saude cardiovascular.", 3),
-    ("CC", "CC"): ("E4/E4", "Risco ~12-15x de Alzheimer de inicio tardio. Prevencao agressiva: exercicio diario, dieta mediterranea rigorosa, sono 7-8h, controle de colesterol/pressao, engajamento cognitivo e social constante. Consulte neurologista.", 4),
-    ("CT", "CT"): ("E2/E4", "Riscos mistos — E2 protetor + E4 de risco. Efeito liquido incerto, depende de outros fatores.", 2),
-    ("CT", "TC"): ("E2/E4", "Riscos mistos — E2 protetor + E4 de risco.", 2),
-    ("TC", "CT"): ("E2/E4", "Riscos mistos — E2 protetor + E4 de risco.", 2),
-    ("TC", "TC"): ("E2/E4", "Riscos mistos — E2 protetor + E4 de risco.", 2),
+    ("TT", "TT"): ("E2/E2", "REDUCED Alzheimer risk. Possible risk of type III hyperlipoproteinemia. Cholesterol tends to run lower.", 1),
+    ("TT", "CT"): ("E2/E3", "Reduced Alzheimer risk. Protective isoform.", 0),
+    ("TT", "TC"): ("E2/E3", "Reduced Alzheimer risk. Protective isoform.", 0),
+    ("TT", "CC"): ("E3/E3", "Most common genotype (~60% of the population). Baseline Alzheimer risk.", 0),
+    ("CT", "CC"): ("E3/E4", "~3x risk of late-onset Alzheimer's. Regular exercise, Mediterranean diet, quality sleep, and cardiovascular control are the best preventive strategies.", 3),
+    ("TC", "CC"): ("E3/E4", "~3x risk of late-onset Alzheimer's. Prevention: exercise, diet, sleep, cardiovascular health.", 3),
+    ("CC", "CC"): ("E4/E4", "~12-15x risk of late-onset Alzheimer's. Aggressive prevention: daily exercise, strict Mediterranean diet, 7-8h sleep, cholesterol/blood pressure control, sustained cognitive and social engagement. Consult a neurologist.", 4),
+    ("CT", "CT"): ("E2/E4", "Mixed risks — protective E2 + risk-conferring E4. Net effect uncertain, depends on other factors.", 2),
+    ("CT", "TC"): ("E2/E4", "Mixed risks — protective E2 + risk-conferring E4.", 2),
+    ("TC", "CT"): ("E2/E4", "Mixed risks — protective E2 + risk-conferring E4.", 2),
+    ("TC", "TC"): ("E2/E4", "Mixed risks — protective E2 + risk-conferring E4.", 2),
 }
 
 

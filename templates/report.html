@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="{{ lang }}" data-theme="{{ theme }}">
+<head>
+<meta charset="utf-8">
+<title>Gene Lens — Report</title>
+<style>
+  /* ════════ A4-first paper layout, theme-aware (light/dark) ════════ */
+  @page { size: A4; margin: 14mm 12mm; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+  /* Theme tokens */
+  html[data-theme="light"] {
+    --bg: #ffffff; --fg: #111111; --muted: #555555; --rule: #999999;
+    --card-border: #bbbbbb; --card-bg: #ffffff; --card-muted: #fafafa;
+    --th-bg: #f4f4f5; --th-fg: #111111; --row-rule: #e5e5e5;
+    --code-bg: #f4f4f5; --code-fg: #111111;
+    --ok-bg: #f0fdf4; --ok-border: #15803d; --ok-fg: #15803d;
+    --warn-bg: #fff7ed; --warn-border: #c2410c; --warn-fg: #92400e;
+    --risk-bg: #fef2f2; --risk-border: #b91c1c; --risk-fg: #b91c1c;
+    --b-bg: #eeeeee; --link: #1d4ed8;
+  }
+  html[data-theme="dark"] {
+    --bg: #0f0f12; --fg: #f4f4f5; --muted: #a1a1aa; --rule: #3f3f46;
+    --card-border: #3f3f46; --card-bg: #18181b; --card-muted: #1f1f23;
+    --th-bg: #27272a; --th-fg: #e4e4e7; --row-rule: #2a2a2e;
+    --code-bg: #27272a; --code-fg: #e4e4e7;
+    --ok-bg: rgba(34,197,94,.10); --ok-border: #22c55e; --ok-fg: #4ade80;
+    --warn-bg: rgba(234,179,8,.10); --warn-border: #eab308; --warn-fg: #fde047;
+    --risk-bg: rgba(239,68,68,.10); --risk-border: #ef4444; --risk-fg: #fca5a5;
+    --b-bg: #2a2a2e; --link: #93c5fd;
+  }
+
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.45;
+    width: 186mm;
+    margin: 0 auto;
+  }
+  h1 { font-size: 18pt; margin: 0 0 4px; letter-spacing: -0.3px; color: var(--fg); }
+  h2 { font-size: 13pt; margin: 18px 0 6px; padding-bottom: 4px; border-bottom: 2px solid var(--fg); break-after: avoid; color: var(--fg); }
+  h3 { font-size: 11pt; margin: 12px 0 4px; break-after: avoid; color: var(--fg); }
+  h4 { font-size: 10pt; margin: 8px 0 4px; break-after: avoid; color: var(--fg); }
+  p  { margin: 4px 0 8px; }
+  ul { margin: 4px 0 8px; padding-left: 18px; }
+  li { margin-bottom: 3px; }
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 9pt; background: var(--code-bg); color: var(--code-fg); padding: 0 3px; border-radius: 2px; }
+
+  .meta { display: flex; justify-content: space-between; font-size: 8.5pt; color: var(--muted); border-bottom: 1px solid var(--rule); padding-bottom: 6px; margin-bottom: 12px; }
+  .meta strong { color: var(--fg); }
+  .subtitle { font-size: 9pt; color: var(--muted); margin: 0 0 6px; }
+
+  /* Cards: flat, single-color, paper-friendly */
+  .card { border: 1px solid var(--card-border); background: var(--card-bg); border-radius: 4px; padding: 8px 10px; margin: 8px 0; break-inside: avoid; }
+  .card.muted { background: var(--card-muted); }
+  .card.warn  { border-color: var(--warn-border); background: var(--warn-bg); }
+  .card.risk  { border-color: var(--risk-border); background: var(--risk-bg); }
+  .card.ok    { border-color: var(--ok-border);   background: var(--ok-bg); }
+  .card h3, .card h4 { margin-top: 0; }
+
+  /* Tables: full width, repeat thead, no row locking */
+  table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin: 6px 0 10px; break-inside: auto; color: var(--fg); }
+  thead { display: table-header-group; }
+  th { text-align: left; background: var(--th-bg); color: var(--th-fg); font-weight: 600; padding: 4px 6px; border-bottom: 1px solid var(--rule); font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.3px; }
+  td { padding: 4px 6px; border-bottom: 1px solid var(--row-rule); vertical-align: top; }
+  tr { break-inside: avoid; }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  td.nowrap, th.nowrap { white-space: nowrap; }
+
+  /* Stat strips */
+  .stats { display: flex; gap: 6px; margin: 6px 0 10px; }
+  .stat  { flex: 1; border: 1px solid var(--card-border); background: var(--card-bg); border-radius: 3px; padding: 6px 8px; text-align: center; break-inside: avoid; }
+  .stat .n { font-size: 14pt; font-weight: 700; line-height: 1.1; color: var(--fg); }
+  .stat .n.ok   { color: var(--ok-fg); }
+  .stat .n.warn { color: var(--warn-fg); }
+  .stat .n.risk { color: var(--risk-fg); }
+  .stat .l { font-size: 7pt; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 2px; }
+
+  /* Two-col layout (Evidence / Confirmation) */
+  .duo { display: flex; gap: 6px; margin: 6px 0; }
+  .duo > div { flex: 1; min-width: 0; border: 1px solid var(--card-border); background: var(--card-muted); border-radius: 3px; padding: 6px 8px; font-size: 9pt; }
+  .duo .lbl { font-size: 7.5pt; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 3px; }
+
+  /* Badges */
+  .b { display: inline-block; padding: 1px 5px; border-radius: 2px; font-size: 7.5pt; font-weight: 600; background: var(--b-bg); color: var(--fg); white-space: nowrap; }
+  .b.risk { background: var(--risk-bg); color: var(--risk-fg); }
+  .b.warn { background: var(--warn-bg); color: var(--warn-fg); }
+  .b.ok   { background: var(--ok-bg);   color: var(--ok-fg); }
+
+  /* Section page-break: each <section> starts a new page (except the first) */
+  section { break-before: page; }
+  section:first-of-type { break-before: auto; }
+
+  /* Header strip on every page (CSS Paged Media) */
+  .page-header { display: block; text-align: center; font-size: 8pt; color: #888; margin-bottom: 4px; }
+
+  /* Force long text columns to wrap, not overflow */
+  .col-detail { word-break: normal; overflow-wrap: anywhere; }
+
+  /* Print: hide any anchor styling that'd waste ink */
+  a { color: var(--link); text-decoration: none; }
+
+  @media screen {
+    html[data-theme="light"] body { background: #e5e5e5; }
+    html[data-theme="dark"]  body { background: #07070a; }
+    .page { background: var(--bg); max-width: 210mm; margin: 16px auto; padding: 14mm 12mm; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+    .actions { max-width: 210mm; margin: 16px auto 0; padding: 0 14mm; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .actions a { color: #2c44d4; font-size: 13px; text-decoration: none; }
+    html[data-theme="dark"] .actions a { color: #93c5fd; }
+    .actions button, .actions .theme-toggle a { background: #2c44d4; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 600; text-decoration: none; display: inline-block; }
+    .actions button:hover, .actions .theme-toggle a:hover { filter: brightness(1.1); }
+    .actions .theme-toggle a.alt { background: transparent; color: var(--fg); border: 1px solid var(--card-border); }
+  }
+  @media print {
+    .actions { display: none !important; }
+    .page { padding: 0; margin: 0; max-width: 100%; box-shadow: none; }
+    /* Force the chosen background to actually print */
+    html, body, .page { background: var(--bg) !important; color: var(--fg) !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="actions">
+  <a href="/">← {{ t.back if t.back else 'Back' }}</a>
+  <div class="theme-toggle">
+    {% if theme == 'dark' %}
+      <a class="alt" href="?theme=light">☀ Light</a>
+    {% else %}
+      <a class="alt" href="?theme=dark">☾ Dark</a>
+    {% endif %}
+    <button type="button" onclick="window.print()">⌘P — Save as PDF</button>
+  </div>
+</div>
+
+<div class="page">
+
+{% set prof = genome_info.get('profile', {}) if genome_info else {} %}
+{% set summary = results.summary if results else {} %}
+
+<h1>Gene Lens</h1>
+<div class="meta">
+  <div>
+    <strong>{{ genome_info.filename if genome_info else '—' }}</strong>
+    {% if genome_info and genome_info.subject_name %} · {{ genome_info.subject_name }}{% endif %}
+    {% if prof %}
+      {% if prof.sex %} · {{ prof.sex }}{% endif %}
+      {% if prof.age %} · {{ prof.age }}{{ t.profile_years }}{% endif %}
+      {% if prof.bmi %} · IMC {{ prof.bmi }}{% endif %}
+    {% endif %}
+  </div>
+  <div>{{ "{:,}".format(genome_info.snp_count) if genome_info else 0 }} SNPs · {{ elapsed }}s</div>
+</div>
+
+{# ════════ OVERVIEW ════════ #}
+<h2>{{ t.tab_overview }}</h2>
+
+{% if human.get('overview') %}
+<div class="card ok">
+  <h4>{{ t.human_overview }}</h4>
+  <ul>{% for c in human.overview %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+{% set high = results.findings|selectattr('magnitude','ge',3)|list if results else [] %}
+{% if high %}
+<h3>{{ t.high_mag_title }}</h3>
+<table>
+  <thead><tr>
+    <th class="nowrap">{{ t.col_gene }}</th>
+    <th class="nowrap">{{ t.col_rsid }}</th>
+    <th class="nowrap">{{ t.col_genotype }}</th>
+    <th>{{ t.col_category }}</th>
+    <th class="nowrap">{{ t.col_magnitude }}</th>
+    <th class="col-detail">{{ t.col_details }}</th>
+  </tr></thead>
+  <tbody>
+  {% for f in high %}
+    <tr>
+      <td class="nowrap"><strong>{{ f.gene }}</strong></td>
+      <td class="nowrap"><code>{{ f.rsid }}</code></td>
+      <td class="nowrap"><code>{{ f.genotype }}</code></td>
+      <td>{{ CAT_PT.get(f.category, f.category) }}</td>
+      <td class="nowrap"><span class="b risk">{{ f.magnitude }}/6</span></td>
+      <td class="col-detail">{{ f.description[:120] }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if coverage and coverage.panels %}
+<h3>{{ t.coverage_title }}</h3>
+<p class="subtitle">{{ t.coverage_intro }}</p>
+<div class="stats">
+  <div class="stat"><div class="n">{{ coverage.summary.markers_present }}/{{ coverage.summary.markers_total }}</div><div class="l">{{ t.coverage_markers }}</div></div>
+  <div class="stat"><div class="n ok">{{ coverage.summary.panels_high }}</div><div class="l">{{ t.coverage_high }}</div></div>
+  <div class="stat"><div class="n warn">{{ coverage.summary.panels_partial }}</div><div class="l">{{ t.coverage_partial }}</div></div>
+  <div class="stat"><div class="n risk">{{ coverage.summary.panels_low }}</div><div class="l">{{ t.coverage_low }}</div></div>
+</div>
+<table>
+  <thead><tr><th>{{ t.coverage_breakdown if t.coverage_breakdown else 'Panel' }}</th><th class="num">{{ t.col_genotype if false else '' }}Markers</th><th class="nowrap">{{ t.coverage_band_high if false else 'Confidence' }}</th></tr></thead>
+  <tbody>
+  {% for p in coverage.panels %}
+    <tr>
+      <td>{{ p.name_pt if lang == 'pt' else p.name_en }}</td>
+      <td class="num">{{ p.present }}/{{ p.total }}</td>
+      <td class="nowrap"><span class="b {% if p.confidence == 'high' %}ok{% elif p.confidence == 'partial' %}warn{% else %}risk{% endif %}">{{ t['coverage_band_' ~ p.confidence] }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ════════ HEALTH ════════ #}
+<section>
+<h2>{{ t.tab_health_risks }}</h2>
+
+{% if human.get('health') %}
+<div class="card ok">
+  <h4>{{ t.human_health }}</h4>
+  <ul>{% for c in human.health %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+{% if disease %}
+  {% set patho = (disease.pathogenic or []) + (disease.likely_pathogenic or []) %}
+  {% if patho %}
+    <h3>{{ t.pathogenic_variants_title }}</h3>
+    <table>
+      <thead><tr>
+        <th class="nowrap">{{ t.col_gene }}</th>
+        <th class="nowrap">{{ t.col_rsid }}</th>
+        <th class="nowrap">{{ t.col_genotype }}</th>
+        <th class="nowrap">{{ t.col_zygosity }}</th>
+        <th class="nowrap">{{ t.col_confidence }}</th>
+        <th class="col-detail">{{ t.col_condition }}</th>
+      </tr></thead>
+      <tbody>
+      {% for f in patho %}
+        <tr>
+          <td class="nowrap"><strong>{{ f.gene or '---' }}</strong></td>
+          <td class="nowrap"><code>{{ f.rsid }}</code></td>
+          <td class="nowrap"><code>{{ f.user_genotype }}</code></td>
+          <td class="nowrap"><span class="b {% if f.zygosity_status=='AFFECTED' %}risk{% elif f.zygosity_status=='CARRIER' %}warn{% endif %}">{{ ZYG_PT.get(f.zygosity_status, f.zygosity_status) }}</span></td>
+          <td class="nowrap">{{ f.gold_stars }}/4 ★</td>
+          <td class="col-detail">{{ traits_label(f.traits) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  {% if disease.risk_factor %}
+    <h3>{{ t.risk_factors_title }}</h3>
+    <table>
+      <thead><tr>
+        <th class="nowrap">{{ t.col_gene }}</th>
+        <th class="nowrap">{{ t.col_rsid }}</th>
+        <th class="nowrap">{{ t.col_genotype }}</th>
+        <th class="nowrap">{{ t.col_confidence }}</th>
+        <th class="col-detail">{{ t.col_condition }}</th>
+      </tr></thead>
+      <tbody>
+      {% for f in disease.risk_factor[:40] %}
+        <tr>
+          <td class="nowrap"><strong>{{ f.gene or '---' }}</strong></td>
+          <td class="nowrap"><code>{{ f.rsid }}</code></td>
+          <td class="nowrap"><code>{{ f.user_genotype }}</code></td>
+          <td class="nowrap">{{ f.gold_stars }}/4 ★</td>
+          <td class="col-detail">{{ traits_label(f.traits) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endif %}
+
+{% if hereditary and hereditary.conditions %}
+<h3>{{ t.acc_hereditary }}{% if hereditary.sex %} <span class="b">{{ hereditary.sex }}</span>{% endif %}</h3>
+<p class="subtitle"><strong>{{ t.warning_label }}:</strong> {{ t.hereditary_disclaimer }}</p>
+{% for cond in hereditary.conditions %}
+  <div class="card {% if cond.priority <= 1 %}risk{% elif cond.priority <= 2 %}warn{% else %}muted{% endif %}">
+    <h4>{{ cond.name }} <span class="b">{{ cond.genes_found|join(', ') }} · {{ cond.max_stars }}/4 ★</span></h4>
+    <p>{{ cond.text|bold|safe }}</p>
+    <div class="duo">
+      <div><div class="lbl">{{ t.hereditary_evidence }}</div>{{ cond.evidence }}</div>
+      <div><div class="lbl">{{ t.hereditary_confirm }}</div>{{ cond.confirm }}</div>
+    </div>
+  </div>
+{% endfor %}
+{% endif %}
+
+{# Lifestyle findings #}
+{% if results and results.by_category %}
+<h3>{{ t.acc_lifestyle }}</h3>
+{% for cat, findings in results.by_category.items() %}
+  <h4>{{ CAT_PT.get(cat, cat) }}</h4>
+  <table>
+    <thead><tr>
+      <th class="nowrap">{{ t.col_gene }}</th>
+      <th class="nowrap">{{ t.col_rsid }}</th>
+      <th class="nowrap">{{ t.col_genotype }}</th>
+      <th class="nowrap">{{ t.col_magnitude }}</th>
+      <th class="col-detail">{{ t.col_details }}</th>
+    </tr></thead>
+    <tbody>
+    {% for f in findings|sort(attribute='magnitude',reverse=True) %}
+      <tr>
+        <td class="nowrap"><strong>{{ f.gene }}</strong></td>
+        <td class="nowrap"><code>{{ f.rsid }}</code></td>
+        <td class="nowrap"><code>{{ f.genotype }}</code></td>
+        <td class="nowrap"><span class="b {% if f.magnitude>=3 %}risk{% elif f.magnitude>=2 %}warn{% else %}ok{% endif %}">{{ f.magnitude }}/6</span></td>
+        <td class="col-detail">{{ f.description[:140] }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% endfor %}
+{% endif %}
+</section>
+
+{# ════════ PHARMACOGENOMICS ════════ #}
+{% if results and results.by_category.get('drug_response') %}
+<section>
+<h2>{{ t.tab_drugs }}</h2>
+{% if human.get('drugs') %}<div class="card ok"><ul>{% for c in human.drugs %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+<table>
+  <thead><tr>
+    <th class="nowrap">{{ t.col_gene }}</th>
+    <th class="nowrap">{{ t.col_rsid }}</th>
+    <th class="nowrap">{{ t.col_genotype }}</th>
+    <th class="nowrap">{{ t.col_magnitude }}</th>
+    <th class="col-detail">{{ t.col_details }}</th>
+  </tr></thead>
+  <tbody>
+  {% for f in results.by_category.drug_response|sort(attribute='magnitude',reverse=True) %}
+    <tr>
+      <td class="nowrap"><strong>{{ f.gene }}</strong></td>
+      <td class="nowrap"><code>{{ f.rsid }}</code></td>
+      <td class="nowrap"><code>{{ f.genotype }}</code></td>
+      <td class="nowrap"><span class="b {% if f.magnitude>=3 %}risk{% elif f.magnitude>=2 %}warn{% else %}ok{% endif %}">{{ f.magnitude }}/6</span></td>
+      <td class="col-detail">{{ f.description[:160] }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</section>
+{% endif %}
+
+{# ════════ WELLNESS PANELS ════════ #}
+{% if wellness %}
+<section>
+<h2>{{ t.tab_wellness }}</h2>
+{% if human.get('wellness') %}<div class="card ok"><ul>{% for c in human.wellness %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+{% for pk, pn, acc_key in [
+  ('nutri', t.panel_nutri, 'acc_nutri'),
+  ('fit', t.panel_fit, 'acc_fit'),
+  ('skin', t.panel_skin, 'acc_skin'),
+  ('aging', t.panel_aging, 'acc_aging'),
+  ('sensory', t.panel_sensory, 'acc_sensory'),
+  ('sleep', t.panel_sleep, 'acc_sleep'),
+  ('longevity', t.panel_longevity, 'acc_longevity'),
+  ('mental', t.panel_mental, 'acc_mental'),
+  ('food', t.panel_food, 'acc_food'),
+  ('thyroid', t.panel_thyroid, 'acc_thyroid'),
+  ('eyes', t.panel_eyes, 'acc_eyes'),
+  ('bones', t.panel_bones, 'acc_bones'),
+  ('allergy', t.panel_allergy, 'acc_allergy'),
+  ('autoimmune', t.panel_autoimmune, 'acc_autoimmune')
+] %}
+  {% set panel = wellness.get(pk, {}) %}
+  {% if panel and panel.findings %}
+    <h3>{{ pn }}</h3>
+    <div class="stats">
+      <div class="stat"><div class="n">{{ panel.summary.total }}</div><div class="l">{{ t.markers_analyzed }}</div></div>
+      <div class="stat"><div class="n ok">{{ panel.summary.normal }}</div><div class="l">{{ t.normal_favorable }}</div></div>
+      <div class="stat"><div class="n warn">{{ panel.summary.atencao + panel.summary.alerta }}</div><div class="l">{{ t.require_attention }}</div></div>
+    </div>
+    {% if panel.conclusions %}
+    <div class="card muted"><ul>{% for c in panel.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>
+    {% endif %}
+    <table>
+      <thead><tr>
+        <th>{{ t.col_marker }}</th>
+        <th class="nowrap">{{ t.col_gene }}</th>
+        <th class="nowrap">rsID</th>
+        <th class="nowrap">{{ t.col_genotype }}</th>
+        <th class="nowrap">{{ t.col_result }}</th>
+        <th class="col-detail">{{ t.col_interpretation }}</th>
+      </tr></thead>
+      <tbody>
+      {% for f in panel.findings %}
+        <tr>
+          <td><strong>{{ f.trait }}</strong></td>
+          <td class="nowrap">{{ f.gene }}</td>
+          <td class="nowrap"><code>{{ f.rsid }}</code></td>
+          <td class="nowrap"><code>{{ f.genotype }}</code></td>
+          <td class="nowrap"><span class="b {% if f.color == 'red' %}risk{% elif f.color == 'yellow' %}warn{% else %}ok{% endif %}">{{ f.label }}</span></td>
+          <td class="col-detail">{{ f.text|bold|safe }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endfor %}
+</section>
+{% endif %}
+
+{# ════════ HERITAGE (Ancestry + Family + Phenotype) ════════ #}
+{% if ancestry and ancestry.percentages %}
+<section>
+<h2>{{ t.tab_heritage }}</h2>
+<h3>{{ t.acc_ancestry }} — {{ t.continental_composition }}</h3>
+<table>
+  <thead><tr><th>{{ t.col_eur if false else 'Population' }}</th><th class="num">%</th></tr></thead>
+  <tbody>
+  {% for pop, pct in ancestry.percentages.items()|sort(attribute='1', reverse=True) %}
+    <tr>
+      <td>{{ ancestry.labels.get(pop, pop) }}</td>
+      <td class="num">{{ pct }}%</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="subtitle"><strong>{{ t.warning_label }}:</strong> {{ t.ancestry_disclaimer }}</p>
+</section>
+{% endif %}
+
+{# ════════ PRS ════════ #}
+{% if prs and prs.scores %}
+<section>
+<h2>Polygenic Risk Scores</h2>
+<p class="subtitle">{{ t.prs_disclaimer if t.prs_disclaimer else '' }}</p>
+<table>
+  <thead><tr>
+    <th>{{ t.col_condition if t.col_condition else 'Condition' }}</th>
+    <th class="num">Score</th>
+    <th class="num nowrap">Markers</th>
+    <th class="nowrap">Band</th>
+  </tr></thead>
+  <tbody>
+  {% for s in prs.scores %}
+    <tr>
+      <td><strong>{{ s.name if s.name else s.id }}</strong></td>
+      <td class="num">{% if s.score is defined %}{{ s.score }}{% else %}—{% endif %}</td>
+      <td class="num nowrap">{{ s.markers_present }}/{{ s.markers_total }}</td>
+      <td class="nowrap"><span class="b {% if s.band == 'elevated' %}risk{% elif s.band == 'average' %}warn{% elif s.band == 'below_average' %}ok{% endif %}">{{ s.band|replace('_',' ') }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</section>
+{% endif %}
+
+<div style="margin-top: 24px; padding-top: 8px; border-top: 1px solid #999; font-size: 7.5pt; color: #666; text-align: center;">
+  <strong>{{ t.warning_label }}:</strong> {{ t.upload_disclaimer }}
+</div>
+
+</div><!-- /.page -->
+
+{% if auto_print %}
+<script>window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 300); });</script>
+{% endif %}
+
+</body>
+</html>

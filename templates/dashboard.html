@@ -39,7 +39,7 @@ a { color: var(--accent); }
 /* ── AI chat drawer ────────────────────────────────────────────────────── */
 .ai-fab { position: fixed; bottom: 24px; right: 24px; z-index: 40; background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%); color: #fff; border: none; border-radius: 999px; padding: 13px 22px 13px 18px; font-size: 14px; font-weight: 600; font-family: 'Geist', sans-serif; box-shadow: 0 10px 30px -8px rgba(59,130,246,.5), 0 4px 12px -2px rgba(0,0,0,.4); cursor: pointer; display: inline-flex; align-items: center; gap: 9px; transition: transform .18s ease-out, box-shadow .2s; backdrop-filter: blur(8px); }
 .ai-fab .ai-fab-icon { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,.18); font-size: 15px; }
-.ai-fab .ai-fab-dot { position: absolute; top: -1px; right: -1px; width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #6ee7b7 0%, #10b981 55%, #047857 100%); box-shadow: 0 0 0 2px #2c44d4, 0 0 6px rgba(16,185,129,.55); }
+.ai-fab .ai-fab-dot { position: absolute; top: -1px; right: 3px; width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #6ee7b7 0%, #10b981 55%, #047857 100%); box-shadow: 0 0 0 2px #2c44d4, 0 0 6px rgba(16,185,129,.55); }
 .ai-fab .ai-fab-dot::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; background: rgba(16,185,129,.45); animation: ai-fab-pulse 2.2s ease-out infinite; z-index: -1; }
 .ai-fab:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 16px 40px -10px rgba(59,130,246,.65), 0 6px 16px -2px rgba(0,0,0,.5); }
 .ai-fab:active { transform: translateY(0) scale(.99); }
@@ -310,11 +310,22 @@ a { color: var(--accent); }
 /* Print stylesheet: user already views in a browser, so "Save as PDF" from
    the OS print dialog gives a no-dependency, privacy-preserving export. */
 @media print {
-  @page { size: A4; margin: 14mm 12mm; }
-  body { background: #fff !important; color: #111 !important; font-size: 10pt; }
+  @page { size: A4; margin: 12mm 10mm; }
+  /* Force A4 width — prevent right-edge clipping caused by default viewport widths */
+  html, body { width: 190mm !important; max-width: 190mm !important; margin: 0 !important; padding: 0 !important; overflow-x: hidden !important; }
+  body { background: #fff !important; color: #111 !important; font-size: 9.5pt; }
+  * { box-sizing: border-box !important; }
   .site-header, .ai-fab, .ai-drawer, .ai-backdrop, .mb-actions, .tabs, .lang-toggle, form, button { display: none !important; }
-  .container { padding: 0 !important; max-width: 100% !important; }
+  .container { padding: 0 !important; margin: 0 !important; max-width: 100% !important; width: 100% !important; }
   .print-only { display: block !important; }
+
+  /* Collapse every multi-column grid into a single column so wide cards never overflow A4 */
+  .cg, .prs-grid, .cov-grid { display: block !important; }
+  .cg > *, .prs-grid > *, .cov-grid > * { width: 100% !important; max-width: 100% !important; margin-bottom: 8px !important; }
+
+  /* Inline flex pairs (EVIDENCE / CLINICAL CONFIRMATION etc.) must wrap and respect the page */
+  .gc-b > div[style*="display:flex"] { display: block !important; }
+  .gc-b > div[style*="display:flex"] > div { width: 100% !important; min-width: 0 !important; max-width: 100% !important; margin-bottom: 6px !important; }
 
   /* Tabs: render every panel in natural flow — don't force page breaks per tab */
   .tp { display: block !important; }
@@ -369,6 +380,17 @@ a { color: var(--accent); }
   .acc-body > .gc { page-break-inside: auto; }
   .acc-body > .gc > .gc-h + .gc-b { page-break-before: avoid; break-before: avoid; }
 
+  /* Small data cards (PRS cards, hereditary condition cards, coverage panels) — keep whole */
+  .prs-card, .hcw-card, .hcw-empty, .acc-body > .gc[style*="border-color"] { page-break-inside: avoid; break-inside: avoid; }
+
+  /* Tables that fit in one page (under ~20 rows) — keep them whole when reasonable.
+     Use a wrapper rule: any .gc-b.np containing a table is the table wrapper.
+     We can't measure here, so prefer to keep small grouped tables together. */
+  .gc-b.np > table.tb { break-inside: auto; }
+  /* But the parent .gc-h title must stay glued to the first rows */
+  .gc > .gc-h { page-break-after: avoid; break-after: avoid; }
+  .gc > .gc-h + .gc-b { page-break-before: avoid; break-before: avoid; }
+
   a { color: #1d4ed8; text-decoration: underline; }
   code { background: #f4f4f5; color: #111; padding: 0 2px; border-radius: 2px; }
 
@@ -394,7 +416,7 @@ a { color: var(--accent); }
     <div class="logo"><span class="logo-icon"><i class="ti ti-flask"></i></span> {{ t.app_title }} <span class="priv-pill"><i class="ti ti-lock"></i> {{ t.privacy_badge|safe }}</span></div>
     <div class="d-flex align-items-center gap-2">
       <a href="/settings" class="lang-sw" style="margin-right:8px;color:#a1a1aa;text-decoration:none;font-size:13px;display:inline-flex;align-items:center;gap:4px" title="{{ t.settings_link }}"><i class="ti ti-settings"></i> {{ t.settings_link }}</a>
-      <div class="lang-sw"><a href="/lang/pt" class="{% if lang == 'pt' %}active{% endif %}">PT-BR</a> <a href="/lang/en" class="{% if lang == 'en' %}active{% endif %}">EN</a></div>
+      <div class="lang-sw"><a href="/lang/en" class="{% if lang == 'en' %}active{% endif %}">EN</a> <a href="/lang/pt" class="{% if lang == 'pt' %}active{% endif %}">PT-BR</a></div>
     </div>
   </div>
 </header>
@@ -651,10 +673,10 @@ a { color: var(--accent); }
         {% if conclusions.get('disease_technical') %}<div class="tn">{% for n in conclusions.disease_technical %}<p style="margin:0">{{ n|bold|safe }}</p>{% endfor %}</div>{% endif %}
         {% set patho = disease.pathogenic + disease.likely_pathogenic %}
         {% if patho %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.pathogenic_variants_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_zygosity }}</th><th>{{ t.col_confidence }}</th><th>{{ t.col_condition }}</th></tr></thead><tbody>
-        {% for f in patho %}<tr><td class="fw6">{{ f.gene or '---' }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.user_genotype }}</code></td><td><span class="bs {% if f.zygosity_status=='AFFECTED' %}br{% elif f.zygosity_status=='CARRIER' %}by{% else %}bn{% endif %}">{{ ZYG_PT.get(f.zygosity_status, f.zygosity_status) }}</span></td><td><span class="stars">{{ ("★" * f.gold_stars ~ "☆" * (4 - f.gold_stars))|safe }}</span> <span class="tm" style="font-size:11px">{{ f.gold_stars }}/4</span></td><td>{{ translate_traits(f.traits) }}</td></tr>{% endfor %}
+        {% for f in patho %}<tr><td class="fw6">{{ f.gene or '---' }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.user_genotype }}</code></td><td><span class="bs {% if f.zygosity_status=='AFFECTED' %}br{% elif f.zygosity_status=='CARRIER' %}by{% else %}bn{% endif %}">{{ ZYG_PT.get(f.zygosity_status, f.zygosity_status) }}</span></td><td><span class="stars">{{ ("★" * f.gold_stars ~ "☆" * (4 - f.gold_stars))|safe }}</span> <span class="tm" style="font-size:11px">{{ f.gold_stars }}/4</span></td><td>{{ traits_label(f.traits) }}</td></tr>{% endfor %}
         </tbody></table></div></div>{% endif %}
         {% if disease.risk_factor %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3>{{ t.risk_factors_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_confidence }}</th><th>{{ t.col_condition }}</th></tr></thead><tbody>
-        {% for f in disease.risk_factor[:40] %}<tr><td class="fw6">{{ f.gene or '---' }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.user_genotype }}</code></td><td><span class="stars">{{ ("★" * f.gold_stars ~ "☆" * (4 - f.gold_stars))|safe }}</span> <span class="tm" style="font-size:11px">{{ f.gold_stars }}/4</span></td><td>{{ translate_traits(f.traits) }}</td></tr>{% endfor %}
+        {% for f in disease.risk_factor[:40] %}<tr><td class="fw6">{{ f.gene or '---' }}</td><td><code>{{ f.rsid }}</code></td><td><code>{{ f.user_genotype }}</code></td><td><span class="stars">{{ ("★" * f.gold_stars ~ "☆" * (4 - f.gold_stars))|safe }}</span> <span class="tm" style="font-size:11px">{{ f.gold_stars }}/4</span></td><td>{{ traits_label(f.traits) }}</td></tr>{% endfor %}
         </tbody></table></div></div>{% endif %}
         {% if disease.protective %}<div class="gc" style="margin-bottom:12px"><div class="gc-h"><h3 class="tg">{{ t.protective_variants_title }}</h3></div><div class="gc-b np"><table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_rsid }}</th><th>{{ t.col_protective_effect }}</th></tr></thead><tbody>
         {% for f in disease.protective %}<tr><td class="fw6">{{ f.gene or '---' }}</td><td><code>{{ f.rsid }}</code></td><td>{{ (f.traits or 'Protetor').split(';')[0][:70] }}</td></tr>{% endfor %}
@@ -1047,14 +1069,9 @@ document.querySelectorAll('tr[data-href]').forEach(r => { r.addEventListener('cl
 // <details> so accordions render in full on paper, then restore the
 // original state afterwards so the on-screen view isn't disturbed.
 function exportPdf() {
-  const wasOpen = [];
-  document.querySelectorAll('details').forEach((d, i) => { wasOpen[i] = d.open; d.open = true; });
-  const cleanup = () => {
-    document.querySelectorAll('details').forEach((d, i) => { d.open = wasOpen[i]; });
-    window.removeEventListener('afterprint', cleanup);
-  };
-  window.addEventListener('afterprint', cleanup);
-  window.print();
+  // Open the dedicated A4 report page. ?print=1 auto-triggers the browser
+  // print dialog once the page finishes loading.
+  window.open('/report?print=1', '_blank');
 }
 // Init ancestry charts when accordion expands
 const ancBody = document.getElementById('ancestry-acc-body');

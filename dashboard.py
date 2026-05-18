@@ -31,7 +31,7 @@ from src.reports import (
 )
 from src.translations import translate_traits, get_gene_context, GENE_CONTEXT
 from src.translator import get_translator, translate_medical
-from src.i18n import get_strings
+from src.i18n import get_strings, Lang, normalize_lang, DEFAULT_LANG
 from src.wellness_panels import analyze_all_panels, ALL_PANELS, SCORE_COLORS, SCORE_LABELS
 from src.ancestry import analyze_ancestry, POP_LABELS, POP_COLORS, POP_COUNTRIES
 from src.family_planning import analyze_family_planning
@@ -119,13 +119,22 @@ def _ensure_dbs():
         try:
             ensure_directories()
             _db_cache["status"]["current"] = "clinvar"
-            _log("Carregando ClinVar (289 MB) — pode levar 30-90s na primeira vez...")
+            _is_pt = _current_lang == "pt"
+            _log(
+                "Carregando ClinVar (289 MB) — pode levar 30-90s na primeira vez..."
+                if _is_pt else
+                "Loading ClinVar (289 MB) — first run takes 30-90s..."
+            )
             _db_cache["clinvar"] = load_clinvar()
-            _log(f"ClinVar OK: {len(_db_cache['clinvar']):,} posicoes")
+            _log(
+                f"ClinVar OK: {len(_db_cache['clinvar']):,} {'posicoes' if _is_pt else 'positions'}"
+            )
             _db_cache["status"]["current"] = "pharmgkb"
-            _log("Carregando PharmGKB...")
+            _log("Carregando PharmGKB..." if _is_pt else "Loading PharmGKB...")
             _db_cache["pharmgkb"] = load_pharmgkb()
-            _log(f"PharmGKB OK: {len(_db_cache['pharmgkb']):,} interacoes")
+            _log(
+                f"PharmGKB OK: {len(_db_cache['pharmgkb']):,} {'interacoes' if _is_pt else 'interactions'}"
+            )
             _db_cache["loaded"] = True
             _db_cache["status"]["current"] = "ready"
             _db_cache["status"]["finished_at"] = time.time()
@@ -151,7 +160,7 @@ def _preload_dbs_async():
 
 _jobs = {}  # job_id -> {status, progress, result, error}
 
-def _run_analysis(job_id: str, filepath: Path, subject_name: str, profile: dict = None, lang: str = "en"):
+def _run_analysis(job_id: str, filepath: Path, subject_name: str, profile: dict = None, lang: Lang = "en"):
     """Run analysis in background thread."""
     job = _jobs[job_id]
     _tr = get_strings(lang)
@@ -268,11 +277,33 @@ def _run_analysis(job_id: str, filepath: Path, subject_name: str, profile: dict 
                 try:
                     translator = get_translator()
                     _log(f"[JOB {job_id[:8]}] Tradutor: neural={'sim' if translator.is_neural_available else 'nao'}")
-                    for finding in health_results["pharmgkb_findings"]:
+                    # Cache so we don't re-translate the same string (lots of
+                    # findings share descriptions — e.g. heterozygous variants).
+                    _tcache = {}
+                    def _tr_cached(s):
+                        if not s:
+                            return s
+                        if s not in _tcache:
+                            _tcache[s] = translator.translate(s)
+                        return _tcache[s]
+
+                    # 1) PharmGKB annotations
+                    for finding in health_results.get("pharmgkb_findings", []):
                         if finding.get("annotation"):
                             finding["annotation_original"] = finding["annotation"]
-                            finding["annotation"] = translator.translate(finding["annotation"])
-                    _log(f"[JOB {job_id[:8]}] Traducao OK: {len(health_results['pharmgkb_findings'])} anotacoes")
+                            finding["annotation"] = _tr_cached(finding["annotation"])
+
+                    # 2) Lifestyle findings descriptions (the long text shown
+                    # in every Health & Lifestyle table — kept in EN as the
+                    # source of truth, translated to PT here in one batch.
+                    # by_category holds the same finding dicts by reference,
+                    # so mutating findings updates both.
+                    for finding in health_results.get("findings", []):
+                        if finding.get("description"):
+                            finding["description_original"] = finding["description"]
+                            finding["description"] = _tr_cached(finding["description"])
+
+                    _log(f"[JOB {job_id[:8]}] Traducao OK: {len(health_results.get('pharmgkb_findings', []))} anotacoes + {len(health_results.get('findings', []))} descricoes (cache: {len(_tcache)} unicos)")
                 except Exception as e:
                     _log(f"[JOB {job_id[:8]}] Traducao falhou (mantendo ingles): {e}")
             else:
@@ -312,6 +343,11 @@ def _run_analysis(job_id: str, filepath: Path, subject_name: str, profile: dict 
             "coverage": coverage,
             "prs": prs,
             "elapsed": round(time.time() - t0_total, 1),
+            # Memory-only fields (stripped before history save) so we can
+            # re-run language-dependent analyses when the user toggles PT/EN
+            # after the analysis already ran:
+            "genome_by_rsid": genome_by_rsid,
+            "_lang_cached": lang,
         }
 
         # Save to history
@@ -346,11 +382,14 @@ def _save_history(result):
     safe_name = "".join(c for c in name if c.isalnum() or c in "-_")
     hid = f"{ts}_{safe_name}"
 
-    # Save full result (for reload) + summary meta (for listing)
+    # Save full result (for reload) + summary meta (for listing).
+    # Strip memory-only fields that don't need to persist (and would bloat
+    # the history file with raw genotype maps).
+    persisted = {k: v for k, v in result.items() if not k.startswith("_") and k != "genome_by_rsid"}
     full = {
         "id": hid,
         "timestamp": datetime.now().isoformat(),
-        **result,
+        **persisted,
     }
 
     with open(HISTORY_DIR / f"{hid}.json", "w", encoding="utf-8") as f:
@@ -649,13 +688,13 @@ def build_conclusions(health, disease, protocol, lang="en"):
                     continue
                 genes_seen.add(gene)
                 stars = f.get("gold_stars", 0)
-                ctx = get_gene_context(gene)
+                ctx = get_gene_context(gene, lang=lang)
                 if ctx:
-                    traits_pt = translate_traits(f.get("traits", ""))
+                    traits_txt = translate_traits(f.get("traits", "")) if lang == "pt" else (f.get("traits", "") or "")
                     note = ctx.get("note", "")
                     action = ctx.get("action", "")
                     confidence = f"({stars}/4 {stars_label})"
-                    line = f"**{gene}** {confidence} — {traits_pt}: {note}"
+                    line = f"**{gene}** {confidence} — {traits_txt}: {note}"
                     if action:
                         line += f" {action_label} {action}"
                     disease_conc.append(line)
@@ -666,7 +705,7 @@ def build_conclusions(health, disease, protocol, lang="en"):
 
         apoe_findings = [f for f in patho if f.get("gene") == "APOE"]
         if apoe_findings and "APOE" not in {f.get("gene") for f in high_conf}:
-            ctx = get_gene_context("APOE")
+            ctx = get_gene_context("APOE", lang=lang)
             if ctx:
                 disease_conc.append(f"**APOE**: {ctx['note']}")
 
@@ -828,7 +867,7 @@ _HC = {
 }
 
 
-def _build_profile_notes(profile: dict, health: dict, disease: dict, lang: str = "en") -> list:
+def _build_profile_notes(profile: dict, health: dict, disease: dict, lang: Lang = "en") -> list:
     """Generate contextual notes based on user profile (sex, age, weight)."""
     notes = []
     if not profile:
@@ -1023,6 +1062,30 @@ ZYGOSITY_PT = {
     "HETEROZYGOUS": "HETEROZIGOTO",
     "UNKNOWN": "INDEFINIDO",
 }
+CAT_EN = {
+    "Drug Metabolism": "\U0001f48a Drug Metabolism",
+    "Methylation": "\U0001f9ec Methylation",
+    "Neurotransmitters": "\U0001f9e0 Neurotransmitters",
+    "Caffeine Response": "☕ Caffeine Response",
+    "Cardiovascular": "❤️ Cardiovascular",
+    "Nutrition": "\U0001f957 Nutrition",
+    "Fitness": "\U0001f4aa Fitness",
+    "Sleep/Circadian": "\U0001f634 Sleep / Circadian",
+    "Inflammation": "\U0001f525 Inflammation",
+    "Autoimmune": "\U0001f6e1️ Autoimmune",
+    "Detoxification": "\U0001f9f9 Detoxification",
+    "Skin": "✨ Skin",
+    "Iron Metabolism": "\U0001fa78 Iron Metabolism",
+    "Longevity": "⏳ Longevity",
+    "Alcohol": "\U0001f377 Alcohol",
+}
+ZYGOSITY_EN = {
+    "AFFECTED": "AFFECTED",
+    "CARRIER": "CARRIER",
+    "CARRIER/AT_RISK": "CARRIER / AT RISK",
+    "HETEROZYGOUS": "HETEROZYGOUS",
+    "UNKNOWN": "UNKNOWN",
+}
 import re as _re
 from markupsafe import escape as _escape
 def _md_bold(text):
@@ -1036,16 +1099,50 @@ app.jinja_env.filters["bold"] = _md_bold
 app.jinja_env.globals["CAT_PT"] = CAT_PT
 app.jinja_env.globals["ZYG_PT"] = ZYGOSITY_PT
 app.jinja_env.globals["translate_traits"] = translate_traits
+
+
+@app.context_processor
+def _inject_lang_labels():
+    """Override category/zygosity maps per-request based on the current language.
+    Templates keep referencing CAT_PT / ZYG_PT for historical reasons — we just
+    swap the contents to the EN versions when needed.
+
+    Also provides `traits_label(traits, lang)` that bypasses EN→PT translation
+    when language is English (template usage: {{ traits_label(f.traits) }})."""
+    is_en = (_current_lang == "en")
+
+    def traits_label(traits, lang=None):
+        if not traits:
+            return "unspecified" if (lang or _current_lang) == "en" else "nao especificada"
+        if (lang or _current_lang) == "en":
+            parts, seen, out = traits.split(";"), set(), []
+            for p in parts:
+                p = p.strip()
+                if p and p.lower() not in seen:
+                    seen.add(p.lower())
+                    out.append(p)
+            return "; ".join(out[:3]) if out else traits
+        return translate_traits(traits)
+
+    return {
+        "CAT_PT": CAT_EN if is_en else CAT_PT,
+        "ZYG_PT": ZYGOSITY_EN if is_en else ZYGOSITY_PT,
+        "traits_label": traits_label,
+    }
+
 app.jinja_env.globals["get_gene_context"] = get_gene_context
 app.jinja_env.globals["translate_medical"] = translate_medical
 app.jinja_env.globals["POP_COUNTRIES"] = POP_COUNTRIES
 
-# Language state
-_current_lang = "en"  # fallback default
+# Language state. `_current_lang` is always one of the values defined by
+# the Lang Literal (see src/i18n.py); use normalize_lang() at any boundary
+# that accepts untrusted input (URL segments, cookies, query params).
+_current_lang: Lang = DEFAULT_LANG
 
-def _get_lang():
+def _get_lang() -> Lang:
     """Get language from cookie (per-request) or fallback to global default."""
-    return request.cookies.get("lang", _current_lang) if request else _current_lang
+    raw = request.cookies.get("lang") if request else None
+    return normalize_lang(raw) if raw else _current_lang
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -1055,8 +1152,8 @@ def index():
     global _current_lang
     # Restore language from cookie if not set via URL
     saved_lang = request.cookies.get("lang")
-    if saved_lang in ("pt", "en"):
-        _current_lang = saved_lang
+    if saved_lang:
+        _current_lang = normalize_lang(saved_lang)
     active = _jobs.get("active_result")
     history = _load_history_index()
     t = get_strings(_current_lang)
@@ -1079,11 +1176,7 @@ def index():
         except Exception:
             human = {}
 
-        # Regenerate wellness panels in current language (for i18n)
-        # Only if health data exists (needed for genome_by_rsid to re-analyze)
-        # Note: wellness is cached from analysis. For language switch, we keep
-        # the cached data since wellness texts are translated at display time
-        # via the panel conclusions only.
+        _retranslate_active_if_needed(active)
 
         # Regenerate conclusions in current language
         try:
@@ -1159,11 +1252,124 @@ def index():
     )
 
 
+def _retranslate_active_if_needed(active):
+    """Re-run language-dependent analyses when the user toggled PT/EN after
+    the initial analysis. Mutates `active` in place. No-op for history reloads
+    (where genome_by_rsid is intentionally absent)."""
+    cached_lang = active.get("_lang_cached")
+    gbr = active.get("genome_by_rsid")
+    if not (gbr and cached_lang and cached_lang != _current_lang):
+        return
+
+    # Lifestyle finding descriptions: kept in EN as source of truth, the PT
+    # version is generated by the neural translator. On lang switch, flip them
+    # using the cached `description_original` (EN) we stash on first translate.
+    health = active.get("health") or {}
+    findings = health.get("findings") or []
+    try:
+        if _current_lang == "pt":
+            from src.translator import get_translator
+            tr = get_translator()
+            _cache = {}
+            for f in findings:
+                if not f.get("description_original"):
+                    f["description_original"] = f.get("description", "")
+                src = f["description_original"]
+                if src:
+                    if src not in _cache:
+                        _cache[src] = tr.translate(src)
+                    f["description"] = _cache[src]
+        else:  # restore EN source
+            for f in findings:
+                if f.get("description_original"):
+                    f["description"] = f["description_original"]
+    except Exception as e:
+        _log(f"Re-traducao descricoes falhou: {e}")
+    try:
+        active["wellness"] = analyze_all_panels(gbr, lang=_current_lang)
+    except Exception:
+        pass
+    try:
+        fam = analyze_family_planning(active.get("disease"), active.get("health", {}), lang=_current_lang)
+        fam["phenotype"] = analyze_phenotype(gbr, lang=_current_lang)
+        active["family"] = fam
+    except Exception:
+        pass
+    try:
+        active["hereditary"] = analyze_hereditary_conditions(
+            active.get("disease"),
+            active.get("genome_info", {}).get("profile", {}),
+            lang=_current_lang,
+        )
+    except Exception:
+        pass
+    try:
+        active["ancestry"] = analyze_ancestry(gbr, lang=_current_lang)
+    except Exception:
+        pass
+    active["_lang_cached"] = _current_lang
+
+
+@app.route("/report")
+def report():
+    """Print-optimized A4 report. The dashboard's @media print fights too many
+    dark-mode rules; this dedicated route renders a flat, paper-first HTML so
+    the browser's Save-as-PDF dialog produces a clean PDF.
+    Append ?print=1 to auto-open the print dialog."""
+    active = _jobs.get("active_result")
+    if not active or not active.get("health"):
+        return redirect(url_for("index"))
+    _retranslate_active_if_needed(active)
+    t = get_strings(_current_lang)
+    human = {}
+    try:
+        human = build_human_conclusions(
+            active.get("health", {}),
+            active.get("disease"),
+            active.get("protocol_data", {}),
+            active.get("wellness", {}),
+            active.get("family", {}),
+            active.get("ancestry", {}),
+            profile=active.get("genome_info", {}).get("profile", {}),
+            lang=_current_lang,
+        )
+    except Exception:
+        human = {}
+    try:
+        conclusions = build_conclusions(
+            active.get("health", {}),
+            active.get("disease"),
+            active.get("protocol_data", {}),
+            lang=_current_lang,
+        )
+    except Exception:
+        conclusions = {}
+    return render_template(
+        "report.html",
+        results=active.get("health"),
+        disease=active.get("disease"),
+        genome_info=active.get("genome_info"),
+        protocol=active.get("protocol_data"),
+        conclusions=conclusions,
+        human=human,
+        wellness=active.get("wellness") or {},
+        ancestry=active.get("ancestry") or {},
+        family=active.get("family") or {},
+        hereditary=active.get("hereditary") or {},
+        coverage=active.get("coverage") or {},
+        prs=active.get("prs") or {},
+        elapsed=active.get("elapsed", 0),
+        auto_print=request.args.get("print") == "1",
+        theme=("dark" if request.args.get("theme") == "dark" else "light"),
+        t=t,
+        lang=_current_lang,
+    )
+
+
 @app.route("/lang/<code>")
 def set_lang(code):
     global _current_lang
-    if code in ("pt", "en"):
-        _current_lang = code
+    _current_lang = normalize_lang(code)
     resp = redirect(url_for("index"))
     resp.set_cookie("lang", _current_lang, max_age=365*24*3600, httponly=True, samesite="Strict")
     return resp
@@ -1392,7 +1598,7 @@ def clear():
     return redirect(url_for("index"))
 
 
-def _build_chat_context(active: dict, lang: str) -> str:
+def _build_chat_context(active: dict, lang: Lang) -> str:
     """Serialize the active analysis into a compact text the LLM can read."""
     if not active:
         return "No analysis is loaded."
@@ -1583,16 +1789,39 @@ def settings_ai_toggle():
     return redirect(url_for("settings"))
 
 
-def run_dashboard(port: int = 5000, debug: bool = False):
+def run_dashboard(port: int = 5000, debug: bool = False, lang: Lang = "en"):
+    global _current_lang
     ensure_directories()
     HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Normalize and propagate language: dashboard default + DB loader logs.
+    lang_code: Lang = "pt" if (lang or "").lower().startswith("pt") else "en"
+    _current_lang = lang_code
+    from src.databases import set_lang as _set_db_lang
+    _set_db_lang(lang_code)
+
+    msgs = {
+        "en": {
+            "title": "Dashboard Gene Lens",
+            "privacy": "Privacy: server bound to localhost only",
+            "assets": "ECharts + Tabler served locally (no CDN)",
+            "preload": "Pre-loading databases in background...",
+        },
+        "pt": {
+            "title": "Dashboard Gene Lens",
+            "privacy": "Privacidade: servidor apenas em localhost",
+            "assets": "ECharts + Tabler servidos localmente (sem CDN)",
+            "preload": "Pré-carregando bancos de dados em background...",
+        },
+    }[lang_code]
+
     print()
     print("=" * 60)
-    print("  DASHBOARD GENETICO LOCAL")
+    print(f"  {msgs['title']}")
     print(f"  http://127.0.0.1:{port}")
     print()
-    print("  Privacidade: servidor apenas em localhost")
-    print("  ECharts + Tabler servidos localmente (sem CDN)")
+    print(f"  {msgs['privacy']}")
+    print(f"  {msgs['assets']}")
     print("=" * 60)
     print()
     # Kick off DB loading in the background so the first analysis doesn't
@@ -1602,7 +1831,7 @@ def run_dashboard(port: int = 5000, debug: bool = False):
     # twice (debug=True spawns a child that reruns this).
     if not (debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true"):
         _preload_dbs_async()
-        print("  Pre-carregando bancos de dados em background...")
+        print(f"  {msgs['preload']}")
         print()
     app.config["TEMPLATES_AUTO_RELOAD"] = debug
     app.run(host="127.0.0.1", port=port, debug=debug)

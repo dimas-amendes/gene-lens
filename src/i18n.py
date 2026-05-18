@@ -156,6 +156,31 @@ STRINGS = {
         "loading_done": "Concluído! Redirecionando...",
         "loading_error": "Erro",
 
+        # Flash messages
+        "flash_terms_accepted": "Termos aceitos.",
+        "flash_no_file": "Nenhum arquivo selecionado.",
+        "flash_invalid_file": "Tipo de arquivo inválido. Aceitos: .txt, .csv, .tsv, .gz",
+        "flash_upload_error": "Erro no upload. Tente novamente com um arquivo de DNA válido (.txt, .csv, .tsv, .gz).",
+        "flash_analysis_not_found": "Análise não encontrada ou ainda em andamento.",
+        "flash_history_not_found": "Análise não encontrada no histórico.",
+        "flash_history_deleted": "Análise removida do histórico.",
+        "flash_results_cleared": "Resultados limpos.",
+        "flash_install_ollama": "Instale o Ollama antes de habilitar.",
+
+        # Consent screen
+        "consent_title": "TERMOS DE USO",
+        "consent_not_device": "Este software NÃO é um dispositivo médico (SaMD)",
+        "consent_purpose": "Finalidade exclusivamente <span class=\"highlight\">EDUCACIONAL</span> e de <span class=\"highlight\">AUTOCONHECIMENTO</span>.",
+        "consent_important_facts": "Fatos importantes",
+        "consent_fact_fp": "Testes de genotipagem de consumo (23andMe, Genera, AncestryDNA) possuem taxa de falso positivo de aproximadamente <span class=\"highlight\">40%</span> para variantes clinicamente significativas.",
+        "consent_fact_not_replace": "Os resultados <span class=\"highlight\">NÃO substituem</span> exames médicos, diagnósticos clínicos, laudos genéticos ou aconselhamento genético.",
+        "consent_fact_never_change": "<span class=\"highlight\">NUNCA</span> altere medicamentos, dietas ou tratamentos baseado nestes resultados sem consultar um médico.",
+        "consent_fact_no_liability": "O autor/mantenedor <span class=\"highlight\">NÃO se responsabiliza</span> por decisões clínicas, sofrimento psicológico (ansiedade induzida por falsos positivos) ou quaisquer danos causados pelo uso deste software.",
+        "consent_counselor": "Para aconselhamento genético profissional:",
+        "consent_confirm": "Ao clicar em \"Aceitar\", você confirma que leu e compreendeu os termos acima.",
+        "consent_accept_btn": "Aceitar e Continuar",
+        "consent_back": "Voltar",
+
         # Charts
         "chart_categories": "Achados por Categoria",
         "chart_magnitude": "Distribuição por Magnitude",
@@ -352,6 +377,42 @@ STRINGS = {
         "hcw_empty_title": "Nenhum achado hereditário não significa ausência de risco",
         "hcw_empty_body": "A análise não encontrou variantes hereditárias relevantes nos dados do seu chip — mas chips de consumo cobrem pouquíssimas variantes patogênicas de BRCA1/2, Lynch e outros painéis hereditários. Histórico familiar continua sendo o melhor indicador de risco. Discuta com seu médico se houver casos de câncer precoce na família.",
 
+        # Export to PDF
+        "export_pdf": "Exportar PDF",
+        "export_pdf_tooltip": "Abrir diálogo de impressão para salvar este relatório como PDF",
+
+        # Composite Risk Index (PRS-style aggregation)
+        "prs_title": "Índice composto de risco",
+        "prs_subtitle": "soma de alelos de risco por condição",
+        "prs_disclaimer": "Esta NÃO é uma pontuação de risco poligênica (PRS) calibrada. É apenas uma soma transparente de quantos alelos de risco você carrega entre SNPs bem replicados de cada condição. Sem distribuição de referência por ancestralidade, não dá pra dizer percentil. Use como sinal direcional, não como diagnóstico.",
+        "prs_risk_alleles": "alelos de risco carregados",
+        "prs_risk_allele": "Alelo de risco",
+        "prs_copies": "Cópias",
+        "prs_show_snps": "Ver SNPs do painel",
+        "prs_insufficient_text": "Poucos marcadores no seu chip para estimar",
+        "prs_band_elevated": "elevado",
+        "prs_band_average": "médio",
+        "prs_band_below_average": "abaixo da média",
+        "prs_band_insufficient": "sem dados suficientes",
+
+        # Sample genome shortcut (skips the file upload — uses the bundled synthetic file)
+        "try_sample_btn": "Testar com genoma de exemplo",
+        "try_sample_hint": "Arquivo sintético incluído no projeto — bom pra ver o relatório sem subir DNA real.",
+        "flash_sample_missing": "Arquivo de exemplo não encontrado em sample/sample_genome.csv.",
+
+        # Neural translator (PT-BR analyses depend on the en->pt Argos model)
+        "translator_required_title": "Tradutor neural não instalado",
+        "translator_required_body": "Análises em português dependem do modelo neural en→pt do Argos Translate para traduzir anotações clínicas do ClinVar e PharmGKB. Sem ele, o relatório PT-BR fica com trechos em inglês e termos não traduzidos.",
+        "translator_required_cta": "Instalar nas Configurações",
+        "translator_required_switch_en": "ou usar análise em inglês",
+        "flash_translator_required": "Análise em PT-BR exige o tradutor neural — instale em Configurações.",
+        "settings_translator_label": "Modelo neural en→pt",
+        "settings_translator_desc": "Baixa o modelo de tradução (~100 MB, uma vez só). Necessário para análises em PT-BR. Roda inteiramente local depois de baixado.",
+        "settings_translator_install_btn": "Instalar modelo",
+        "settings_translator_installing": "Baixando modelo (~100 MB, pode levar 1-2 min)",
+        "settings_translator_installing_btn": "Instalando…",
+        "settings_translator_failed": "Falha ao instalar",
+
         # AI chat drawer
         "ai_button": "Perguntar à IA",
         "ai_title": "Pergunte sobre sua análise",
@@ -498,6 +559,31 @@ STRINGS = {
         "loading_step_conclude": "Generating conclusions",
         "loading_done": "Done! Redirecting...",
         "loading_error": "Error",
+
+        # Flash messages
+        "flash_terms_accepted": "Terms accepted.",
+        "flash_no_file": "No file selected.",
+        "flash_invalid_file": "Invalid file type. Accepted: .txt, .csv, .tsv, .gz",
+        "flash_upload_error": "Upload error. Please try again with a valid DNA file (.txt, .csv, .tsv, .gz).",
+        "flash_analysis_not_found": "Analysis not found or still in progress.",
+        "flash_history_not_found": "Analysis not found in history.",
+        "flash_history_deleted": "Analysis removed from history.",
+        "flash_results_cleared": "Results cleared.",
+        "flash_install_ollama": "Install Ollama before enabling.",
+
+        # Consent screen
+        "consent_title": "TERMS OF USE",
+        "consent_not_device": "This software is NOT a medical device (SaMD)",
+        "consent_purpose": "Strictly for <span class=\"highlight\">EDUCATIONAL</span> and <span class=\"highlight\">SELF-AWARENESS</span> purposes.",
+        "consent_important_facts": "Important facts",
+        "consent_fact_fp": "Consumer genotyping tests (23andMe, Genera, AncestryDNA) have a false positive rate of approximately <span class=\"highlight\">40%</span> for clinically significant variants.",
+        "consent_fact_not_replace": "These results <span class=\"highlight\">DO NOT replace</span> medical exams, clinical diagnoses, genetic reports, or genetic counseling.",
+        "consent_fact_never_change": "<span class=\"highlight\">NEVER</span> change medications, diets, or treatments based on these results without consulting a physician.",
+        "consent_fact_no_liability": "The author/maintainer is <span class=\"highlight\">NOT liable</span> for clinical decisions, psychological distress (anxiety induced by false positives), or any harm caused by use of this software.",
+        "consent_counselor": "For professional genetic counseling:",
+        "consent_confirm": "By clicking \"Accept\", you confirm that you have read and understood the terms above.",
+        "consent_accept_btn": "Accept and Continue",
+        "consent_back": "Go back",
 
         "chart_categories": "Findings by Category",
         "chart_magnitude": "Magnitude Distribution",
@@ -684,6 +770,42 @@ STRINGS = {
         "hcw_cta": "If you have a family history of cancer (breast, ovarian, prostate, colon, pancreatic) in first-degree relatives or diagnoses before age 50, see a cancer geneticist for clinical testing (Invitae, Myriad, or a local lab) — it's the only reliable way to evaluate these genes.",
         "hcw_empty_title": "No hereditary findings doesn't mean no risk",
         "hcw_empty_body": "The analysis found no relevant hereditary variants in your chip data — but consumer chips cover very few pathogenic variants of BRCA1/2, Lynch, and other hereditary panels. Family history remains the strongest indicator of risk. Discuss this with your doctor if there are cases of early-onset cancer in your family.",
+
+        # Export to PDF
+        "export_pdf": "Export PDF",
+        "export_pdf_tooltip": "Open the print dialog to save this report as PDF",
+
+        # Composite Risk Index (PRS-style aggregation)
+        "prs_title": "Composite risk index",
+        "prs_subtitle": "risk-allele tally per condition",
+        "prs_disclaimer": "This is NOT a calibrated polygenic risk score (PRS). It is a transparent count of how many risk alleles you carry across well-replicated SNPs for each condition. Without an ancestry-matched reference distribution there is no percentile to report. Treat it as directional signal, not a diagnosis.",
+        "prs_risk_alleles": "risk alleles carried",
+        "prs_risk_allele": "Risk allele",
+        "prs_copies": "Copies",
+        "prs_show_snps": "Show panel SNPs",
+        "prs_insufficient_text": "Too few markers on your chip to estimate",
+        "prs_band_elevated": "elevated",
+        "prs_band_average": "average",
+        "prs_band_below_average": "below average",
+        "prs_band_insufficient": "insufficient data",
+
+        # Sample genome shortcut (skips file upload — uses the bundled synthetic file)
+        "try_sample_btn": "Try with sample genome",
+        "try_sample_hint": "Synthetic file shipped with the project — useful for previewing the report without uploading real DNA.",
+        "flash_sample_missing": "Sample file not found at sample/sample_genome.csv.",
+
+        # Neural translator (PT-BR analyses depend on the en->pt Argos model)
+        "translator_required_title": "Neural translator not installed",
+        "translator_required_body": "Portuguese analyses depend on the Argos en→pt neural model to translate ClinVar and PharmGKB clinical annotations. Without it, the PT-BR report ends up with English fragments and untranslated terminology.",
+        "translator_required_cta": "Install in Settings",
+        "translator_required_switch_en": "or run the analysis in English",
+        "flash_translator_required": "PT-BR analyses require the neural translator — install it in Settings.",
+        "settings_translator_label": "en→pt neural model",
+        "settings_translator_desc": "Downloads the translation model (~100 MB, one-time). Required for PT-BR analyses. Runs fully local after the download.",
+        "settings_translator_install_btn": "Install model",
+        "settings_translator_installing": "Downloading model (~100 MB · may take 1-2 min)",
+        "settings_translator_installing_btn": "Installing…",
+        "settings_translator_failed": "Install failed",
 
         # AI chat drawer
         "ai_button": "Ask AI",

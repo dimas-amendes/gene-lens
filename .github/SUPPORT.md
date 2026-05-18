@@ -22,7 +22,7 @@ Open a [Bug Report](../.github/ISSUE_TEMPLATE/bug_report.md). Please:
 
 ## I want to suggest a feature
 
-Open a [Feature Request](../.github/ISSUE_TEMPLATE/feature_request.md). Check the [ROADMAP](../ROADMAP.md) first — your idea may already be planned.
+Open a [Feature Request](../.github/ISSUE_TEMPLATE/feature_request.md).
 
 ## I found a security vulnerability
 

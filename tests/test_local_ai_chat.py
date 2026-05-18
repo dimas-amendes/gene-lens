@@ -21,7 +21,77 @@ from src.local_ai import (
     chat_about_analysis_stream,
     estimate_prompt_tokens,
     estimate_tokens,
+    DEFAULT_MODEL,
+    RECOMMENDED_MODELS,
 )
+
+
+# ── system prompt guarantees ────────────────────────────────────────────────
+#
+# The system prompts are the "constitution" the local model operates under.
+# Some sections have direct patient-safety consequences — removing them
+# silently would degrade the product in dangerous ways. These tests pin the
+# contract so a future edit that drops the emergency block / high-impact
+# hereditary rule / specialty mapping fails CI loudly.
+
+class TestSystemPromptSafety:
+    def test_pt_prompt_has_emergency_block(self):
+        from src.local_ai import SYSTEM_PROMPT_PT
+        assert "EMERGÊNCIA" in SYSTEM_PROMPT_PT
+        assert "192" in SYSTEM_PROMPT_PT  # SAMU
+        assert "pronto-socorro" in SYSTEM_PROMPT_PT.lower()
+
+    def test_en_prompt_has_emergency_block(self):
+        from src.local_ai import SYSTEM_PROMPT_EN
+        assert "EMERGENCY" in SYSTEM_PROMPT_EN
+        assert "911" in SYSTEM_PROMPT_EN
+
+    def test_pt_prompt_has_high_impact_hereditary_rule(self):
+        from src.local_ai import SYSTEM_PROMPT_PT
+        # Must instruct the model to ASK about family history for these.
+        for gene in ("BRCA1", "Lynch", "Factor V Leiden"):
+            assert gene in SYSTEM_PROMPT_PT
+        assert "histórico familiar" in SYSTEM_PROMPT_PT.lower()
+
+    def test_en_prompt_has_high_impact_hereditary_rule(self):
+        from src.local_ai import SYSTEM_PROMPT_EN
+        for gene in ("BRCA1", "Lynch", "Factor V Leiden"):
+            assert gene in SYSTEM_PROMPT_EN
+        assert "family history" in SYSTEM_PROMPT_EN.lower()
+
+    def test_pt_prompt_has_specialty_mapping(self):
+        from src.local_ai import SYSTEM_PROMPT_PT
+        # The model needs to route patients to the right specialty,
+        # not generic "médico".
+        for word in ("hematologista", "oncogeneticista", "cardiologista", "conselheiro genético"):
+            assert word in SYSTEM_PROMPT_PT
+
+    def test_en_prompt_has_specialty_mapping(self):
+        from src.local_ai import SYSTEM_PROMPT_EN
+        for word in ("hematologist", "cardiologist", "genetic counselor"):
+            assert word in SYSTEM_PROMPT_EN
+
+    def test_prompts_still_forbid_prescriptive_language(self):
+        # Locked since day one — keep it locked.
+        from src.local_ai import SYSTEM_PROMPT_PT, SYSTEM_PROMPT_EN
+        assert "você tem" in SYSTEM_PROMPT_PT.lower()  # called out as forbidden
+        assert "you have" in SYSTEM_PROMPT_EN.lower()
+
+
+# ── curated model list ───────────────────────────────────────────────────────
+
+class TestRecommendedModels:
+    def test_default_is_first_recommended(self):
+        assert DEFAULT_MODEL == RECOMMENDED_MODELS[0]
+
+    def test_recommended_list_is_unique(self):
+        assert len(RECOMMENDED_MODELS) == len(set(RECOMMENDED_MODELS))
+
+    def test_recommended_models_look_like_ollama_tags(self):
+        # Each entry must be a non-empty string; Ollama tags usually have a
+        # colon (`name:size`) but bare names ("mistral") are also valid.
+        for m in RECOMMENDED_MODELS:
+            assert isinstance(m, str) and m
 
 
 # ── _friendly_ollama_error ───────────────────────────────────────────────────
@@ -299,95 +369,125 @@ class TestChatAboutAnalysis:
 
 # ── chat_about_analysis_stream ──────────────────────────────────────────────
 
-class _FakePopen:
-    """Minimal subprocess.Popen substitute that yields a scripted stdout."""
-    def __init__(self, chunks=("Hello ", "world", ""), stderr="", returncode=0):
-        self._chunks = list(chunks)
-        self._stderr_text = stderr
-        self.returncode = returncode
-        self.stdin = _FakeStdin()
-        self.stdout = self  # we'll implement read() ourselves
-        self.stderr = _FakeStderr(stderr)
-        self.wait_called = False
+class _FakeStreamResponse:
+    """urlopen() result that mimics Ollama's NDJSON streaming /api/chat.
 
-    def read(self, n=64):
-        if not self._chunks:
-            return ""
-        return self._chunks.pop(0)
+    Iterating over an HTTPResponse yields raw bytes lines; we replicate that
+    by exposing the same iteration protocol over a list of byte lines.
+    """
+    def __init__(self, lines):
+        self._lines = [l if isinstance(l, bytes) else l.encode("utf-8") for l in lines]
+        self.closed = False
 
-    def wait(self, timeout=None):
-        self.wait_called = True
-        return self.returncode
+    def __iter__(self):
+        return iter(self._lines)
 
+    def __enter__(self):
+        return self
 
-class _FakeStdin:
-    def write(self, data): pass
-    def close(self): pass
+    def __exit__(self, *a):
+        self.close()
+
+    def close(self):
+        self.closed = True
 
 
-class _FakeStderr:
-    def __init__(self, text): self._text = text
-    def read(self): return self._text
+def _nd(*objs):
+    """Build NDJSON byte-lines from a sequence of dicts."""
+    return [json.dumps(o).encode("utf-8") + b"\n" for o in objs]
 
 
 class TestChatStream:
     def test_yields_chunks_in_order(self):
-        fake = _FakePopen(chunks=("Hello, ", "this is ", "the answer.", ""))
-        with patch("src.local_ai.is_ollama_available", return_value=True), \
-             patch("src.local_ai.subprocess.Popen", return_value=fake):
+        resp = _FakeStreamResponse(_nd(
+            {"message": {"content": "Hello, "}, "done": False},
+            {"message": {"content": "this is "}, "done": False},
+            {"message": {"content": "the answer."}, "done": True},
+        ))
+        with patch("urllib.request.urlopen", return_value=resp):
             chunks = list(chat_about_analysis_stream(
                 context="ctx", history=[], question="hi", model="llama3.1:8b", language="en",
             ))
-        # All chunks should be strings (no error sentinel since returncode=0)
         assert all(isinstance(c, str) for c in chunks)
         assert "".join(chunks) == "Hello, this is the answer."
+        assert resp.closed  # generator must close the response
 
-    def test_yields_error_sentinel_when_ollama_missing(self):
-        with patch("src.local_ai.is_ollama_available", return_value=False):
+    def test_stops_after_done_even_with_trailing_lines(self):
+        """`done:true` ends the stream; trailing content is ignored."""
+        resp = _FakeStreamResponse(_nd(
+            {"message": {"content": "ok"}, "done": True},
+            {"message": {"content": "ignored"}, "done": False},
+        ))
+        with patch("urllib.request.urlopen", return_value=resp):
+            chunks = list(chat_about_analysis_stream(
+                context="ctx", history=[], question="hi", model="llama3.1:8b",
+            ))
+        assert chunks == ["ok"]
+
+    def test_yields_error_when_daemon_unreachable(self):
+        import urllib.error as ue
+        with patch("urllib.request.urlopen",
+                   side_effect=ue.URLError("Connection refused")):
             chunks = list(chat_about_analysis_stream(
                 context="ctx", history=[], question="hi",
             ))
         assert len(chunks) == 1
-        assert isinstance(chunks[0], dict)
         assert chunks[0]["event"] == "error"
+        assert chunks[0]["message"]
 
-    def test_yields_error_when_binary_not_found(self):
-        with patch("src.local_ai.is_ollama_available", return_value=True), \
-             patch("src.local_ai.subprocess.Popen", side_effect=FileNotFoundError):
-            chunks = list(chat_about_analysis_stream(
-                context="ctx", history=[], question="hi",
-            ))
-        assert chunks[0]["event"] == "error"
-        assert "ollama" in chunks[0]["message"].lower()
-
-    def test_yields_error_appended_after_text_on_nonzero_exit(self):
-        """If model errors out mid-stream we still surface a diagnostic."""
-        fake = _FakePopen(
-            chunks=("partial reply", ""),
-            stderr="Error: model 'llama3.1:8b' not found",
-            returncode=1,
+    def test_yields_error_when_model_missing(self):
+        import urllib.error as ue
+        err = ue.HTTPError(
+            "http://127.0.0.1:11434/api/chat", 404,
+            "Not Found", {}, io.BytesIO(b"model 'llama3.1:8b' not found"),
         )
-        with patch("src.local_ai.is_ollama_available", return_value=True), \
-             patch("src.local_ai.subprocess.Popen", return_value=fake):
+        with patch("urllib.request.urlopen", side_effect=err):
             chunks = list(chat_about_analysis_stream(
                 context="ctx", history=[], question="hi", model="llama3.1:8b",
             ))
-        assert chunks[0] == "partial reply"
-        # Last item is the error sentinel
-        assert isinstance(chunks[-1], dict)
+        assert chunks[0]["event"] == "error"
+        assert "ollama pull llama3.1:8b" in chunks[0]["message"]
+
+    def test_yields_error_when_inline_error_in_payload(self):
+        """Ollama can emit `{"error": "..."}` mid-stream."""
+        resp = _FakeStreamResponse(_nd(
+            {"message": {"content": "partial"}, "done": False},
+            {"error": "model runner crashed"},
+        ))
+        with patch("urllib.request.urlopen", return_value=resp):
+            chunks = list(chat_about_analysis_stream(
+                context="ctx", history=[], question="hi",
+            ))
+        assert chunks[0] == "partial"
         assert chunks[-1]["event"] == "error"
-        assert "ollama pull" in chunks[-1]["message"]
 
     def test_yields_error_when_no_text_produced(self):
-        fake = _FakePopen(chunks=("",), returncode=0)
-        with patch("src.local_ai.is_ollama_available", return_value=True), \
-             patch("src.local_ai.subprocess.Popen", return_value=fake):
+        resp = _FakeStreamResponse(_nd({"message": {"content": ""}, "done": True}))
+        with patch("urllib.request.urlopen", return_value=resp):
             chunks = list(chat_about_analysis_stream(
                 context="ctx", history=[], question="hi",
             ))
         assert len(chunks) == 1
         assert chunks[0]["event"] == "error"
         assert "empty" in chunks[0]["message"].lower()
+
+    def test_request_body_pins_streaming_and_context(self):
+        """Streaming endpoint should set stream:true and pin num_ctx/num_predict."""
+        captured = {}
+
+        def _capture(req, timeout=None):
+            captured["body"] = json.loads(req.data.decode("utf-8"))
+            return _FakeStreamResponse(_nd({"message": {"content": "ok"}, "done": True}))
+
+        with patch("urllib.request.urlopen", side_effect=_capture):
+            list(chat_about_analysis_stream(
+                context="ctx", history=[], question="hi", model="llama3.1:8b",
+            ))
+        body = captured["body"]
+        assert body["stream"] is True
+        assert body["model"] == "llama3.1:8b"
+        assert body["options"]["num_predict"] >= 1024
+        assert body["options"]["num_ctx"] >= 4096
 
 
 # ── token estimates ─────────────────────────────────────────────────────────

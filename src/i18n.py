@@ -468,6 +468,8 @@ STRINGS = {
         "ai_export_you": "Você",
         "ai_export_ai": "IA",
         "ai_tokens_tooltip": "Estimativa local (~4 chars/token): prompt → resposta",
+        "ai_stop": "Parar geração",
+        "ai_stopped": "Geração interrompida",
     },
 
     "en": {
@@ -888,6 +890,8 @@ STRINGS = {
         "ai_export_you": "You",
         "ai_export_ai": "AI",
         "ai_tokens_tooltip": "Local estimate (~4 chars/token): prompt → reply",
+        "ai_stop": "Stop generating",
+        "ai_stopped": "Generation stopped",
     },
 }
 

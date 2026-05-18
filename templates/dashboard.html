@@ -108,10 +108,14 @@ a { color: var(--accent); }
 @keyframes ai-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: .4; } 30% { transform: translateY(-4px); opacity: 1; } }
 
 .ai-form { border-top: 1px solid #27272a; padding: 14px 16px; display: flex; gap: 8px; align-items: flex-end; background: #0a0a0c; }
-.ai-form textarea { flex: 1; background: #18181b; border: 1px solid #3f3f46; color: #fafafa; border-radius: 10px; padding: 10px 12px; font-size: 13px; font-family: 'Geist', sans-serif; resize: none; min-height: 42px; max-height: 140px; line-height: 1.4; }
+.ai-form textarea { flex: 1; background: #18181b; border: 1px solid #3f3f46; color: #fafafa; border-radius: 10px; padding: 10px 12px; font-size: 13px; font-family: 'Geist', sans-serif; resize: none; min-height: 42px; max-height: 140px; line-height: 1.4; transition: height .14s cubic-bezier(.2,.0,.2,1), border-color .15s; overflow-y: auto; }
 .ai-form textarea:focus { outline: none; border-color: var(--accent); }
 .ai-form button { background: var(--accent); color: #09090b; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 600; font-family: 'Geist', sans-serif; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
 .ai-form button[disabled] { opacity: .5; cursor: not-allowed; }
+.ai-form button.ai-stop { background: #ef4444; color: #fafafa; animation: ai-stop-pulse 1.4s ease-in-out infinite; }
+.ai-form button.ai-stop:hover { background: #dc2626; }
+@keyframes ai-stop-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.45); } 50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); } }
+.ai-meta .ai-meta-stopped { color: #ef4444; }
 
 .ai-model { background: #18181b; border: 1px solid #3f3f46; color: #d4d4d8; border-radius: 8px; padding: 4px 8px; font-size: 11px; font-family: 'Geist Mono', monospace; }
 .gc { background: #18181b; border: 1px solid #27272a; border-radius: 12px; }
@@ -1139,7 +1143,7 @@ const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/
       <h3><i class="ti ti-sparkles" style="color:var(--accent)"></i> {{ t.ai_title }}</h3>
       <div class="sub">
         <select class="ai-model" id="aiModel">
-          {% for m in ollama_models %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+          {% for m in ollama_models %}<option value="{{ m }}"{% if m == default_model %} selected{% endif %}>{{ m }}</option>{% endfor %}
         </select>
       </div>
     </div>
@@ -1191,18 +1195,31 @@ const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/
     drawer.setAttribute('aria-hidden', 'true');
   }
 
-  fab.addEventListener('click', open);
+  // Clicking the FAB toggles the drawer — opens when closed, minimizes
+  // when already open. Standard chat-widget behavior; previously the FAB
+  // was open-only and the user had to reach for the X to dismiss.
+  fab.addEventListener('click', () => {
+    if (drawer.classList.contains('open')) close();
+    else open();
+  });
   closeBtn.addEventListener('click', close);
   const exportBtn = document.getElementById('aiExport');
   if (exportBtn) exportBtn.addEventListener('click', exportConversation);
   backdrop.addEventListener('click', close);
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && drawer.classList.contains('open')) close(); });
 
-  // Auto-grow textarea
-  input.addEventListener('input', () => {
+  // Auto-grow textarea with a smooth height transition. We can't transition
+  // from `height: auto`, so we briefly snapshot the current numeric height,
+  // measure the new target via `auto`, then animate from old → new on the
+  // next frame.
+  function resizeInput() {
+    const current = input.offsetHeight;
     input.style.height = 'auto';
-    input.style.height = Math.min(input.scrollHeight, 140) + 'px';
-  });
+    const target = Math.min(input.scrollHeight, 140);
+    input.style.height = current + 'px';
+    requestAnimationFrame(() => { input.style.height = target + 'px'; });
+  }
+  input.addEventListener('input', resizeInput);
   // Send on Enter (no shift), newline on Shift+Enter
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
@@ -1210,6 +1227,14 @@ const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/
 
   function escapeHtml(s) {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  // Wrap any rs1234-style identifier in a clickable chip. We run this AFTER
+  // the markdown pass so it also chip-ifies rsIDs the model emitted inside
+  // backticks (`<code>rs1234</code>` becomes a chip styled by .rsid-chip).
+  // Click handler is delegated below — see msgs.addEventListener('click').
+  function chipifyRsids(html) {
+    return html.replace(/\brs(\d{2,9})\b/g,
+      '<span class="rsid-chip" data-rsid="rs$1" title="Jump to rs$1 in the dashboard">rs$1</span>');
   }
   // Minimal markdown: escape HTML first, then turn **bold**, `code`,
   // list bullets and paragraph breaks into real elements. The model
@@ -1232,7 +1257,7 @@ const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/
       }
     }
     if (inList) html += '</ul>';
-    return html.replace(/(<br>){2,}/g, '<br><br>');
+    return chipifyRsids(html.replace(/(<br>){2,}/g, '<br><br>'));
   }
   function addMsg(role, content) {
     const empty = msgs.querySelector('.ai-msg.empty');
@@ -1312,10 +1337,33 @@ const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/
     return pool[Math.floor(Math.random() * pool.length)];
   }
 
+  // Holds the in-flight AbortController so the stop button can cancel.
+  let currentAbort = null;
+  const SEND_ICON = '<i class="ti ti-send"></i>';
+  const STOP_ICON = '<i class="ti ti-player-stop"></i>';
+
+  function setSending(on) {
+    if (on) {
+      sendBtn.innerHTML = STOP_ICON;
+      sendBtn.title = '{{ t.ai_stop }}';
+      sendBtn.classList.add('ai-stop');
+      sendBtn.disabled = false; // stop must remain clickable
+      input.disabled = true;
+    } else {
+      sendBtn.innerHTML = SEND_ICON;
+      sendBtn.title = '';
+      sendBtn.classList.remove('ai-stop');
+      sendBtn.disabled = false;
+      input.disabled = false;
+    }
+  }
+
   async function send(question) {
     addMsg('user', question);
     history.push({ role: 'user', content: question });
 
+    // Typing placeholder — replaced in-place with the streamed bubble once
+    // the first chunk arrives.
     const typing = document.createElement('div');
     typing.className = 'ai-msg assistant ai-typing';
     typing.innerHTML = '<span class="ai-dots"><span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span></span><span class="ai-status"></span><span class="ai-elapsed">0.0s</span>';
@@ -1326,15 +1374,12 @@ const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/
     if (emptyEl) emptyEl.remove();
     msgs.appendChild(typing);
     msgs.scrollTop = msgs.scrollHeight;
-    sendBtn.disabled = true; input.disabled = true;
 
     const started = performance.now();
     let lastPhrase = statusEl.textContent;
     const tick = setInterval(() => {
       elapsedEl.textContent = formatElapsed(performance.now() - started);
     }, 100);
-    // Rotate the status phrase every 2.5s so the user gets the sense of
-    // ongoing work, with a quick fade between phrases.
     const rotate = setInterval(() => {
       statusEl.style.opacity = '0';
       setTimeout(() => {
@@ -1345,64 +1390,224 @@ const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/
       }, 180);
     }, 2500);
 
+    const abort = new AbortController();
+    currentAbort = abort;
+    setSending(true);
+
+    let bubble = null;     // assistant message element once streaming starts
+    let copyBtn = null;
+    let fullText = '';
+    let doneMeta = null;
+    let aborted = false;
+    let errorMsg = null;
+
+    function ensureBubble() {
+      if (bubble) return;
+      typing.remove();
+      bubble = document.createElement('div');
+      bubble.className = 'ai-msg assistant';
+      bubble.innerHTML = '';
+      copyBtn = document.createElement('button');
+      copyBtn.className = 'ai-msg-copy';
+      copyBtn.type = 'button';
+      copyBtn.title = '{{ t.ai_copy }}';
+      copyBtn.innerHTML = '<i class="ti ti-copy"></i>';
+      copyBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(fullText);
+          copyBtn.innerHTML = '<i class="ti ti-check"></i>';
+          copyBtn.classList.add('copied');
+          setTimeout(() => { copyBtn.innerHTML = '<i class="ti ti-copy"></i>'; copyBtn.classList.remove('copied'); }, 1400);
+        } catch (e) { /* clipboard may be blocked on http */ }
+      });
+      msgs.appendChild(bubble);
+    }
+
+    function paintBubble() {
+      if (!bubble) return;
+      // Render the accumulated text; re-append copy button each time since
+      // innerHTML replacement wipes children.
+      bubble.innerHTML = renderMd(fullText);
+      bubble.appendChild(copyBtn);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+
     try {
-      const r = await fetch('/api/chat/ask', {
+      const r = await fetch('/api/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
         body: JSON.stringify({ question, history, model: modelSel.value }),
+        signal: abort.signal,
       });
-      const data = await r.json();
-      clearInterval(tick);
-      clearInterval(rotate);
-      const elapsed = performance.now() - started;
-      typing.remove();
-      if (data.ok) {
-        addMsg('assistant', data.reply);
-        // Tiny footer under the reply: model name, wall-clock time and a
-        // local token estimate (rough — ~4 chars/token — but accurate enough
-        // to spot when the prompt is approaching the context window).
-        const meta = document.createElement('div');
-        meta.className = 'ai-meta';
-        const ms = (typeof data.elapsed_ms === 'number') ? data.elapsed_ms : elapsed;
-        let metaHtml = '<span class="ai-meta-model">' + modelSel.value + '</span> · ' + formatElapsed(ms);
-        if (data.tokens) {
-          metaHtml += ' · <span class="ai-meta-tok" title="{{ t.ai_tokens_tooltip }}">'
-            + formatTokens(data.tokens.prompt) + ' → ' + formatTokens(data.tokens.completion)
-            + ' tok</span>';
+      if (!r.ok) {
+        // Non-2xx — try to surface server JSON if any.
+        let body = '';
+        try { body = await r.text(); } catch (_) {}
+        throw new Error(body || ('HTTP ' + r.status));
+      }
+      const reader = r.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buf = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        // SSE events are separated by blank lines.
+        let idx;
+        while ((idx = buf.indexOf('\n\n')) !== -1) {
+          const raw = buf.slice(0, idx);
+          buf = buf.slice(idx + 2);
+          if (!raw.startsWith('data:')) continue;
+          const json = raw.slice(5).trim();
+          if (!json) continue;
+          let ev;
+          try { ev = JSON.parse(json); } catch (_) { continue; }
+          if (ev.event === 'chunk') {
+            ensureBubble();
+            fullText += ev.text;
+            paintBubble();
+          } else if (ev.event === 'done') {
+            doneMeta = ev;
+          } else if (ev.event === 'error') {
+            errorMsg = ev.message || 'Unknown error';
+          }
         }
-        meta.innerHTML = metaHtml;
-        msgs.appendChild(meta);
-        msgs.scrollTop = msgs.scrollHeight;
-        history.push({ role: 'assistant', content: data.reply });
-      } else {
-        addMsg('error', data.error || 'Unknown error');
       }
     } catch (err) {
+      if (err && err.name === 'AbortError') {
+        aborted = true;
+      } else {
+        errorMsg = String(err && err.message || err);
+      }
+    } finally {
       clearInterval(tick);
       clearInterval(rotate);
-      typing.remove();
-      addMsg('error', String(err));
-    } finally {
-      sendBtn.disabled = false; input.disabled = false;
+      if (!bubble) typing.remove();
+      setSending(false);
+      currentAbort = null;
       input.focus();
+    }
+
+    if (errorMsg && !fullText) {
+      addMsg('error', errorMsg);
+      return;
+    }
+    if (aborted && !fullText) {
+      addMsg('error', '{{ t.ai_stopped }}');
+      return;
+    }
+    if (fullText) {
+      history.push({ role: 'assistant', content: fullText });
+      const meta = document.createElement('div');
+      meta.className = 'ai-meta';
+      const elapsedMs = doneMeta && typeof doneMeta.elapsed_ms === 'number'
+        ? doneMeta.elapsed_ms : (performance.now() - started);
+      let metaHtml = '<span class="ai-meta-model">' + modelSel.value + '</span> · ' + formatElapsed(elapsedMs);
+      if (doneMeta && doneMeta.tokens) {
+        metaHtml += ' · <span class="ai-meta-tok" title="{{ t.ai_tokens_tooltip }}">'
+          + formatTokens(doneMeta.tokens.prompt) + ' → ' + formatTokens(doneMeta.tokens.completion)
+          + ' tok</span>';
+      }
+      if (aborted) {
+        metaHtml += ' · <span class="ai-meta-stopped">{{ t.ai_stopped }}</span>';
+      }
+      meta.innerHTML = metaHtml;
+      msgs.appendChild(meta);
+      msgs.scrollTop = msgs.scrollHeight;
+      if (errorMsg) addMsg('error', errorMsg);
     }
   }
 
   form.addEventListener('submit', e => {
     e.preventDefault();
+    // If a request is in flight, treat the submit (Enter / send-button) as
+    // a cancel — the button itself shows the stop icon.
+    if (currentAbort) {
+      currentAbort.abort();
+      return;
+    }
     const q = input.value.trim();
     if (!q) return;
-    input.value = ''; input.style.height = 'auto';
+    input.value = '';
+    resizeInput();
     send(q);
   });
 
   // Suggested questions in the empty state — click sends the question directly.
+  // Also handles rsID chip clicks: scroll to the matching <code>rs…</code>
+  // in the dashboard tables and flash it.
   msgs.addEventListener('click', e => {
+    const chip = e.target.closest('.rsid-chip');
+    if (chip) {
+      const rsid = chip.dataset.rsid;
+      if (rsid) jumpToRsid(rsid);
+      return;
+    }
     const btn = e.target.closest('.ai-suggestion');
     if (!btn) return;
     const q = btn.dataset.q;
     if (q) send(q);
   });
+
+  function jumpToRsid(rsid) {
+    // Pick the BEST match across all tabs, not just the first hit. The
+    // overview tab tends to repeat rsIDs that "belong" to other tabs
+    // (health, drugs), so a naive first-match scrolls to the summary chip
+    // when the user actually wants the detailed row.
+    //
+    // Priority of containing tabs (most specific → most generic):
+    //   health > drugs > wellness > advanced > heritage > overview
+    // anything outside .tp keeps neutral priority.
+    const TAB_PRIORITY = ['tab-health', 'tab-drugs', 'tab-wellness', 'tab-advanced', 'tab-heritage', 'tab-overview'];
+    function rank(el) {
+      const tab = el.closest('.tp');
+      if (!tab) return 100; // not in any tab — treat as low priority
+      const idx = TAB_PRIORITY.indexOf(tab.id);
+      return idx === -1 ? 99 : idx;
+    }
+
+    const codes = document.querySelectorAll('code');
+    let target = null, bestRank = Infinity;
+    for (const c of codes) {
+      if (c.closest('.ai-drawer')) continue;
+      if (c.textContent.trim() !== rsid) continue;
+      const r = rank(c);
+      if (r < bestRank) { target = c; bestRank = r; }
+    }
+    if (!target) {
+      // Either the model hallucinated an rsID not in this user's data, or
+      // it lives in a panel that isn't rendered for this profile (e.g. no
+      // sex match). Log for debugging but stay silent in the UI — a noisy
+      // toast every time the model invents an rsID would be worse than
+      // nothing.
+      console.debug('[chat] rsID not found on page:', rsid);
+      return;
+    }
+    // If the target lives in a hidden tab, switch to that tab first. The
+    // tab nav uses showTab(name, btn) which expects the clicked button as
+    // its second arg — we look it up by the same name.
+    const tabPanel = target.closest('.tp');
+    if (tabPanel && !tabPanel.classList.contains('active')) {
+      const name = tabPanel.id.replace(/^tab-/, '');
+      const btn = document.querySelector('.gt button[onclick*="showTab(\'' + name + '\'"]');
+      if (btn && typeof showTab === 'function') showTab(name, btn);
+    }
+    // Expand any collapsed <details> ancestors so scrollIntoView lands on
+    // a visible element. Phenotype "basis" sections and some wellness
+    // panels ship collapsed.
+    let walker = target.parentElement;
+    while (walker) {
+      if (walker.tagName === 'DETAILS' && !walker.open) walker.open = true;
+      walker = walker.parentElement;
+    }
+    close(); // dismiss drawer so the panel is visible
+    setTimeout(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target.classList.remove('rsid-flash');
+      void target.offsetWidth; // restart the CSS animation
+      target.classList.add('rsid-flash');
+    }, 320); // wait for drawer close + tab switch repaint
+  }
 })();
 </script>
 {% endif %}

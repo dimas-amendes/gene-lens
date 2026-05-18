@@ -10,54 +10,33 @@ Requirements:
 - A model pulled: ollama pull llama3.1:8b (or gemma2:9b, mistral, etc.)
 """
 import json
-import re
 import socket
 import subprocess
 import sys
 from pathlib import Path
 
-# Ollama CLI emits ANSI cursor/erase control sequences when it detects (or
-# guesses) a TTY. They survive subprocess.PIPE and leak into the chat as
-# garbage like "[5D [K" or "[1D [K". This regex matches CSI sequences
-# (ESC + '[' + optional params + a final byte) plus bare ESC[?…h variants.
-_ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07]*\x07")
+from src.medical_specialties import format_for_prompt as _specialty_referrals
 
+# ── Curated model list ─────────────────────────────────────────────────────
+#
+# Single source of truth for "models we know work well with the system prompt
+# above and the ~8k context window the chat ships with". Ordered by
+# recommendation — the first entry is the product default. The settings page
+# uses this list to suggest pulls when none are installed; the dashboard
+# dropdown unions this with `list_models()` so users always see a usable
+# starting point even before they've pulled anything.
+#
+# Why a constant and not "whatever ollama list returns": the empty-state UX
+# was useless when the user had zero models pulled, and the default was
+# repeated as a magic string in four places — easy to drift, hard to grep.
 
-def _strip_ansi(text: str) -> str:
-    """Remove ANSI escape sequences from Ollama output.
-
-    Ollama's CLI also rewrites partial lines with carriage returns, so a
-    bare `\\r` means "discard everything since the previous newline" — we
-    apply that semantics here so duplicated word fragments don't leak into
-    the rendered chat bubble.
-    """
-    if not text:
-        return text
-    cleaned = _ANSI_ESCAPE_RE.sub("", text)
-    if "\r" in cleaned:
-        out_lines = []
-        for line in cleaned.split("\n"):
-            if "\r" in line:
-                line = line.split("\r")[-1]
-            out_lines.append(line)
-        cleaned = "\n".join(out_lines)
-    return cleaned
-
-
-def _clean_env() -> dict:
-    """Environment that tells Ollama (and anything it spawns) we're not a TTY,
-    so it doesn't emit ANSI cursor/spinner control codes.
-
-    Also pins COLUMNS/LINES to a giant value so Ollama's CLI doesn't
-    soft-wrap mid-word and rewrite with `\\r` (which leaked partials like
-    "CYP2C1\\nCYP2C19" into the rendered chat bubble)."""
-    import os
-    env = os.environ.copy()
-    env["TERM"] = "dumb"
-    env["NO_COLOR"] = "1"
-    env["COLUMNS"] = "100000"
-    env["LINES"] = "100000"
-    return env
+RECOMMENDED_MODELS: list[str] = [
+    "llama3.1:8b",   # ~5 GB · best balance of quality and speed on a laptop
+    "gemma2:9b",     # ~6 GB · alternative with slightly different phrasing
+    "gemma2:2b",     # ~1.5 GB · fallback for low-RAM machines
+    "mistral",       # ~4 GB · faster, terser
+]
+DEFAULT_MODEL: str = RECOMMENDED_MODELS[0]
 
 
 def is_ollama_available() -> bool:
@@ -98,7 +77,7 @@ def list_models() -> list[str]:
 
 def interpret_reports(
     report_paths: list[Path],
-    model: str = "llama3.1:8b",
+    model: str = DEFAULT_MODEL,
     language: str = "pt-BR",
 ) -> str:
     """Send reports to local Ollama for human-friendly interpretation.
@@ -212,6 +191,20 @@ IMPORTANT RULES:
 
 SYSTEM_PROMPT_PT = """Você é um educador em genética conversando com alguém que rodou uma análise local de DNA com a ferramenta Gene Lens. O usuário vai fazer perguntas sobre a própria análise.
 
+# EMERGÊNCIA (verificada ANTES de qualquer outra regra)
+
+Se o usuário descrever sintomas agudos — dor no peito, falta de ar súbita,
+sangramento intenso, fraqueza/dormência de um lado do corpo, fala
+arrastada, perda de consciência, dor de cabeça súbita e severa, dor
+abdominal forte, ou reação alérgica com inchaço — IGNORE as variantes e
+responda apenas:
+
+"Isso pode ser uma emergência — procure pronto-socorro AGORA ou ligue
+192 (SAMU). A gente retoma a análise depois que você estiver em segurança."
+
+Não correlacione com SNPs. Não interprete. Análise genética não
+substitui atendimento imediato.
+
 # REGRAS ABSOLUTAS (nunca quebre nenhuma)
 
 1. NÃO diga "você tem [condição]", "você está em risco de", "você deve". Use:
@@ -235,6 +228,14 @@ SYSTEM_PROMPT_PT = """Você é um educador em genética conversando com alguém 
 6. Se o usuário pedir conselho psicológico, jurídico ou reprodutivo concreto,
    redirecione ao profissional adequado (conselheiro genético, médico,
    psicólogo). Você não é nenhum deles.
+7. Para achados HEREDITÁRIOS DE ALTO IMPACTO — BRCA1/2, síndrome de Lynch
+   (MLH1/MSH2/MSH6/PMS2), Factor V Leiden, Prothrombin G20210A, FAP/APC,
+   polipose hereditária, cardiomiopatia hipertrófica sarcomérica, ataxia
+   hereditária — PERGUNTE sobre histórico familiar (parentes de 1º/2º grau
+   com câncer de mama/ovário/cólon/útero antes dos 50, trombose venosa em
+   idade jovem, morte súbita cardíaca, doença neurodegenerativa precoce)
+   ANTES de sugerir o especialista. Histórico familiar muda completamente
+   o aconselhamento.
 
 # FORMATO DE SAÍDA
 
@@ -254,14 +255,38 @@ SYSTEM_PROMPT_PT = """Você é um educador em genética conversando com alguém 
 
 # QUANDO TERMINAR
 
-Se a resposta envolve uma decisão de saúde, termine sugerindo um próximo
-passo concreto: "vale levar isso na próxima consulta", "um exame de
-[X] pode ajudar a esclarecer", "considere conversar com um conselheiro
-genético se houver histórico familiar". Não termine com platitudes ("cada
-caso é único") — termine com uma ação.
+Termine com um próximo passo CONCRETO e, sempre que possível, com a
+ESPECIALIDADE certa em vez de "médico" genérico. Mapa de encaminhamento
+(use o que se encaixar no achado da pergunta):
+
+""" + _specialty_referrals("pt") + """
+
+Quando o achado for HEREDITÁRIO de alto impacto E houver histórico
+familiar, o conselheiro genético entra ANTES do especialista de órgão.
+Sem categoria clara → clínico geral pra encaminhar.
+
+NUNCA termine com platitudes ("cada caso é único", "converse com um
+médico" sem especificar qual). Ofereça uma ação: "vale levar isso na
+próxima consulta", "um painel de [exame] pode ajudar a esclarecer",
+"considere agendar com [especialidade]".
 """
 
 SYSTEM_PROMPT_EN = """You are a genetics educator chatting with someone who ran a local DNA analysis using Gene Lens. The user will ask questions about their own analysis.
+
+# EMERGENCY (checked BEFORE any other rule)
+
+If the user describes acute symptoms — chest pain, sudden shortness of
+breath, heavy bleeding, weakness/numbness on one side of the body, slurred
+speech, loss of consciousness, sudden severe headache, severe abdominal
+pain, or allergic reaction with swelling — STOP discussing variants and
+respond only:
+
+"This may be an emergency — go to an emergency room NOW or call your
+local emergency number (911 in the US, 999 in the UK, 112 in the EU).
+We can pick the analysis back up once you're safe."
+
+Do not correlate with SNPs. Do not interpret. Genetic analysis does not
+substitute for immediate care.
 
 # ABSOLUTE RULES (never break any)
 
@@ -289,6 +314,14 @@ SYSTEM_PROMPT_EN = """You are a genetics educator chatting with someone who ran 
 6. If the user asks for psychological, legal, or reproductive advice,
    redirect to the appropriate professional (genetic counselor, physician,
    psychologist). You are none of these.
+7. For HIGH-IMPACT HEREDITARY findings — BRCA1/2, Lynch syndrome
+   (MLH1/MSH2/MSH6/PMS2), Factor V Leiden, Prothrombin G20210A, FAP/APC,
+   hereditary polyposis, sarcomeric hypertrophic cardiomyopathy, hereditary
+   ataxias — ASK about family history (first/second-degree relatives with
+   breast/ovarian/colon/uterine cancer under 50, venous thrombosis at a
+   young age, sudden cardiac death, early-onset neurodegenerative disease)
+   BEFORE recommending a specialist. Family history completely changes the
+   counseling.
 
 # OUTPUT FORMAT
 
@@ -308,11 +341,20 @@ SYSTEM_PROMPT_EN = """You are a genetics educator chatting with someone who ran 
 
 # HOW TO END
 
-If the answer involves a health decision, end with a concrete next step:
-"worth bringing up at your next appointment", "a [X] lab could help clarify
-this", "consider talking to a genetic counselor if you have a family
-history". Don't close with platitudes ("everyone is different") — close
-with an action.
+End with a CONCRETE next step and, whenever possible, the right SPECIALTY
+rather than a generic "doctor". Referral map (use what fits the finding
+in the question):
+
+""" + _specialty_referrals("en") + """
+
+When the finding is HIGH-IMPACT hereditary AND there's family history,
+the genetic counselor comes BEFORE the organ-specific specialist. No
+clear category → general practitioner to triage onward.
+
+NEVER close with platitudes ("everyone is different", "talk to your
+doctor" without specifying which). Offer an action: "worth bringing up
+at your next appointment", "a [test] panel could help clarify this",
+"consider booking with [specialty]".
 """
 
 
@@ -320,7 +362,7 @@ def chat_about_analysis(
     context: str,
     history: list[dict],
     question: str,
-    model: str = "llama3.1:8b",
+    model: str = DEFAULT_MODEL,
     language: str = "pt",
     timeout: int = 120,
 ) -> tuple[bool, str]:
@@ -412,8 +454,9 @@ def chat_about_analysis_stream(
     context: str,
     history: list[dict],
     question: str,
-    model: str = "llama3.1:8b",
+    model: str = DEFAULT_MODEL,
     language: str = "pt",
+    timeout: int = 300,
 ):
     """Streaming counterpart of chat_about_analysis.
 
@@ -423,63 +466,80 @@ def chat_about_analysis_stream(
     assistant reply (in order, partial tokens allowed). Caller is responsible
     for stitching them together.
 
-    Implementation note: uses subprocess.Popen + line iteration on stdout
-    instead of the Ollama HTTP API, so we don't introduce a new dependency
-    and the NetworkBlocker (when active for analysis) doesn't interfere.
+    Implementation: HTTP loopback (127.0.0.1:11434) with `stream:true`. We
+    moved off the `ollama run` subprocess because its CLI rewrote partial
+    lines with `\\r`, leaking word fragments into the chat bubble; the HTTP
+    path also lets us pin `num_ctx` / `num_predict` deterministically and
+    share message construction with the blocking endpoint.
     """
-    if not is_ollama_available():
-        yield {"event": "error", "message": (
-            "Ollama is not available on this machine. Install it from "
-            "https://ollama.com and pull a model (e.g. `ollama pull llama3.1:8b`)."
-        )}
-        return
+    import urllib.request
+    import urllib.error
 
-    prompt = _build_chat_prompt(context, history, question, language)
+    messages = _build_chat_messages(context, history, question, language)
+    body = json.dumps({
+        "model": model,
+        "messages": messages,
+        "stream": True,
+        "options": {
+            "num_ctx": 8192,
+            "num_predict": 2048,
+            "temperature": 0.3,
+        },
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        "http://127.0.0.1:11434/api/chat",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
 
     try:
-        proc = subprocess.Popen(
-            ["ollama", "run", model],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            bufsize=1,  # line buffered
-            env=_clean_env(),
-        )
-    except FileNotFoundError:
-        yield {"event": "error", "message": "Ollama binary not found. Install it from https://ollama.com."}
+        resp = urllib.request.urlopen(req, timeout=timeout)
+    except urllib.error.HTTPError as e:
+        detail = ""
+        try:
+            detail = e.read().decode("utf-8", errors="replace")
+        except Exception:
+            pass
+        yield {"event": "error", "message": _friendly_ollama_error(detail or str(e), model)}
         return
-
-    # Feed the full prompt then close stdin so Ollama starts generating.
-    try:
-        proc.stdin.write(prompt)
-        proc.stdin.close()
-    except BrokenPipeError:
-        # Process died before we could send the prompt — most likely the model isn't pulled.
-        stderr = (proc.stderr.read() or "") if proc.stderr else ""
-        yield {"event": "error", "message": _friendly_ollama_error(stderr, model)}
+    except urllib.error.URLError as e:
+        reason = str(e.reason) if hasattr(e, "reason") else str(e)
+        yield {"event": "error", "message": _friendly_ollama_error(f"could not connect: {reason}", model)}
+        return
+    except (TimeoutError, socket.timeout):
+        yield {"event": "error", "message": "Ollama took too long to respond. Try a smaller model (e.g. gemma2:2b)."}
         return
 
     produced_any = False
     try:
-        while True:
-            raw = proc.stdout.read(64) if proc.stdout else ""
-            if not raw:
+        for raw in resp:
+            line = raw.decode("utf-8", errors="replace").strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if obj.get("error"):
+                yield {"event": "error", "message": _friendly_ollama_error(str(obj["error"]), model)}
+                return
+            chunk = ((obj.get("message") or {}).get("content") or "")
+            if chunk:
+                produced_any = True
+                yield chunk
+            if obj.get("done"):
                 break
-            chunk = _strip_ansi(raw)
-            if not chunk:
-                continue  # whole chunk was control codes, swallow it
-            produced_any = True
-            yield chunk
+    except (TimeoutError, socket.timeout):
+        yield {"event": "error", "message": "Ollama stopped responding mid-reply."}
+        return
     finally:
-        proc.wait(timeout=2)
+        try:
+            resp.close()
+        except Exception:
+            pass
 
-    if proc.returncode != 0:
-        stderr = (proc.stderr.read() or "") if proc.stderr else ""
-        # If we already streamed text the caller can ignore this — but we still
-        # surface the diagnostic so the UI can append a banner.
-        yield {"event": "error", "message": _friendly_ollama_error(stderr, model)}
-    elif not produced_any:
+    if not produced_any:
         yield {"event": "error", "message": "The model produced an empty response. Try rephrasing your question."}
 
 
@@ -508,35 +568,6 @@ def estimate_prompt_tokens(context: str, history: list, question: str, language:
         "total": estimate_tokens(sys_prompt) + estimate_tokens(context)
                  + estimate_tokens(history_text) + estimate_tokens(question),
     }
-
-
-def _build_chat_prompt(context: str, history: list, question: str, language: str) -> str:
-    """Shared prompt construction used by both blocking and streaming chat."""
-    system_prompt = SYSTEM_PROMPT_PT if language == "pt" else SYSTEM_PROMPT_EN
-
-    MAX_CONTEXT_CHARS = 20000
-    context = context.strip()
-    if len(context) > MAX_CONTEXT_CHARS:
-        context = context[:MAX_CONTEXT_CHARS] + (
-            f"\n\n[... analysis truncated: {len(context) - MAX_CONTEXT_CHARS} "
-            "characters omitted to fit the model's context window. "
-            "Ask about specific findings to get more detail.]"
-        )
-
-    transcript_lines = [
-        system_prompt,
-        "",
-        "---- USER'S ANALYSIS (read-only context) ----",
-        context,
-        "---- END OF ANALYSIS ----",
-        "",
-    ]
-    for turn in history[-8:]:
-        role = "USER" if turn.get("role") == "user" else "ASSISTANT"
-        transcript_lines.append(f"{role}: {turn.get('content', '').strip()}")
-    transcript_lines.append(f"USER: {question.strip()}")
-    transcript_lines.append("ASSISTANT:")
-    return "\n".join(transcript_lines)
 
 
 def _friendly_ollama_error(stderr: str, model: str) -> str:

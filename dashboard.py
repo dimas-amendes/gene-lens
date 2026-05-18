@@ -17,7 +17,7 @@ from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response
 from werkzeug.utils import secure_filename
 
 from config import DATA_DIR, INPUT_DIR, OUTPUT_DIR
@@ -1217,17 +1217,22 @@ def index():
     # in /settings. We detect both signals on each page load so the FAB reflects
     # the latest state without needing a restart.
     try:
-        from src.local_ai import is_ollama_available, list_models
+        from src.local_ai import is_ollama_available, list_models, DEFAULT_MODEL
         from src.preferences import is_ai_chat_enabled
         ollama_installed = is_ollama_available()
         ai_chat_enabled = is_ai_chat_enabled()
         ollama_ready = ollama_installed and ai_chat_enabled
+        # Chat dropdown lists ONLY installed models — recommendations for
+        # models the user hasn't pulled live on /settings, not here. Keeps
+        # the chat honest: every option in the dropdown actually works.
         ollama_models = list_models() if ollama_ready else []
+        default_model = DEFAULT_MODEL if DEFAULT_MODEL in ollama_models else (ollama_models[0] if ollama_models else "")
     except Exception:
         ollama_installed = False
         ai_chat_enabled = False
         ollama_ready = False
         ollama_models = []
+        default_model = ""
 
     return render_template(
         "dashboard.html",
@@ -1251,6 +1256,7 @@ def index():
         lang=_current_lang,
         ollama_ready=ollama_ready,
         ollama_models=ollama_models,
+        default_model=default_model,
         ollama_installed=ollama_installed,
         ai_chat_enabled=ai_chat_enabled,
         needs_translator=_block_pt_without_translator(),
@@ -1654,10 +1660,26 @@ def _build_chat_context(active: dict, lang: Lang) -> str:
             lines.append(f"- {name}: {findings_count} findings")
 
     ancestry = active.get("ancestry") or {}
-    if ancestry.get("region_scores"):
-        top = sorted(ancestry["region_scores"].items(), key=lambda kv: kv[1], reverse=True)[:5]
+    # The analyzer returns `percentages` (rounded floats summing to ~100),
+    # NOT `region_scores` — the old key here was a silent bug that left the
+    # ancestry section out of every chat context. Symptom: model would
+    # refuse or hallucinate on "e a minha ancestralidade?" with no data.
+    pcts = ancestry.get("percentages") or {}
+    if pcts:
+        # Send ALL regions, sorted desc — costs <50 tokens and prevents the
+        # model from claiming a single-region ancestry when minor components
+        # exist. Skipping zeros to stay terse.
+        ranked = sorted(pcts.items(), key=lambda kv: kv[1], reverse=True)
         lines.append("")
-        lines.append("Top ancestry regions: " + ", ".join(f"{r} ({s:.0%})" for r, s in top))
+        lines.append(
+            f"Ancestry estimate ({ancestry.get('markers_used', '?')} of "
+            f"{ancestry.get('markers_total', '?')} AIM markers used, "
+            f"confidence: {ancestry.get('confidence', '?')}):"
+        )
+        for region, pct in ranked:
+            if pct <= 0:
+                continue
+            lines.append(f"- {region}: {pct}%")
 
     family = active.get("family") or {}
     if family.get("phenotype"):
@@ -1665,6 +1687,82 @@ def _build_chat_context(active: dict, lang: Lang) -> str:
         lines.append("Phenotype: " + ", ".join(f"{k}={v}" for k, v in family["phenotype"].items() if v))
 
     return "\n".join(lines) if lines else "Analysis loaded but no notable findings."
+
+
+@app.route("/api/chat/stream", methods=["POST"])
+def chat_stream():
+    """Stream the assistant reply token-by-token via Server-Sent Events.
+
+    Reply format is line-delimited SSE events:
+      data: {"event":"chunk","text":"..."}\\n\\n
+      data: {"event":"done","elapsed_ms":1234,"tokens":{...}}\\n\\n
+      data: {"event":"error","message":"..."}\\n\\n
+
+    The frontend consumes this via fetch + ReadableStream so it can also
+    AbortController-cancel to implement the stop button. CSRF is enforced by
+    the global before_request hook.
+    """
+    payload = request.get_json(silent=True) or {}
+    question = (payload.get("question") or "").strip()
+    if not question:
+        return {"ok": False, "error": "empty question"}, 400
+
+    from src.preferences import is_ai_chat_enabled
+    if not is_ai_chat_enabled():
+        return {"ok": False, "error": "ai_chat_disabled"}, 403
+
+    from src.local_ai import chat_about_analysis_stream, estimate_tokens, estimate_prompt_tokens, DEFAULT_MODEL
+    history = payload.get("history") or []
+    model = payload.get("model") or DEFAULT_MODEL
+    lang = _get_lang()
+    active = _jobs.get("active_result")
+    context = _build_chat_context(active, lang)
+
+    import time as _time
+
+    def _events():
+        started = _time.monotonic()
+        full_reply_parts: list[str] = []
+        error_msg = None
+        try:
+            for item in chat_about_analysis_stream(
+                context=context,
+                history=history,
+                question=question,
+                model=model,
+                language=lang,
+            ):
+                if isinstance(item, dict) and item.get("event") == "error":
+                    error_msg = item.get("message") or "Unknown error"
+                    yield "data: " + json.dumps({"event": "error", "message": error_msg}) + "\n\n"
+                    return
+                # Text chunk
+                full_reply_parts.append(item)
+                yield "data: " + json.dumps({"event": "chunk", "text": item}) + "\n\n"
+        except GeneratorExit:
+            # Client disconnected (stop button / tab closed). urlopen
+            # response is closed by the inner generator's finally; nothing
+            # else to do.
+            return
+
+        elapsed_ms = int((_time.monotonic() - started) * 1000)
+        full_reply = "".join(full_reply_parts)
+        prompt_tokens = estimate_prompt_tokens(context, history, question, language=lang)
+        completion_tokens = estimate_tokens(full_reply)
+        yield "data: " + json.dumps({
+            "event": "done",
+            "elapsed_ms": elapsed_ms,
+            "tokens": {
+                "prompt": prompt_tokens["total"],
+                "completion": completion_tokens,
+                "total": prompt_tokens["total"] + completion_tokens,
+            },
+        }) + "\n\n"
+
+    return Response(_events(), mimetype="text/event-stream", headers={
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",  # disable proxy buffering if anything sits in front
+    })
 
 
 @app.route("/api/chat/ask", methods=["POST"])
@@ -1680,14 +1778,13 @@ def chat_ask():
     if not is_ai_chat_enabled():
         return {"ok": False, "error": "ai_chat_disabled"}, 403
 
+    from src.local_ai import chat_about_analysis, estimate_tokens, estimate_prompt_tokens, DEFAULT_MODEL
     history = payload.get("history") or []
-    model = payload.get("model") or "llama3.1:8b"
+    model = payload.get("model") or DEFAULT_MODEL
     lang = _get_lang()
 
     active = _jobs.get("active_result")
     context = _build_chat_context(active, lang)
-
-    from src.local_ai import chat_about_analysis, estimate_tokens, estimate_prompt_tokens
     import time as _time
     started = _time.monotonic()
     ok, reply = chat_about_analysis(

@@ -7,21 +7,19 @@
 [![CI](https://github.com/dimas-amendes/gene-lens/actions/workflows/ci.yml/badge.svg)](https://github.com/dimas-amendes/gene-lens/actions/workflows/ci.yml)
 [![Local First](https://img.shields.io/badge/Privacidade-Local_First-brightgreen.svg)](#arquitetura-de-privacidade)
 
-**Dashboard de exploração genética local-first.** Projetado para análise offline de dados brutos de DNA de serviços de genotipagem (23andMe, AncestryDNA, MyHeritage, Genera/MeuDNA) contra bancos de dados públicos de referência (ClinVar, PharmGKB) — bloqueia o acesso padrão de rede do Python durante a análise e processa tudo na sua máquina.
+**Dashboard de exploração genética local-first.** Projetado para análise offline de dados brutos de DNA de serviços de genotipagem (23andMe, AncestryDNA, MyHeritage, Genera/MeuDNA) contra bancos de dados públicos de referência (ClinVar, PharmGKB), bloqueia o acesso padrão de rede do Python durante a análise e processa tudo na sua máquina.
 
 Construído com Flask, Apache ECharts, Halfmoon CSS e fonte Geist. IA local opcional via Ollama e tradução neural via Argos Translate.
 
 ---
 
-## Por que criei este projeto
+## Por que existe
 
-Tem uma longa linha de doenças hereditárias na minha família — condições que apareceram em várias gerações, com componente genético documentado. Crescer com isso significa carregar uma pergunta silenciosa: quanto da minha saúde já está escrita, e quanto é coincidência?
+Testes genéticos de consumo te entregam algo polido mas superficial. Cor dos olhos, tolerância à cafeína, probabilidade de gostar de coentro. O arquivo bruto por trás contém muito mais, e bancos públicos de referência como ClinVar e PharmGKB mapeiam essas variantes contra literatura clínica de verdade. A maioria das ferramentas que faz essa ponte manda seu DNA pra nuvem de outra pessoa pra fazer isso.
 
-Quando esbarrei num [post sobre explorar dados brutos do 23andMe contra bancos públicos](https://www.youtube.com/@nicksaraev), o assunto clicou. Eu tinha o arquivo. Os bancos de referência (ClinVar, PharmGKB) eram gratuitos. Só faltava uma ferramenta que não mandasse meu DNA pra algum serviço em nuvem pra ser processado.
+O Gene Lens é construído pra que você possa fazer essa exploração sem que seu DNA saia da sua máquina. Acesso à rede é bloqueado durante a análise. Sem telemetria, sem CDN, sem chamada externa. Achados são enquadrados como perguntas pra levar pro seu médico, nunca como diagnósticos, porque chips de consumidor têm ~40% de falso positivo pra variantes clinicamente significativas.
 
-Então construí uma. O que me surpreendeu não foi a parte técnica — foi a sobreposição. Várias variantes que a ferramenta sinalizou bateram com condições que já tinham sido confirmadas pelos meus médicos anos antes, às vezes pra coisas que eu nem tinha pensado em mencionar. Outros achados abriram perguntas que levei pra minha próxima consulta. O ponto nunca foi me auto-diagnosticar — foi parar de ser passageiro em conversas sobre o meu próprio corpo.
-
-Se você tem um histórico familiar parecido, ou só é curioso, essa ferramenta existe pra isso. Roda inteira na sua máquina, seu DNA não sai dela, e os achados são enquadrados como pontos de partida pra conversas com um profissional — não respostas.
+Se tem condições hereditárias na sua família, ou você é só curioso sobre o que seu arquivo bruto realmente diz, essa ferramenta existe pra isso.
 
 ---
 
@@ -31,7 +29,7 @@ Se você tem um histórico familiar parecido, ou só é curioso, essa ferramenta
 |---|---|
 | Uma ferramenta educacional de exploração de dados brutos de DNA | Uma ferramenta de diagnóstico ou dispositivo médico (SaMD) |
 | Uma forma de gerar tópicos de discussão para seu médico | Um substituto para testes genéticos clínicos |
-| Um ponto de partida para curiosidade genômica pessoal | Um teste confirmatório — resultado negativo não exclui risco |
+| Um ponto de partida para curiosidade genômica pessoal | Um teste confirmatório, resultado negativo não exclui risco |
 | Software open-source com disclaimers éticos rigorosos | Um produto que garante precisão clínica |
 
 ---
@@ -49,18 +47,18 @@ Se você tem um histórico familiar parecido, ou só é curioso, essa ferramenta
 
 ## Funcionalidades
 
-- **Privacidade local-first** — O acesso padrão de rede do Python é bloqueado (`socket` substituído) durante a análise. Projetado para que dados de DNA não saiam da sua máquina. Arquivos enviados são sobrescritos com dados aleatórios após o processamento.
-- **Dashboard interativo** — UI dark com visualizações ECharts (gráficos, mapas de ancestralidade, tabelas de variantes), servido localmente em `127.0.0.1`. Zero dependências de CDN.
-- **Farmacogenômica** — Interações droga-gene do PharmGKB/CPIC com níveis de evidência 1A/1B/2A/2B e anotação baseada em referência por gene.
-- **Exploração de variantes de doença** — Classificação de variantes do ClinVar (patogênica, provavelmente patogênica, fator de risco, protetora) com nível de confiança (estrelas).
-- **Roteamento clínico por sexo** — Renderização inteligente de condições hereditárias (HBOC/BRCA, Lynch, Próstata, Trombofilia, Hemocromatose, HF, Alfa-1 AT) condicionada ao sexo biológico, seguindo a abordagem de relatórios de laboratórios de grau clínico. Foca em condições monogênicas de alta ação em vez de traços poligênicos ruidosos.
-- **12 painéis de bem-estar** — Nutrição, fitness, pele, envelhecimento, percepção sensorial, sono/cronobiologia, longevidade, saúde mental, sensibilidades alimentares, tireoide, saúde ocular e saúde óssea.
-- **Ancestralidade** — Estimativa continental a partir de 22 marcadores informativos (AIMs) com mapa-múndi interativo.
-- **Fenótipo** — Predição de cor dos olhos, cabelo, textura, sardas, alopecia androgênica (modelo HIrisPlex + loci GWAS). Cada predição mostra sua base genética (SNPs contribuintes).
-- **Exploração de planejamento familiar** — Exploração de status de portador, fatores de risco gestacional (MTHFR, F5, F2), condições X-linked, transmissão de variantes dominantes.
-- **Bilíngue** — Interface completa em português (PT-BR) e inglês com tradução médica neural (Argos Translate).
-- **Visão humanizada + técnica** — Resumos em linguagem simples para autoexploração ao lado de apêndice técnico detalhado para revisão médica.
-- **IA local** — Interpretação opcional de relatórios via Ollama (Llama, Gemma, etc.).
+- **Privacidade local-first**. O acesso padrão de rede do Python é bloqueado (`socket` substituído) durante a análise. Projetado para que dados de DNA não saiam da sua máquina. Arquivos enviados são sobrescritos com dados aleatórios após o processamento.
+- **Dashboard interativo**. UI dark com visualizações ECharts (gráficos, mapas de ancestralidade, tabelas de variantes), servido localmente em `127.0.0.1`. Zero dependências de CDN.
+- **Farmacogenômica**. Interações droga-gene do PharmGKB/CPIC com níveis de evidência 1A/1B/2A/2B e anotação baseada em referência por gene.
+- **Exploração de variantes de doença**. Classificação de variantes do ClinVar (patogênica, provavelmente patogênica, fator de risco, protetora) com nível de confiança (estrelas).
+- **Roteamento clínico por sexo**. Renderização inteligente de condições hereditárias (HBOC/BRCA, Lynch, Próstata, Trombofilia, Hemocromatose, HF, Alfa-1 AT) condicionada ao sexo biológico, seguindo a abordagem de relatórios de laboratórios de grau clínico. Foca em condições monogênicas de alta ação em vez de traços poligênicos ruidosos.
+- **12 painéis de bem-estar**. Nutrição, fitness, pele, envelhecimento, percepção sensorial, sono/cronobiologia, longevidade, saúde mental, sensibilidades alimentares, tireoide, saúde ocular e saúde óssea.
+- **Ancestralidade**. Estimativa continental a partir de 22 marcadores informativos (AIMs) com mapa-múndi interativo.
+- **Fenótipo**. Predição de cor dos olhos, cabelo, textura, sardas, alopecia androgênica (modelo HIrisPlex + loci GWAS). Cada predição mostra sua base genética (SNPs contribuintes).
+- **Exploração de planejamento familiar**. Exploração de status de portador, fatores de risco gestacional (MTHFR, F5, F2), condições X-linked, transmissão de variantes dominantes.
+- **Bilíngue**. Interface completa em português (PT-BR) e inglês com tradução médica neural (Argos Translate).
+- **Visão humanizada + técnica**. Resumos em linguagem simples para autoexploração ao lado de apêndice técnico detalhado para revisão médica.
+- **IA local**. Interpretação opcional de relatórios via Ollama (Llama, Gemma, etc.).
 
 ---
 
@@ -68,7 +66,7 @@ Se você tem um histórico familiar parecido, ou só é curioso, essa ferramenta
 
 ![Tela de upload com campos de perfil e formatos suportados](assets/screenshots/01-landing.png)
 
-*Envie seu arquivo de DNA. Todos os campos de perfil são opcionais — o sexo pode ser inferido do cromossomo Y se preferir não especificar.*
+*Envie seu arquivo de DNA. Todos os campos de perfil são opcionais, o sexo pode ser inferido do cromossomo Y se preferir não especificar.*
 
 ![Visão geral do dashboard com KPIs e gráficos da análise](assets/screenshots/02-dashboard.png)
 
@@ -76,7 +74,7 @@ Se você tem um histórico familiar parecido, ou só é curioso, essa ferramenta
 
 ![Chat de IA local respondendo pergunta sobre metabolismo de medicamentos](assets/screenshots/03-ai-chat.png)
 
-*IA local (Ollama) discutindo o metabolismo de medicamentos do usuário. Respostas são ancoradas na análise, nunca prescritivas, e sempre apontam de volta pro médico. O rodapé mostra modelo, tempo de resposta e contagem de tokens — prova de que nada sai da máquina.*
+*IA local (Ollama) discutindo o metabolismo de medicamentos do usuário. Respostas são ancoradas na análise, nunca prescritivas, e sempre apontam de volta pro médico. O rodapé mostra modelo, tempo de resposta e contagem de tokens, prova de que nada sai da máquina.*
 
 ![Relatório print-friendly com botão Save as PDF](assets/screenshots/04-report.png)
 
@@ -116,8 +114,8 @@ python main.py download
 ```
 
 Isso baixa:
-- **ClinVar** (~120 MB comprimido) — gratuito, sem registro ([NCBI FTP](https://ftp.ncbi.nlm.nih.gov/pub/clinvar/))
-- **PharmGKB** — requer conta gratuita em [pharmgkb.org](https://www.pharmgkb.org/downloads). Baixe "Clinical Annotations" ZIP e extraia para `data/`.
+- **ClinVar** (~120 MB comprimido), gratuito, sem registro ([NCBI FTP](https://ftp.ncbi.nlm.nih.gov/pub/clinvar/))
+- **PharmGKB**: requer conta gratuita em [pharmgkb.org](https://www.pharmgkb.org/downloads). Baixe "Clinical Annotations" ZIP e extraia para `data/`.
 
 > **Esta é a única etapa que requer internet.** Após o download dos bancos, toda análise é projetada para execução local-first, offline.
 
@@ -176,7 +174,7 @@ O sistema usa um modelo de evidência em múltiplas camadas para separar sinal d
 ## Limitações Conhecidas
 
 1. **Genotipagem de consumo não é sequenciamento clínico.** Chips de microarray testam ~600K-2M SNPs pré-selecionados; o sequenciamento clínico de exoma/genoma cobre 20K+ genes de forma abrangente.
-2. **Cobertura incompleta de variantes raras.** A maioria das mutações patogênicas em genes como BRCA1/2 são privadas de famílias — chips podem perder completamente.
+2. **Cobertura incompleta de variantes raras.** A maioria das mutações patogênicas em genes como BRCA1/2 são privadas de famílias, chips podem perder completamente.
 3. **Doenças comuns são poligênicas e multifatoriais.** Esta ferramenta não calcula Polygenic Risk Scores (PRS). Condições como diabetes, hipertensão e depressão envolvem centenas de genes mais ambiente.
 4. **Ancestralidade e fenótipo são estimativas.** Baseados em marcadores limitados (~22 AIMs, ~16 SNPs de pigmentação) e modelos de frequência populacional. A ancestralidade real é muito mais complexa.
 5. **Ausência de variante não exclui risco.** O arquivo pode simplesmente não conter o SNP relevante. Um relatório "limpo" não significa risco genético zero.
@@ -224,7 +222,7 @@ gene-lens/
 
 ## Como baixar seu arquivo de DNA bruto
 
-O Gene Lens precisa do arquivo bruto de genotipagem que o serviço gerou — não do relatório bonitinho que aparece no app deles. Todo serviço grande deixa você baixar isso de graça, mas a opção fica escondida nas configurações da conta.
+O Gene Lens precisa do arquivo bruto de genotipagem que o serviço gerou, não do relatório bonitinho que aparece no app deles. Todo serviço grande deixa você baixar isso de graça, mas a opção fica escondida nas configurações da conta.
 
 | Serviço | Onde encontrar | Tempo de espera |
 |---|---|:---:|
@@ -235,8 +233,8 @@ O Gene Lens precisa do arquivo bruto de genotipagem que o serviço gerou — nã
 
 **Importante:**
 
-- O arquivo geralmente vem como `.zip`. **Descompacta antes de enviar** — o Gene Lens lê o `.txt` ou `.csv` de dentro, não o arquivo compactado. (Arquivos `.gz` são lidos de forma transparente, sem precisar descompactar.)
-- Esse arquivo é o seu **DNA pessoal**. Não manda por email, não cola em ferramentas de chat, não sobe em outros serviços. O Gene Lens nunca envia ele pra lugar nenhum — mantém assim.
+- O arquivo geralmente vem como `.zip`. **Descompacta antes de enviar**: o Gene Lens lê o `.txt` ou `.csv` de dentro, não o arquivo compactado. (Arquivos `.gz` são lidos de forma transparente, sem precisar descompactar.)
+- Esse arquivo é o seu **DNA pessoal**. Não manda por email, não cola em ferramentas de chat, não sobe em outros serviços. O Gene Lens nunca envia ele pra lugar nenhum, mantém assim.
 - Alguns serviços pedem confirmação por email ou 2FA antes de liberar o download. É o serviço te protegendo; segue o fluxo deles.
 - Se o teu serviço não estiver na lista, o formato **Genérico** funciona pra qualquer TSV/CSV que tenha colunas RSID, Cromossomo, Posição e Genótipo.
 
@@ -268,16 +266,16 @@ Projetado para análise local-first, offline após o download inicial dos bancos
 
 **Não protege contra:**
 - Malware já presente na máquina
-- Pastas sincronizadas em nuvem (Dropbox, OneDrive, iCloud) — garanta que o diretório de trabalho não está sincronizado
+- Pastas sincronizadas em nuvem (Dropbox, OneDrive, iCloud), garanta que o diretório de trabalho não está sincronizado
 - Backups do sistema que podem capturar arquivos genéticos
 - Subprocessos externos que contornam a camada de socket do Python
 
 **Medidas técnicas:**
-1. **Bloqueio de Rede** — `socket.socket` e `socket.getaddrinfo` são substituídos durante a análise. Chamadas de rede padrão do Python geram `ConnectionError`.
-2. **Exclusão Segura** — Arquivos DNA enviados são sobrescritos com dados aleatórios antes da exclusão.
-3. **Sem Metadados** — Relatórios não contêm informações do sistema (hostname, usuário, caminhos).
-4. **Apenas Local** — Flask escuta exclusivamente em `127.0.0.1`. Não acessível de outras máquinas.
-5. **Sem Telemetria** — Zero analytics, rastreamento ou requisições externas.
+1. **Bloqueio de Rede**. `socket.socket` e `socket.getaddrinfo` são substituídos durante a análise. Chamadas de rede padrão do Python geram `ConnectionError`.
+2. **Exclusão Segura**. Arquivos DNA enviados são sobrescritos com dados aleatórios antes da exclusão.
+3. **Sem Metadados**. Relatórios não contêm informações do sistema (hostname, usuário, caminhos).
+4. **Apenas Local**. Flask escuta exclusivamente em `127.0.0.1`. Não acessível de outras máquinas.
+5. **Sem Telemetria**. Zero analytics, rastreamento ou requisições externas.
 
 Verifique sua configuração: `python main.py privacy-check`
 
@@ -285,10 +283,10 @@ Verifique sua configuração: `python main.py privacy-check`
 
 ## Atribuição de Dados
 
-- **ClinVar** — NCBI, National Library of Medicine. Landrum MJ, et al. *Nucleic Acids Research*, 2020. [ncbi.nlm.nih.gov/clinvar](https://www.ncbi.nlm.nih.gov/clinvar/)
-- **PharmGKB** — Stanford University, NIH/NIGMS. Whirl-Carrillo M, et al. *Clinical Pharmacology & Therapeutics*, 2021. [pharmgkb.org](https://www.pharmgkb.org/)
-- **CPIC** — Clinical Pharmacogenetics Implementation Consortium. Relling MV, Klein TE. *Clinical Pharmacology & Therapeutics*, 2011. [cpicpgx.org](https://cpicpgx.org/)
-- **HIrisPlex** — Walsh S, et al. *Forensic Science International: Genetics*, 2013.
+- **ClinVar**. NCBI, National Library of Medicine. Landrum MJ, et al. *Nucleic Acids Research*, 2020. [ncbi.nlm.nih.gov/clinvar](https://www.ncbi.nlm.nih.gov/clinvar/)
+- **PharmGKB**. Stanford University, NIH/NIGMS. Whirl-Carrillo M, et al. *Clinical Pharmacology & Therapeutics*, 2021. [pharmgkb.org](https://www.pharmgkb.org/)
+- **CPIC**. Clinical Pharmacogenetics Implementation Consortium. Relling MV, Klein TE. *Clinical Pharmacology & Therapeutics*, 2011. [cpicpgx.org](https://cpicpgx.org/)
+- **HIrisPlex**. Walsh S, et al. *Forensic Science International: Genetics*, 2013.
 
 ---
 
@@ -296,7 +294,7 @@ Verifique sua configuração: `python main.py privacy-check`
 
 Licenciado sob a **MIT License**.
 
-Você pode usar, copiar, modificar, mesclar, publicar, distribuir, sublicenciar e vender cópias deste software — inclusive para fins comerciais — desde que o aviso de copyright e a permissão sejam mantidos.
+Você pode usar, copiar, modificar, mesclar, publicar, distribuir, sublicenciar e vender cópias deste software, inclusive para fins comerciais, desde que o aviso de copyright e a permissão sejam mantidos.
 
 Veja [LICENSE](LICENSE) para o texto completo.
 

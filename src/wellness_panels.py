@@ -905,6 +905,30 @@ AUTOIMMUNE_SNPS = {
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# BODY CHEMISTRY — Composição de suor, cera de ouvido, odor corporal
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Importante: este painel cobre QUÍMICA do suor (composição apócrina + odor
+# axilar + tipo de cera de ouvido), não VOLUME de transpiração. Hiperidrose
+# primária (sudorese excessiva) não tem marcador SNP comum validado em
+# chip de consumidor — é poligênica e mal mapeada em GWAS. Se o usuário
+# perguntar sobre hiperidrose no chat de IA, o system prompt instrui a
+# explicar essa limitação em vez de inventar uma resposta.
+
+BODY_CHEMISTRY_SNPS = {
+    "rs17822931": {
+        "gene": "ABCC11", "trait": "Cera de Ouvido e Odor Corporal",
+        "variants": {
+            "CC": {"score": "normal", "text": "Alelos ABCC11 funcionais — cera de ouvido umida e producao tipica de suor apocrino axilar. Perfil mais comum em populacoes europeias e africanas. Mede composicao da transpiracao, nao volume."},
+            "CT": {"score": "normal", "text": "Heterozigoto — cera de ouvido tipicamente umida, producao de suor apocrino normal a levemente reduzida."},
+            "TC": {"score": "normal", "text": "Heterozigoto — cera de ouvido tipicamente umida, producao de suor apocrino normal a levemente reduzida."},
+            "TT": {"score": "favoravel", "text": "Ambos os alelos nao-funcionais — cera de ouvido seca e producao significativamente reduzida de suor apocrino axilar (menos odor corporal caracteristico). Comum em populacoes do leste asiatico (~80-95%), rara em europeias (~3%). Nao prediz volume de transpiracao — apenas composicao."},
+        },
+    },
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # ANALYZE PANELS
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -923,6 +947,7 @@ ALL_PANELS = {
     "bones": {"name": "Bones", "name_full": "Saude Ossea", "snps": BONES_SNPS},
     "allergy": {"name": "Allergy", "name_full": "Predisposicao Atopica e Alergias", "snps": ALLERGY_SNPS},
     "autoimmune": {"name": "Autoimmune", "name_full": "Predisposicao Autoimune", "snps": AUTOIMMUNE_SNPS},
+    "body_chemistry": {"name": "Body Chemistry", "name_full": "Quimica Corporal (suor, cera de ouvido, odor)", "snps": BODY_CHEMISTRY_SNPS},
 }
 
 SCORE_COLORS = {

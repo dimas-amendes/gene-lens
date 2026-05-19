@@ -22,6 +22,7 @@ PANEL_NAMES_EN = {
     "bones": "Bone Health",
     "allergy": "Atopic Predisposition and Allergies",
     "autoimmune": "Autoimmune Predisposition",
+    "body_chemistry": "Body Chemistry (sweat, earwax, odor)",
 }
 
 
@@ -753,6 +754,19 @@ WELLNESS_EN = {
             "CT": "IL-7R variant — slightly increased multiple sclerosis risk. MS is multifactorial (genetics + Epstein-Barr virus + vitamin D). Maintaining adequate vitamin D levels may be protective.",
             "TC": "IL-7R carrier. Slight MS risk.",
             "TT": "IL-7R homozygous — increased MS risk. If neurological symptoms (tingling, weakness, double vision, extreme fatigue): consult a neurologist. MS is treatable if diagnosed early.",
+        },
+    },
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # BODY CHEMISTRY — Sweat composition, earwax, axillary odor
+    # ═══════════════════════════════════════════════════════════════════════════
+    "rs17822931": {
+        "trait_en": "Earwax Type and Body Odor",
+        "variants": {
+            "CC": "Functional ABCC11 alleles — wet earwax and typical apocrine sweat production. Most common profile in European and African populations. Measures sweat composition, not volume.",
+            "CT": "Heterozygous — typically wet earwax, normal-to-slightly-reduced apocrine sweat production.",
+            "TC": "Heterozygous — typically wet earwax, normal-to-slightly-reduced apocrine sweat production.",
+            "TT": "Both alleles non-functional — dry earwax and significantly reduced axillary apocrine sweat (less characteristic body odor). Common in East Asian populations (~80-95%), rare in European (~3%). Does not predict sweating volume, only composition.",
         },
     },
 }

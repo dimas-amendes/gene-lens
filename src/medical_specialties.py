@@ -509,6 +509,22 @@ SPECIALTY_REFERRALS: list[dict] = [
             "en": "Genotype does NOT determine performance — training and environment matter more. Useful for smart periodization, not sport selection.",
         },
     },
+    {
+        "key": "wellness_body_chemistry",
+        "genes": ["ABCC11"],
+        "trigger": {
+            "pt": "Painel Body Chemistry — composição de suor apócrino, tipo de cera de ouvido, odor corporal axilar (não prediz volume de transpiração)",
+            "en": "Body Chemistry panel — apocrine sweat composition, earwax type, axillary body odor (does not predict sweating volume)",
+        },
+        "specialty": {
+            "pt": "dermatologista para queixas de odor axilar persistente; cirurgião com experiência em hiperidrose se queixa for VOLUME de suor (ABCC11 não cobre isso)",
+            "en": "dermatologist for persistent axillary odor concerns; surgeon experienced with hyperhidrosis if the complaint is sweating VOLUME (ABCC11 does not cover this)",
+        },
+        "notes": {
+            "pt": "ABCC11 mede COMPOSIÇÃO química do suor apócrino, não volume. Hiperidrose primária focal é poligênica/multifatorial e NÃO tem marcador SNP comum confiável em chip de consumidor — não tente correlacionar.",
+            "en": "ABCC11 measures sweat composition, not volume. Primary focal hyperhidrosis is polygenic/multifactorial and has NO validated common SNP marker on consumer chips — do not try to correlate.",
+        },
+    },
 ]
 
 

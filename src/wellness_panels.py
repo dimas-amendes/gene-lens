@@ -901,6 +901,33 @@ AUTOIMMUNE_SNPS = {
             "TT": {"score": "alerta", "text": "IL-7R homozigoto — risco aumentado de EM. Se sintomas neurologicos (formigamento, fraqueza, visao dupla, fadiga extrema): consultar neurologista. EM e tratavel se diagnosticada precocemente."},
         },
     },
+    "rs6457617": {
+        "gene": "HLA-DRB1", "trait": "Artrite Reumatoide (Shared Epitope)",
+        "variants": {
+            "TT": {"score": "normal", "text": "Sem alelo HLA-DRB1 shared epitope neste tag. Risco basal de artrite reumatoide soropositiva."},
+            "TC": {"score": "atencao", "text": "Portador do tag HLA-DRB1 (frequentemente DRB1*04) — risco aumentado de artrite reumatoide soropositiva. OR ~2-3x. Se rigidez matinal prolongada nas mãos/pulsos, dor articular simetrica: investigar com reumatologista (FR, anti-CCP)."},
+            "CT": {"score": "atencao", "text": "Portador HLA-DRB1 shared epitope. Predisposicao a AR soropositiva."},
+            "CC": {"score": "alerta", "text": "Homozigoto HLA-DRB1 shared epitope — risco significativamente aumentado de artrite reumatoide soropositiva (OR ~5x para algumas combinacoes). Tabagismo multiplica drasticamente esse risco. Atencao a sintomas articulares precoces — diagnostico precoce muda completamente o prognostico."},
+        },
+    },
+    "rs34536443": {
+        "gene": "TYK2", "trait": "Protecao Autoimune Geral (P1104A)",
+        "variants": {
+            "CC": {"score": "normal", "text": "TYK2 funcional. Sem efeito protetor adicional contra doencas autoimunes."},
+            "CG": {"score": "favoravel", "text": "Portador da variante TYK2 P1104A (loss-of-function) — efeito PROTETOR contra multiplas autoimunes: lupus, artrite reumatoide, psoriase, doenca de Crohn, espondilite (OR ~0.5-0.7). Imunidade levemente menos reativa, sem comprometer defesa significativamente. Frequencia ~3-10% em europeus."},
+            "GC": {"score": "favoravel", "text": "Portador TYK2 P1104A — protecao parcial contra autoimunes."},
+            "GG": {"score": "favoravel", "text": "Homozigoto TYK2 P1104A — protecao mais forte contra autoimunes (rara, <1%). Em contrapartida, pode haver suscetibilidade levemente aumentada a infeccoes por micobacterias e virus específicos."},
+        },
+    },
+    "rs231775": {
+        "gene": "CTLA4", "trait": "Autoimunidade Tireoidiana e Endocrina (+49 A/G)",
+        "variants": {
+            "AA": {"score": "normal", "text": "CTLA4 padrao. Risco basal de doenca de Graves, Hashimoto, diabetes tipo 1, vitiligo."},
+            "AG": {"score": "atencao", "text": "CTLA4 +49 G variante — risco ~1.2-1.5x para autoimunes endocrinas: doenca de Graves (hipertireoidismo), tireoidite de Hashimoto, diabetes tipo 1, vitiligo. Vale monitorar TSH/T4 periodicamente, especialmente se sintomas de tireoide."},
+            "GA": {"score": "atencao", "text": "Portador CTLA4 +49 G. Risco aumentado de autoimunidade tireoidiana."},
+            "GG": {"score": "alerta", "text": "Homozigoto CTLA4 +49 G — risco mais consistente para autoimunes endocrinas. Considerar avaliacao anual de TSH, anti-TPO, anti-tireoglobulina. Glicemia tambem se houver historico familiar de DM1."},
+        },
+    },
 }
 
 

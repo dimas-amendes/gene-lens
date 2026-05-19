@@ -756,6 +756,33 @@ WELLNESS_EN = {
             "TT": "IL-7R homozygous — increased MS risk. If neurological symptoms (tingling, weakness, double vision, extreme fatigue): consult a neurologist. MS is treatable if diagnosed early.",
         },
     },
+    "rs6457617": {
+        "trait_en": "Rheumatoid Arthritis (Shared Epitope)",
+        "variants": {
+            "TT": "No HLA-DRB1 shared epitope tag here. Baseline seropositive rheumatoid arthritis risk.",
+            "TC": "Carrier of HLA-DRB1 tag (often DRB1*04) — increased seropositive RA risk (OR ~2-3x). If prolonged morning stiffness in hands/wrists or symmetric joint pain: investigate with a rheumatologist (RF, anti-CCP).",
+            "CT": "HLA-DRB1 shared epitope carrier. Predisposition to seropositive RA.",
+            "CC": "Homozygous HLA-DRB1 shared epitope — significantly increased seropositive RA risk (OR up to ~5x for some combinations). Smoking dramatically multiplies this risk. Early joint symptoms deserve attention — early diagnosis changes prognosis substantially.",
+        },
+    },
+    "rs34536443": {
+        "trait_en": "Autoimmune Protection (TYK2 P1104A)",
+        "variants": {
+            "CC": "Standard TYK2. No additional protective effect against autoimmune disease.",
+            "CG": "Carrier of TYK2 P1104A (loss-of-function) — PROTECTIVE against multiple autoimmune conditions: lupus, rheumatoid arthritis, psoriasis, Crohn's disease, ankylosing spondylitis (OR ~0.5-0.7). Slightly less reactive immunity without substantially compromising defense. Carrier frequency ~3-10% in Europeans.",
+            "GC": "TYK2 P1104A carrier — partial protection against autoimmune disease.",
+            "GG": "Homozygous TYK2 P1104A — stronger autoimmune protection (rare, <1%). The trade-off may be slightly increased susceptibility to mycobacterial and certain viral infections.",
+        },
+    },
+    "rs231775": {
+        "trait_en": "Thyroid and Endocrine Autoimmunity (CTLA4 +49 A/G)",
+        "variants": {
+            "AA": "Standard CTLA4. Baseline risk for Graves' disease, Hashimoto's thyroiditis, type 1 diabetes, vitiligo.",
+            "AG": "CTLA4 +49 G variant — ~1.2-1.5x risk for endocrine autoimmunity: Graves' disease (hyperthyroidism), Hashimoto's thyroiditis, type 1 diabetes, vitiligo. Periodic TSH/T4 monitoring worthwhile, especially with thyroid symptoms.",
+            "GA": "CTLA4 +49 G carrier. Increased thyroid autoimmunity risk.",
+            "GG": "Homozygous CTLA4 +49 G — more consistent risk for endocrine autoimmunity. Annual TSH, anti-TPO, anti-thyroglobulin worth considering. Also fasting glucose if family history of T1D.",
+        },
+    },
 
     # ═══════════════════════════════════════════════════════════════════════════
     # BODY CHEMISTRY — Sweat composition, earwax, axillary odor

@@ -510,6 +510,38 @@ SPECIALTY_REFERRALS: list[dict] = [
         },
     },
     {
+        "key": "wellness_cardio",
+        "genes": ["9p21", "CDKN2B-AS1", "ANRIL"],
+        "trigger": {
+            "pt": "Painel Cardio — 9p21 (rs10757278) e risco residual independente de lipídios",
+            "en": "Cardio panel — 9p21 (rs10757278) and lipid-independent residual risk",
+        },
+        "specialty": {
+            "pt": "cardiologista; escore de cálcio coronariano (CAC) após 40 anos se variante de risco presente",
+            "en": "cardiologist; coronary artery calcium (CAC) scoring after age 40 if the risk variant is present",
+        },
+        "notes": {
+            "pt": "9p21 captura risco NÃO explicado por LDL/pressão/glicemia — ou seja, mesmo com perfil lipídico bom, vale acompanhar. Combinado com tabagismo/HAS/dislipidemia, risco se multiplica.",
+            "en": "9p21 captures risk NOT explained by LDL/BP/glucose — meaning even with a clean lipid panel, monitoring is worthwhile. Combined with smoking/HTN/dyslipidemia, risk multiplies.",
+        },
+    },
+    {
+        "key": "wellness_carrier_screening",
+        "genes": ["HBB", "CFTR", "BLM"],
+        "trigger": {
+            "pt": "Painel Carrier Screening — anemia falciforme (HBB), fibrose cística (CFTR F508del), síndrome de Bloom (BLMAsh) — portador (assintomático) vs afetado (homozigoto)",
+            "en": "Carrier Screening panel — sickle cell (HBB), cystic fibrosis (CFTR F508del), Bloom syndrome (BLMAsh) — carrier (asymptomatic) vs affected (homozygous)",
+        },
+        "specialty": {
+            "pt": "geneticista clínico + aconselhador genético se planejamento reprodutivo; hematologista se HbAS/HbSS; pneumologista CF-especialista se CFTR; oncologista + geneticista se BLM homozigoto",
+            "en": "clinical geneticist + genetic counselor if planning pregnancy; hematologist if HbAS/HbSS; CF-specialized pulmonologist if CFTR; oncologist + geneticist if BLM homozygous",
+        },
+        "notes": {
+            "pt": "Portador heterozigoto é assintomático mas tem 25% de chance de filho afetado se parceiro também for portador da MESMA doença. Para CFTR, parceiro pode ter outra mutação (não só F508del) e ainda contar como compatível. Aconselhamento genético antes de gestação é o padrão de cuidado.",
+            "en": "Heterozygous carriers are asymptomatic but have a 25% chance of an affected child if the partner carries the SAME disease. For CFTR, the partner can carry a different mutation (not just F508del) and still count as compatible. Genetic counseling before pregnancy is standard of care.",
+        },
+    },
+    {
         "key": "wellness_body_chemistry",
         "genes": ["ABCC11"],
         "trigger": {

@@ -609,6 +609,19 @@ FOOD_SNPS = {
             "AA": {"score": "atencao", "text": "Nao-secretor (~20% da populacao) — microbioma diferente, pode ter niveis mais baixos de B12 e maior resistencia a norovirus. Monitore B12 e considere suplementacao."},
         },
     },
+    "rs1050828": {
+        "gene": "G6PD", "trait": "Deficiencia de G6PD (favismo + risco com farmacos)",
+        "variants": {
+            # Diploide (mulheres XX)
+            "CC": {"score": "normal", "text": "Sem variante G6PD A- aqui. Producao normal de glicose-6-fosfato desidrogenase nos eritrocitos."},
+            "CT": {"score": "atencao", "text": "Mulher heterozigota — portadora da variante G6PD A-. Por inativacao aleatoria do X (Lyonizacao), pode haver deficit parcial e oscilante. Atencao ao consumo de favas e a medicamentos oxidantes (primaquina, dapsona, rasburicase, sulfas em altas doses, nitrofurantoina). Hemograma se houver palidez/fadiga apos exposicao."},
+            "TC": {"score": "atencao", "text": "Mulher heterozigota G6PD A-. Mesmas precaucoes."},
+            "TT": {"score": "alerta", "text": "Mulher homozigota G6PD A- — deficiencia confirmada. EVITAR: favas, primaquina/cloroquina, dapsona, rasburicase, sulfas (sulfametoxazol), nitrofurantoina, naftalina (anti-tracas), acido ascorbico EV em altas doses. Crise hemolitica pode ocorrer apos exposicao. Hematologista para orientacao formal e carteirinha de identificacao."},
+            # Hemizigoto (homens XY — chip costuma reportar como letra unica)
+            "C": {"score": "normal", "text": "Homem hemizigoto C — sem variante G6PD A-. Atividade enzimatica normal."},
+            "T": {"score": "alerta", "text": "Homem hemizigoto T — deficiencia de G6PD (variante A-). Como X-linked em homem, deficit e total. EVITAR: favas, primaquina/cloroquina, dapsona, rasburicase, sulfas (sulfametoxazol), nitrofurantoina, naftalina, acido ascorbico EV em altas doses. Crise hemolitica (anemia aguda, urina escura) pode ocorrer 24-72h apos exposicao. Hematologista + carteirinha de identificacao. Avisar TODOS os medicos antes de qualquer prescricao."},
+        },
+    },
     "rs4988235": {
         "gene": "MCM6/LCT", "trait": "Intolerancia a Lactose",
         "variants": {
@@ -959,6 +972,73 @@ AUTOIMMUNE_SNPS = {
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# CARRIER SCREENING — Status de portador para doencas recessivas Mendelianas
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Cobre doencas autossomicas recessivas onde portador (heterozigoto) e
+# assintomatico mas pode transmitir, e homozigoto tem a doenca. Relevante
+# para PLANEJAMENTO REPRODUTIVO (especialmente se parceiro tambem e portador)
+# e para SAUDE PESSOAL (homozigoto = ja tem a doenca).
+#
+# Painel inicial: anemia falciforme (rs334) + fibrose cistica F508del
+# (rs113993960). Slot expansivel para Tay-Sachs (HEXA), Bloom (BLM founder),
+# atrofia muscular espinhal (SMN1), etc.
+
+CARRIER_SCREENING_SNPS = {
+    "rs334": {
+        "gene": "HBB", "trait": "Anemia Falciforme (HbS)",
+        "variants": {
+            "AA": {"score": "normal", "text": "Sem alelo HbS (sickle). Hemoglobina normal (HbAA). Nao e portador nem afetado."},
+            "AT": {"score": "atencao", "text": "Portador do traco falciforme (HbAS) — heterozigoto. Geralmente ASSINTOMATICO no dia a dia. Importancia REPRODUTIVA: se parceiro tambem for portador, cada filho tem 25% de chance de ter anemia falciforme (HbSS). Cuidados especificos: hidratacao em altitude/desidratacao extrema, atencao em mergulho. Confirme com eletroforese de hemoglobina antes de planejar gestacao."},
+            "TA": {"score": "atencao", "text": "Portador HbAS. Assintomatico mas relevante para planejamento reprodutivo."},
+            "TT": {"score": "critico", "text": "Anemia falciforme (HbSS) — voce tem a doenca. Hematologista para acompanhamento continuo. Crises algicas, risco aumentado de AVC, sindrome toracica aguda, infeccoes. Hidroxiureia e tratamentos modernos melhoraram MUITO o prognostico. Vacinacao reforcada (pneumococo, meningococo, gripe), profilaxia com penicilina ate 5 anos em criancas. Se ainda nao tem diagnostico formal: eletroforese de hemoglobina confirma."},
+        },
+    },
+    "rs113993960": {
+        "gene": "CFTR", "trait": "Fibrose Cistica (F508del)",
+        "variants": {
+            "II": {"score": "normal", "text": "Sem F508del. NAO descarta fibrose cistica — existem 2.000+ mutacoes CFTR conhecidas, F508del cobre ~70% em populacoes europeias. Se ha sintomas (infeccoes respiratorias recorrentes, problemas digestivos, suor muito salgado) ou historico familiar: painel CFTR completo + teste do suor com pneumologista."},
+            "ID": {"score": "atencao", "text": "Portador de F508del (heterozigoto) — assintomatico. Importancia REPRODUTIVA: se parceiro tambem for portador (qualquer mutacao CFTR, nao so F508del), cada filho tem 25% de chance de ter fibrose cistica. Aconselhamento genetico recomendado antes de gestacao. Em populacoes europeias, ~1 em 25 e portador de alguma mutacao CFTR."},
+            "DI": {"score": "atencao", "text": "Portador F508del. Aconselhamento genetico se planejamento reprodutivo."},
+            "DD": {"score": "critico", "text": "Homozigoto F508del — fibrose cistica confirmada (forma mais comum, ~50% dos CFs). Pneumologista especialista + nutricionista + fisioterapeuta respiratorio. Tratamentos modernos (moduladores CFTR como ivacaftor/lumacaftor/elexacaftor) mudaram drasticamente o prognostico — expectativa de vida hoje supera 50 anos para muitos pacientes. Se ainda nao tem diagnostico formal: teste do suor + painel CFTR completo confirmam."},
+        },
+    },
+    "rs113993962": {
+        "gene": "BLM", "trait": "Sindrome de Bloom (BLMAsh, fundadora ashkenazi)",
+        "variants": {
+            "II": {"score": "normal", "text": "Sem mutacao BLMAsh (delecao de 6pb / insercao TAGATT). NAO descarta sindrome de Bloom — existem outras mutacoes BLM mais raras, mas BLMAsh cobre quase todos os casos em ascendencia ashkenazi."},
+            "ID": {"score": "atencao", "text": "Portador BLMAsh (heterozigoto) — assintomatico. Frequencia ~1 em 100 em ashkenazi. Importancia REPRODUTIVA: se parceiro tambem for portador, cada filho tem 25% de chance de ter sindrome de Bloom (baixa estatura, fotossensibilidade, infertilidade, risco ~80x de cancer aos 30-40 anos). Aconselhamento genetico antes de gestacao especialmente se parceiro tambem tem ascendencia ashkenazi."},
+            "DI": {"score": "atencao", "text": "Portador BLMAsh. Mesmo perfil de risco reprodutivo."},
+            "DD": {"score": "critico", "text": "Homozigoto BLMAsh — sindrome de Bloom confirmada. Acompanhamento oncologico INTENSO desde a infancia (risco enorme de multiplos canceres: leucemia, linfoma, mama, colorretal, pulmao, pele). Geneticista clinico + oncologista. Evitar exposicao solar excessiva (fotossensibilidade), exames de rastreamento anuais a partir dos 15-20 anos. Diagnostico formal confirma com analise de SCE (sister chromatid exchange) em fibroblastos."},
+        },
+    },
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CARDIO — Doenca arterial coronariana e risco cardiovascular
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# 9p21 (rs10757278) e o hit GWAS mais replicado para CAD/IAM em populacoes
+# europeias e asiaticas. Efeito independente de lipidios, glicemia, pressao
+# arterial — ou seja, marca risco residual nao explicado por fatores classicos.
+# Painel intencionalmente pequeno na v1: 9p21 carrega o sinal mais forte e
+# pode ser estendido (PITX2, LPA, etc) sem refator.
+
+CARDIO_SNPS = {
+    "rs10757278": {
+        "gene": "9p21 (ANRIL/CDKN2B-AS1)", "trait": "Doenca Arterial Coronariana / IAM",
+        "variants": {
+            "AA": {"score": "normal", "text": "Sem alelo de risco 9p21. Risco basal de doenca arterial coronariana — fatores classicos (LDL, pressao, glicemia, tabagismo, sedentarismo) seguem sendo os principais drivers."},
+            "AG": {"score": "atencao", "text": "Portador 9p21 (1 alelo G) — risco ~1.3x para doenca arterial coronariana e infarto, INDEPENDENTE de lipidios e outros fatores classicos. Manutencao agressiva de fatores modificaveis recomendada: LDL < 100 mg/dL, pressao < 130/80, glicemia controlada, atividade aerobica regular. Considere checkup cardiologico anual apos os 40."},
+            "GA": {"score": "atencao", "text": "Portador 9p21 — risco aumentado de eventos cardiovasculares precoces. Cardiologista periodicamente, mesmo sem sintomas."},
+            "GG": {"score": "alerta", "text": "9p21 homozigoto G — risco ~1.7x para CAD/IAM, podendo se manifestar em idade mais jovem que a media (variante associada a eventos antes dos 55 em homens, antes dos 65 em mulheres). Avaliacao cardiologica com escore de calcio coronariano (CAC) apos os 40 pode mudar o manejo. Combinado com tabagismo, dislipidemia ou hipertensao, risco se multiplica drasticamente."},
+        },
+    },
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # BODY CHEMISTRY — Composição de suor, cera de ouvido, odor corporal
 # ═══════════════════════════════════════════════════════════════════════════════
 #
@@ -1002,6 +1082,8 @@ ALL_PANELS = {
     "allergy": {"name": "Allergy", "name_full": "Predisposicao Atopica e Alergias", "snps": ALLERGY_SNPS},
     "autoimmune": {"name": "Autoimmune", "name_full": "Predisposicao Autoimune", "snps": AUTOIMMUNE_SNPS},
     "body_chemistry": {"name": "Body Chemistry", "name_full": "Quimica Corporal (suor, cera de ouvido, odor)", "snps": BODY_CHEMISTRY_SNPS},
+    "cardio": {"name": "Cardio", "name_full": "Risco Cardiovascular (CAD/IAM)", "snps": CARDIO_SNPS},
+    "carrier_screening": {"name": "Carrier Screening", "name_full": "Status de Portador (Doencas Recessivas)", "snps": CARRIER_SCREENING_SNPS},
 }
 
 SCORE_COLORS = {

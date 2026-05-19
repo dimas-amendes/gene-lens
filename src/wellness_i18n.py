@@ -23,6 +23,8 @@ PANEL_NAMES_EN = {
     "allergy": "Atopic Predisposition and Allergies",
     "autoimmune": "Autoimmune Predisposition",
     "body_chemistry": "Body Chemistry (sweat, earwax, odor)",
+    "cardio": "Cardiovascular Risk (CAD/MI)",
+    "carrier_screening": "Carrier Screening (Recessive Mendelian)",
 }
 
 
@@ -808,6 +810,65 @@ WELLNESS_EN = {
             "GA": "ITGAM R77H variant — alters leukocyte adhesion and immune-complex phagocytosis. ~1.7-2x lupus risk, with stronger effect in European and Hispanic populations. Also associated with lupus nephritis (kidney involvement in SLE).",
             "AG": "ITGAM R77H carrier. Increased SLE risk.",
             "AA": "Homozygous ITGAM R77H — substantial lupus risk in European/Hispanic populations. Watch for renal symptoms (proteinuria, hypertension) in addition to systemic ones — elevated lupus-nephritis risk.",
+        },
+    },
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # CARRIER SCREENING — Recessive Mendelian disorders (carrier + affected)
+    # ═══════════════════════════════════════════════════════════════════════════
+    "rs334": {
+        "trait_en": "Sickle Cell Disease (HbS)",
+        "variants": {
+            "AA": "No HbS (sickle) allele. Normal hemoglobin (HbAA). Not a carrier, not affected.",
+            "AT": "Sickle cell trait carrier (HbAS) — heterozygous. Generally ASYMPTOMATIC day-to-day. REPRODUCTIVE significance: if your partner is also a carrier, each child has a 25% chance of sickle cell disease (HbSS). Specific care: hydration at altitude/extreme dehydration, attention during scuba diving. Confirm with hemoglobin electrophoresis before planning pregnancy.",
+            "TA": "HbAS carrier. Asymptomatic but relevant for reproductive planning.",
+            "TT": "Sickle cell disease (HbSS) — you have the disease. Hematologist for ongoing follow-up. Pain crises, increased stroke risk, acute chest syndrome, infections. Hydroxyurea and modern treatments have IMPROVED prognosis significantly. Reinforced vaccination (pneumococcus, meningococcus, flu), penicillin prophylaxis until age 5 in children. If you don't yet have a formal diagnosis: hemoglobin electrophoresis confirms.",
+        },
+    },
+    "rs113993960": {
+        "trait_en": "Cystic Fibrosis (F508del)",
+        "variants": {
+            "II": "No F508del. Does NOT rule out cystic fibrosis — there are 2,000+ known CFTR mutations; F508del covers ~70% in European populations. If symptoms (recurrent respiratory infections, digestive issues, very salty sweat) or family history: full CFTR panel + sweat test with a pulmonologist.",
+            "ID": "F508del carrier (heterozygous) — asymptomatic. REPRODUCTIVE significance: if your partner is also a carrier (any CFTR mutation, not just F508del), each child has a 25% chance of cystic fibrosis. Genetic counseling recommended before pregnancy. In European populations, ~1 in 25 carries some CFTR mutation.",
+            "DI": "F508del carrier. Genetic counseling if planning pregnancy.",
+            "DD": "Homozygous F508del — cystic fibrosis confirmed (most common form, ~50% of CFs). Specialized pulmonologist + nutritionist + respiratory physiotherapist. Modern treatments (CFTR modulators like ivacaftor/lumacaftor/elexacaftor) have dramatically changed prognosis — life expectancy now exceeds 50 years for many patients. If no formal diagnosis yet: sweat test + full CFTR panel confirm.",
+        },
+    },
+    "rs113993962": {
+        "trait_en": "Bloom Syndrome (BLMAsh, Ashkenazi founder)",
+        "variants": {
+            "II": "No BLMAsh mutation (6bp deletion / TAGATT insertion). Does NOT rule out Bloom syndrome — other rarer BLM mutations exist, but BLMAsh covers nearly all cases of Ashkenazi descent.",
+            "ID": "BLMAsh carrier (heterozygous) — asymptomatic. Frequency ~1 in 100 in Ashkenazi populations. REPRODUCTIVE significance: if your partner is also a carrier, each child has a 25% chance of Bloom syndrome (short stature, photosensitivity, infertility, ~80x cancer risk by ages 30-40). Genetic counseling before pregnancy especially recommended if your partner also has Ashkenazi ancestry.",
+            "DI": "BLMAsh carrier. Same reproductive risk profile.",
+            "DD": "Homozygous BLMAsh — Bloom syndrome confirmed. INTENSE oncologic follow-up from childhood (huge risk of multiple cancers: leukemia, lymphoma, breast, colorectal, lung, skin). Clinical geneticist + oncologist. Avoid excessive sun exposure (photosensitivity), annual screening exams starting ages 15-20. Formal diagnosis confirmed with sister chromatid exchange (SCE) analysis on fibroblasts.",
+        },
+    },
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # CARDIO — Coronary artery disease / MI
+    # ═══════════════════════════════════════════════════════════════════════════
+    "rs10757278": {
+        "trait_en": "Coronary Artery Disease / MI (9p21)",
+        "variants": {
+            "AA": "No 9p21 risk allele. Baseline coronary artery disease risk — classical factors (LDL, blood pressure, glucose, smoking, sedentary lifestyle) remain the main drivers.",
+            "AG": "9p21 carrier (1 G allele) — ~1.3x risk of coronary artery disease and heart attack, INDEPENDENT of lipids and other classical factors. Aggressive maintenance of modifiable factors recommended: LDL < 100 mg/dL, BP < 130/80, controlled glucose, regular aerobic activity. Consider annual cardiology checkup after age 40.",
+            "GA": "9p21 carrier — increased risk of early cardiovascular events. See a cardiologist periodically even without symptoms.",
+            "GG": "9p21 homozygous G — ~1.7x risk for CAD/MI, potentially manifesting at younger ages than average (variant associated with events before age 55 in men, before age 65 in women). Cardiology evaluation with coronary artery calcium (CAC) score after age 40 may change management. Combined with smoking, dyslipidemia, or hypertension, risk multiplies dramatically.",
+        },
+    },
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # FOOD — G6PD (X-linked, favism + drug-induced hemolysis)
+    # ═══════════════════════════════════════════════════════════════════════════
+    "rs1050828": {
+        "trait_en": "G6PD Deficiency (favism + drug sensitivity)",
+        "variants": {
+            "CC": "No G6PD A- variant here. Normal glucose-6-phosphate dehydrogenase production in red blood cells.",
+            "CT": "Female heterozygous — G6PD A- carrier. Due to random X inactivation (Lyonization), there may be partial, fluctuating deficiency. Watch for fava bean intake and oxidizing drugs (primaquine, dapsone, rasburicase, high-dose sulfonamides, nitrofurantoin). Get a CBC if pallor/fatigue follow exposure.",
+            "TC": "Female heterozygous G6PD A-. Same precautions.",
+            "TT": "Female homozygous G6PD A- — confirmed deficiency. AVOID: fava beans, primaquine/chloroquine, dapsone, rasburicase, sulfonamides (sulfamethoxazole), nitrofurantoin, naphthalene (mothballs), high-dose IV ascorbic acid. Hemolytic crisis may occur after exposure. See a hematologist for formal guidance and an ID card.",
+            "C": "Male hemizygous C — no G6PD A- variant. Normal enzyme activity.",
+            "T": "Male hemizygous T — G6PD deficiency (A- variant). As X-linked in a male, the deficit is total. AVOID: fava beans, primaquine/chloroquine, dapsone, rasburicase, sulfonamides (sulfamethoxazole), nitrofurantoin, naphthalene, high-dose IV ascorbic acid. Hemolytic crisis (acute anemia, dark urine) may occur 24-72h after exposure. See a hematologist + carry a deficiency ID card. Tell EVERY doctor before any prescription.",
         },
     },
 

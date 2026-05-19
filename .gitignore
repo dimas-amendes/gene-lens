@@ -28,6 +28,9 @@ gene-lens-report*.*
 # Note: ~/.genetics_consent is outside repo, but just in case
 .genetics_consent
 
+# Release notes drafts (paste into GitHub Release, don't commit)
+RELEASE_NOTES_*.md
+
 # Python
 __pycache__/
 *.pyc

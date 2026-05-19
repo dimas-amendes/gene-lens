@@ -34,8 +34,8 @@ local-ai = ["ollama==0.3.3"]
 dev = ["pytest>=8.0", "flake8>=7.0"]
 
 [project.urls]
-Homepage = "https://github.com/dimas-amendes/genetics"
-Issues = "https://github.com/dimas-amendes/genetics/issues"
+Homepage = "https://github.com/dimas-amendes/gene-lens"
+Issues = "https://github.com/dimas-amendes/gene-lens/issues"
 
 [build-system]
 requires = ["setuptools>=68"]

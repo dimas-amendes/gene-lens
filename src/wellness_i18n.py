@@ -783,6 +783,33 @@ WELLNESS_EN = {
             "GG": "Homozygous CTLA4 +49 G — more consistent risk for endocrine autoimmunity. Annual TSH, anti-TPO, anti-thyroglobulin worth considering. Also fasting glucose if family history of T1D.",
         },
     },
+    "rs2004640": {
+        "trait_en": "Systemic Lupus Erythematosus (IRF5 / Interferon)",
+        "variants": {
+            "GG": "Standard IRF5. No lupus risk allele at this locus.",
+            "GT": "IRF5 T variant — creates an alternative splice site that boosts IRF5 (interferon regulatory factor 5) expression. ~1.6x risk of systemic lupus erythematosus (SLE). Lupus affects women 9x more often; symptoms: joint pain, butterfly facial rash, fatigue, photosensitivity.",
+            "TG": "IRF5 T carrier. Lupus predisposition via the type I interferon pathway.",
+            "TT": "Homozygous IRF5 T — increased SLE risk. Combined with STAT4 variants, risk multiplies (additive effect). With compatible symptoms: ANA, anti-dsDNA, complement C3/C4 with a rheumatologist.",
+        },
+    },
+    "rs13277113": {
+        "trait_en": "Lupus and B-Lymphocyte Predisposition (BLK)",
+        "variants": {
+            "GG": "Standard BLK. Normal B-lymphocyte signaling.",
+            "GA": "BLK A variant — reduces B-lymphoid tyrosine kinase expression, affecting B-cell activation. ~1.4x lupus risk. Also linked to rheumatoid arthritis and Sjögren syndrome (dry mouth/eyes).",
+            "AG": "BLK A carrier. Increased SLE risk.",
+            "AA": "Homozygous BLK A — increased risk of lupus and other B-cell-mediated autoimmune disease. Risk compounds when combined with IRF5 or STAT4 variants.",
+        },
+    },
+    "rs1143679": {
+        "trait_en": "Lupus (ITGAM R77H, Leukocyte Adhesion)",
+        "variants": {
+            "GG": "Standard ITGAM. Normal leukocyte adhesion and immune-complex clearance.",
+            "GA": "ITGAM R77H variant — alters leukocyte adhesion and immune-complex phagocytosis. ~1.7-2x lupus risk, with stronger effect in European and Hispanic populations. Also associated with lupus nephritis (kidney involvement in SLE).",
+            "AG": "ITGAM R77H carrier. Increased SLE risk.",
+            "AA": "Homozygous ITGAM R77H — substantial lupus risk in European/Hispanic populations. Watch for renal symptoms (proteinuria, hypertension) in addition to systemic ones — elevated lupus-nephritis risk.",
+        },
+    },
 
     # ═══════════════════════════════════════════════════════════════════════════
     # BODY CHEMISTRY — Sweat composition, earwax, axillary odor

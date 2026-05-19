@@ -928,6 +928,33 @@ AUTOIMMUNE_SNPS = {
             "GG": {"score": "alerta", "text": "Homozigoto CTLA4 +49 G — risco mais consistente para autoimunes endocrinas. Considerar avaliacao anual de TSH, anti-TPO, anti-tireoglobulina. Glicemia tambem se houver historico familiar de DM1."},
         },
     },
+    "rs2004640": {
+        "gene": "IRF5", "trait": "Lupus Eritematoso Sistemico (Interferon)",
+        "variants": {
+            "GG": {"score": "normal", "text": "IRF5 padrao. Sem alelo de risco lupico neste locus."},
+            "GT": {"score": "atencao", "text": "IRF5 variante T — cria sitio de splicing alternativo que aumenta expressao de IRF5 (interferon regulatory factor 5). Risco ~1.6x de lupus eritematoso sistemico (LES). Lupus afeta 9x mais mulheres; sintomas: dor articular, rash em borboleta na face, fadiga, fotossensibilidade."},
+            "TG": {"score": "atencao", "text": "Portador IRF5 T. Predisposicao a lupus via via do interferon tipo I."},
+            "TT": {"score": "alerta", "text": "IRF5 T homozigoto — risco aumentado de SLE. Combinado com STAT4 variante, risco se multiplica (efeito aditivo). Se sintomas compativeis: dosagem de FAN, anti-DNA, complemento C3/C4 com reumatologista."},
+        },
+    },
+    "rs13277113": {
+        "gene": "BLK", "trait": "Lupus e Predisposicao Linfocitaria B",
+        "variants": {
+            "GG": {"score": "normal", "text": "BLK padrao. Sinalizacao de linfocitos B normal."},
+            "GA": {"score": "atencao", "text": "BLK variante A — reduz expressao de B-lymphoid tyrosine kinase, afetando ativacao de linfocitos B. Risco ~1.4x de lupus. Tambem associado a artrite reumatoide e sindrome de Sjogren (boca/olhos secos)."},
+            "AG": {"score": "atencao", "text": "Portador BLK A. Risco aumentado de SLE."},
+            "AA": {"score": "alerta", "text": "BLK A homozigoto — risco aumentado de lupus e outras autoimunes mediadas por linfocito B. Se combinado com IRF5 ou STAT4 variantes, risco se acumula."},
+        },
+    },
+    "rs1143679": {
+        "gene": "ITGAM", "trait": "Lupus (R77H, Adesao Leucocitaria)",
+        "variants": {
+            "GG": {"score": "normal", "text": "ITGAM padrao. Funcao normal de adesao de leucocitos e clearance de imunocomplexos."},
+            "GA": {"score": "atencao", "text": "ITGAM R77H variante — altera adesao de leucocitos e fagocitose de imunocomplexos. Risco ~1.7-2x de lupus, com efeito mais pronunciado em populacoes europeias e hispanicas. Tambem associado a nefrite lupica (envolvimento renal no SLE)."},
+            "AG": {"score": "atencao", "text": "Portador ITGAM R77H. Risco aumentado de SLE."},
+            "AA": {"score": "alerta", "text": "ITGAM R77H homozigoto — risco substancial de lupus em populacoes europeias/hispanicas. Atencao a sintomas renais (proteinuria, hipertensao) alem dos sistemicos — risco aumentado de nefrite lupica."},
+        },
+    },
 }
 
 

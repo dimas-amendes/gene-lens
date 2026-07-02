@@ -18,7 +18,12 @@ cd /d "%~dp0.."
 
 if "%PYTHON%"=="" set PYTHON=.venv\Scripts\python.exe
 
-for /f "delims=" %%v in ('"%PYTHON%" -c "import tomllib,pathlib;print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])"') do set VERSION=%%v
+REM Read the version via a temp file, not `for /f 'python ...'`: the Python
+REM one-liner's single quotes ('pyproject.toml', ['project']) collide with the
+REM for/f single-quote delimiters, leaving VERSION empty (asset named "dev").
+"%PYTHON%" -c "import tomllib,pathlib;print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])" > "%TEMP%\glver.txt"
+set /p VERSION=<"%TEMP%\glver.txt"
+del "%TEMP%\glver.txt"
 if "%VERSION%"=="" set VERSION=dev
 
 echo ==^> Building Gene Lens Windows single-file exe (version %VERSION%)

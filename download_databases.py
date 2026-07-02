@@ -17,21 +17,135 @@ import argparse
 import csv
 import gzip
 import io
+import json
 import os
 import shutil
 import sys
 import tempfile
+import time
+import zipfile
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from urllib.request import urlretrieve, Request, urlopen
 from urllib.error import URLError
 
-from config import DATA_DIR, CLINVAR_TSV, CLINVAR_GZ
+from config import (
+    DATA_DIR, CLINVAR_TSV, CLINVAR_GZ,
+    CLINVAR_DOWNLOAD_URL, PHARMGKB_DOWNLOAD_URL,
+    CLINVAR_MIN_STARS_UNCERTAIN,
+)
 
 try:
     from tqdm import tqdm
     HAS_TQDM = True
 except ImportError:
     HAS_TQDM = False
+
+
+# ── Update tracking ──────────────────────────────────────────────────────────
+# We delete the raw ClinVar .gz after processing, so the local file's mtime
+# can't tell us how fresh the SOURCE is. Instead we record the source's
+# Last-Modified / ETag at download time in a sidecar and compare against a
+# lightweight HEAD when the user explicitly checks for updates. No automatic
+# network on launch — the offline-after-setup promise stays intact.
+DB_META_NAME = ".db_meta.json"
+
+# Which on-disk artifact proves a source has been downloaded, and where to fetch
+# its freshness headers from.
+_SOURCES = {
+    "clinvar": {"url": CLINVAR_DOWNLOAD_URL, "marker": "clinvar_alleles.tsv"},
+    # Both PharmGKB TSVs are required (see _pharmgkb_missing); key off the rarer
+    # alleles file so "up-to-date" can't disagree with "present".
+    "pharmgkb": {"url": PHARMGKB_DOWNLOAD_URL, "marker": "clinical_ann_alleles.tsv"},
+}
+
+
+def _meta_path() -> Path:
+    return DATA_DIR / DB_META_NAME
+
+
+def _read_meta() -> dict:
+    p = _meta_path()
+    if not p.exists():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def _write_meta(source: str, headers) -> None:
+    """Persist the source's freshness signals (Last-Modified, ETag) after a
+    successful download. `headers` is an http.client.HTTPMessage / EmailMessage.
+    Best-effort: a write failure must never break the download itself."""
+    try:
+        meta = _read_meta()
+        meta[source] = {
+            "last_modified": headers.get("Last-Modified") if headers else None,
+            "etag": headers.get("ETag") if headers else None,
+            "downloaded_at": int(time.time()),
+        }
+        _meta_path().write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def _fetch_head(url: str):
+    """Fetch just the freshness headers (Last-Modified/ETag) of the source,
+    return them or None on failure. We send HEAD, but urllib turns a 303
+    (PharmGKB -> S3) into a GET on the redirect; we never read the body, so
+    it's metadata-only either way (no database file is downloaded)."""
+    try:
+        req = Request(url, method="HEAD", headers={"User-Agent": "Mozilla/5.0 (GeneLens)"})
+        with urlopen(req, timeout=30) as resp:
+            return resp.headers
+    except (URLError, OSError):
+        return None
+
+
+def _is_newer(server_headers, stored: dict) -> bool:
+    """True if the server copy looks newer than what we recorded. Prefer ETag
+    (exact), fall back to Last-Modified date comparison. Unknown -> not newer
+    (we don't nag the user on ambiguous signals)."""
+    if server_headers is None or not stored:
+        return False
+    s_etag = server_headers.get("ETag")
+    if s_etag and stored.get("etag"):
+        return s_etag != stored["etag"]
+    s_lm = server_headers.get("Last-Modified")
+    if s_lm and stored.get("last_modified"):
+        try:
+            return parsedate_to_datetime(s_lm) > parsedate_to_datetime(stored["last_modified"])
+        except (TypeError, ValueError):
+            return False
+    return False
+
+
+def check_for_updates() -> dict:
+    """Compare each downloaded database against its source. Returns a dict
+    keyed by source name with one of:
+      'not-downloaded'   — no local copy yet
+      'up-to-date'       — local matches source
+      'update-available' — source is newer
+      'unknown'          — downloaded before tracking, or HEAD failed/ambiguous
+    Explicit, on-demand, read-only — the caller decides what to do about it.
+    """
+    meta = _read_meta()
+    out = {}
+    for name, spec in _SOURCES.items():
+        if not (DATA_DIR / spec["marker"]).exists():
+            out[name] = "not-downloaded"
+            continue
+        stored = meta.get(name)
+        if not stored:
+            out[name] = "unknown"
+            continue
+        head = _fetch_head(spec["url"])
+        if head is None:
+            out[name] = "unknown"
+            continue
+        out[name] = "update-available" if _is_newer(head, stored) else "up-to-date"
+    return out
 
 
 def _progress_hook(block_num, block_size, total_size):
@@ -44,23 +158,71 @@ def _progress_hook(block_num, block_size, total_size):
         print(f"\r  [{pct:3d}%] {mb:.1f} / {total_mb:.1f} MB", end="", flush=True)
 
 
-def download_clinvar():
+def _discard_files(*paths) -> None:
+    """Best-effort delete (public reference data, not genetic user data)."""
+    for p in paths:
+        try:
+            if p.exists():
+                p.unlink()
+        except OSError:
+            pass
+
+
+def download_clinvar(progress_cb=None):
+    """Download ClinVar and validate before replacing anything.
+
+    Safe-update: the new copy is written to a temp file and only swapped into
+    place (atomically) once it passes the integrity check. If the download is
+    unreadable/truncated or the extract is suspiciously tiny, the temp is
+    discarded and any EXISTING working database is left untouched — a bad
+    re-download never destroys a good local copy. Returns False on failure so
+    the caller can tell the user to retry.
+    """
+    gz_path = DATA_DIR / "variant_summary.txt.gz"
+    tmp_tsv = CLINVAR_TSV.with_name(CLINVAR_TSV.name + ".part")
+    had_existing = CLINVAR_TSV.exists()
+    try:
+        return _download_clinvar_impl(progress_cb, tmp_tsv, gz_path, had_existing)
+    except (OSError, EOFError) as e:
+        print(f"\n  [ERROR] ClinVar archive could not be read: {e}")
+        _discard_files(tmp_tsv, gz_path)  # never touch the real file
+        if had_existing:
+            print("  The download was corrupted. Kept your existing ClinVar")
+            print("  database; please try again when you can.")
+        else:
+            print("  The download looks corrupted or incomplete. Please try again.")
+        return False
+
+
+def _download_clinvar_impl(progress_cb, tmp_tsv, gz_path, had_existing):
     """Download ClinVar variant_summary.txt.gz and extract to filtered TSV.
 
-    The raw file is ~120MB compressed, ~1GB uncompressed with 2.5M+ rows.
-    We filter to only SNPs (ref/alt length 1) and write a compact TSV.
+    The raw file is ~120MB compressed, ~1GB uncompressed with ~9M rows. We keep
+    only GRCh37 SNPs that the dashboard can actually surface — pathogenic,
+    likely-pathogenic, risk factors, and >=2-star uncertain variants — dropping
+    benign and low-confidence VUS. Result is ~880k rows / ~380MB, RAM-friendly.
+
+    progress_cb(phase: str, pct: int) is an optional callback for UI progress:
+    phase is "download" (pct 0-100) or "process" (pct -1, indeterminate).
     """
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-    url = "https://ftp.ncbi.nlm.nih.gov/pub/clinvar/tab_delimited/variant_summary.txt.gz"
-    gz_path = DATA_DIR / "variant_summary.txt.gz"
+    url = CLINVAR_DOWNLOAD_URL
 
     print(f"\n  Downloading ClinVar variant_summary.txt.gz...")
     print(f"  Source: {url}")
     print(f"  This file is ~120 MB -- may take a few minutes.\n")
 
+    def _hook(block_num, block_size, total_size):
+        _progress_hook(block_num, block_size, total_size)  # console line
+        if progress_cb and total_size > 0:
+            # Download is the first half of the overall bar (0-50%); the row
+            # processing that follows fills 50-100%.
+            pct = min(100, block_num * block_size * 100 // total_size)
+            progress_cb("download", pct // 2)
+
     try:
-        urlretrieve(url, str(gz_path), reporthook=_progress_hook)
+        _, _clinvar_headers = urlretrieve(url, str(gz_path), reporthook=_hook)
         print()  # newline after progress
     except URLError as e:
         print(f"\n  [ERROR] Download failed: {e}")
@@ -116,27 +278,48 @@ def download_clinvar():
     with gzip.open(str(gz_path), "rt", encoding="utf-8", errors="replace") as infile:
         reader = csv.DictReader(infile, delimiter="\t")
 
-        with open(str(CLINVAR_TSV), "w", newline="", encoding="utf-8") as outfile:
+        with open(str(tmp_tsv), "w", newline="", encoding="utf-8") as outfile:
             writer = csv.DictWriter(outfile, fieldnames=out_columns, delimiter="\t")
             writer.writeheader()
 
             for row in reader:
                 count += 1
-                if count % 500000 == 0:
+                if count % 200000 == 0:
                     print(f"    Processed {count:,} rows, kept {written:,}...")
+                    if progress_cb:
+                        # Processing fills the 50-100% half of the bar (~9M rows).
+                        progress_cb("process", 50 + min(49, count * 49 // 9_000_000))
 
                 # Filter: only GRCh37 assembly (most consumer tests use this)
                 assembly = row.get("Assembly", "")
                 if assembly != "GRCh37":
                     continue
 
-                ref = row.get("ReferenceAllele", "")
-                alt = row.get("AlternateAllele", "")
+                # ClinVar keeps the real alleles in the VCF columns now; the
+                # legacy ReferenceAllele/AlternateAllele are "na" on virtually
+                # every row (that drift is what made the old filter keep ~36
+                # variants out of millions). Prefer the VCF columns, fall back
+                # to the legacy ones only if VCF is absent.
+                ref = row.get("ReferenceAlleleVCF", "") or row.get("ReferenceAllele", "")
+                alt = row.get("AlternateAlleleVCF", "") or row.get("AlternateAllele", "")
 
-                # Filter: only true SNPs
+                # Filter: only true SNPs (single-base ref and alt)
                 if len(ref) != 1 or len(alt) != 1:
                     continue
                 if ref == "na" or alt == "na":
+                    continue
+
+                # Clinical-relevance filter: keep only variants the app can
+                # actually surface. Benign / likely-benign never produce a risk
+                # finding, and uncertain (VUS) variants are reported only at
+                # >= CLINVAR_MIN_STARS_UNCERTAIN gold stars. Dropping the rest
+                # cuts the extract from ~1.4 GB to a RAM-friendly size without
+                # losing anything the dashboard shows.
+                sig = row.get("ClinicalSignificance", "").lower()
+                if sig.startswith("benign") or "likely benign" in sig:
+                    continue
+                if ("uncertain" in sig
+                        and _review_to_stars(row.get("ReviewStatus", "")) < CLINVAR_MIN_STARS_UNCERTAIN):
                     continue
 
                 # Build output row
@@ -184,7 +367,34 @@ def download_clinvar():
                 writer.writerow(out_row)
                 written += 1
 
-    print(f"  Done: {count:,} total rows -> {written:,} SNPs written to {CLINVAR_TSV.name}")
+    print(f"  Done: {count:,} total rows -> {written:,} SNPs kept (writing temp)")
+
+    # Post-download integrity gate: a healthy ClinVar SNP extract is hundreds of
+    # thousands of rows. A tiny result means an upstream schema change silently
+    # broke the filter (exactly how the ReferenceAllele->VCF drift slipped by).
+    # Discard the TEMP and fail — the real file (if any) is never touched, so a
+    # bad re-download can't destroy a working database. count <= threshold means
+    # a tiny synthetic/test input (not a real run), so don't flag it here.
+    CLINVAR_MIN_EXPECTED = 100_000
+    if count > CLINVAR_MIN_EXPECTED and written < CLINVAR_MIN_EXPECTED:
+        print(
+            f"\n  [ERROR] Only {written:,} SNPs from {count:,} rows — far below the "
+            f"~{CLINVAR_MIN_EXPECTED:,} expected. The download is incomplete or the "
+            "ClinVar layout changed."
+        )
+        _discard_files(tmp_tsv, gz_path)
+        print("  Kept the existing database." if had_existing
+              else "  Nothing was installed. Please try again.")
+        return False
+
+    # Valid: atomically swap the temp into place (replaces any existing copy in
+    # one step, so a reader never sees a half-written file).
+    os.replace(str(tmp_tsv), str(CLINVAR_TSV))
+    print(f"  OK: {written:,} SNPs -> {CLINVAR_TSV.name}")
+
+    # Record the SOURCE freshness before we delete the raw file — this is the
+    # only moment we can see the server's Last-Modified/ETag for update checks.
+    _write_meta("clinvar", _clinvar_headers)
 
     # Clean up raw download
     if gz_path.exists():
@@ -210,28 +420,89 @@ def _review_to_stars(review_status: str) -> int:
     return 0
 
 
-def download_pharmgkb():
-    """Provide instructions for PharmGKB download (requires free registration)."""
-    print("\n  PharmGKB requires free registration for bulk downloads.")
-    print()
-    print("  Steps:")
-    print("  1. Create free account at: https://www.pharmgkb.org/")
-    print("  2. Go to: https://www.pharmgkb.org/downloads")
-    print("  3. Download 'Clinical Annotations' zip file")
-    print("  4. Extract these files to the data/ directory:")
-    print(f"     - clinical_annotations.tsv -> {DATA_DIR}")
-    print(f"     - clinical_ann_alleles.tsv -> {DATA_DIR}")
-    print()
+# TSV members we lift out of the PharmGKB clinical-annotations zip. The archive
+# also ships evidence/history TSVs and a LICENSE we don't consume here.
+PHARMGKB_WANTED = ("clinical_annotations.tsv", "clinical_ann_alleles.tsv")
 
-    # Check if files already exist
+
+def download_pharmgkb(force=False):
+    """Download and extract the PharmGKB clinical-annotations bundle.
+
+    The clinicalAnnotations.zip is served publicly (the API 303-redirects to
+    an S3 object, no login), so we can fetch it the same way as ClinVar and
+    unzip just the two TSVs the analyzer needs into data/. Drug-gene findings
+    are optional — on any failure we degrade gracefully and return False.
+
+    force=True re-downloads even if the files already exist (used by the in-app
+    "Update" action); the default skips when both files are present.
+    """
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+
     ann = DATA_DIR / "clinical_annotations.tsv"
     alleles = DATA_DIR / "clinical_ann_alleles.tsv"
-    if ann.exists() and alleles.exists():
+    if not force and ann.exists() and alleles.exists():
         print("  [OK] PharmGKB files already present!")
         return True
-    else:
-        print("  [WAITING] Place the files in data/ and re-run to verify.")
+
+    url = PHARMGKB_DOWNLOAD_URL
+    print(f"\n  Downloading PharmGKB clinical annotations...")
+    print(f"  Source: {url}")
+    print(f"  This file is ~1 MB.\n")
+
+    saved_headers = None
+    try:
+        # A User-Agent avoids the occasional bot filter; urllib follows the
+        # 303 redirect to S3 on its own.
+        req = Request(url, headers={"User-Agent": "Mozilla/5.0 (GeneLens)"})
+        with urlopen(req, timeout=60) as resp:
+            saved_headers = resp.headers  # freshness of the final S3 object
+            payload = resp.read()
+    except (URLError, OSError) as e:
+        print(f"  [ERROR] PharmGKB download failed: {e}")
+        print("  Drug-gene findings will be unavailable. You can retry later,")
+        print("  or download manually from https://www.pharmgkb.org/downloads")
         return False
+
+    # Safe-update: extract to temp files, validate, and only then swap into
+    # place. A corrupt re-download never overwrites a working local copy.
+    tmp_for = {w: DATA_DIR / (w + ".part") for w in PHARMGKB_WANTED}
+    had_existing = ann.exists() and alleles.exists()
+    try:
+        extracted = []
+        with zipfile.ZipFile(io.BytesIO(payload)) as zf:
+            names = {Path(n).name: n for n in zf.namelist()}
+            for wanted in PHARMGKB_WANTED:
+                member = names.get(wanted)
+                if member is None:
+                    continue
+                with zf.open(member) as src, open(tmp_for[wanted], "wb") as dst:
+                    shutil.copyfileobj(src, dst)
+                extracted.append(wanted)
+    except (zipfile.BadZipFile, OSError) as e:
+        print(f"  [ERROR] Could not extract PharmGKB archive (corrupt or")
+        print(f"  incomplete download): {e}. Please try again.")
+        _discard_files(*tmp_for.values())  # drop any half-written partials
+        return False
+
+    # Integrity: both TSVs present and non-trivial (a valid
+    # clinical_annotations.tsv is hundreds of KB). Tiny = truncated/corrupt.
+    ann_tmp, all_tmp = tmp_for["clinical_annotations.tsv"], tmp_for["clinical_ann_alleles.tsv"]
+    _PHARMGKB_MIN_BYTES = 1024
+    valid = (ann_tmp.exists() and all_tmp.exists()
+             and ann_tmp.stat().st_size >= _PHARMGKB_MIN_BYTES
+             and all_tmp.stat().st_size >= _PHARMGKB_MIN_BYTES)
+    if not valid:
+        print("  [ERROR] PharmGKB download looks corrupt or incomplete.")
+        _discard_files(*tmp_for.values())
+        print("  Kept your existing PharmGKB files." if had_existing
+              else "  Please try again.")
+        return False
+
+    os.replace(str(ann_tmp), str(ann))
+    os.replace(str(all_tmp), str(alleles))
+    _write_meta("pharmgkb", saved_headers)
+    print(f"  Done: extracted {', '.join(extracted)} to {DATA_DIR.name}/")
+    return True
 
 
 def main():

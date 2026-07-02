@@ -1,0 +1,20 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Gene Lens app icon: DNA helix inside a lens ring, brand blue on dark tile. -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#18181b"/>
+      <stop offset="1" stop-color="#0a0a0c"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="480" height="480" rx="120" fill="url(#tile)" stroke="#27272a" stroke-width="2"/>
+  <circle cx="256" cy="256" r="152" fill="none" stroke="#3b82f6" stroke-width="7" opacity="0.55"/>
+  <g stroke="#3b82f6" stroke-width="18" stroke-linecap="round" fill="none">
+    <path d="M256 178 C 300 195,300 212,256 230 C 212 248,212 264,256 282 C 300 300,300 316,256 334"/>
+    <path d="M256 178 C 212 195,212 212,256 230 C 300 248,300 264,256 282 C 212 300,212 316,256 334"/>
+  </g>
+  <g stroke="#3b82f6" stroke-width="8" stroke-linecap="round" opacity="0.5">
+    <line x1="230" y1="203" x2="282" y2="203"/>
+    <line x1="226" y1="256" x2="286" y2="256"/>
+    <line x1="230" y1="309" x2="282" y2="309"/>
+  </g>
+</svg>

@@ -1,9 +1,13 @@
+{%- macro explain_button(section) -%}
+{% if ollama_ready %}<div class="explain-wrap"><button class="explain-btn" onclick="explainSection(this,'{{ section }}')"><i class="ti ti-sparkles"></i> {{ t.explain_btn }}</button><div class="explain-out"></div></div>{% endif %}
+{%- endmacro -%}
 <!DOCTYPE html>
 <html lang="{{ 'en' if lang == 'en' else 'pt-BR' }}" data-bs-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ t.app_title }}</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/logo-icon.svg') }}">
 <meta name="csrf-token" content="{{ session.get('csrf_token', '') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/halfmoon.min.css') }}">
@@ -55,6 +59,14 @@ a { color: var(--accent); }
 .lang-sw a { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none; color: var(--text-muted); transition: color .2s; }
 .lang-sw a:hover { color: var(--text-secondary); }
 .lang-sw a.active { background: var(--accent-soft); color: var(--accent); }
+.explain-wrap { margin: 0 0 16px; }
+.explain-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-soft); color: var(--accent); border: 1px solid transparent; padding: 6px 13px; border-radius: 6px; font-size: 12.5px; font-weight: 500; cursor: pointer; font-family: inherit; }
+.explain-btn:hover:not(:disabled) { background: rgba(59,130,246,.2); }
+.explain-btn:disabled { opacity: .6; cursor: not-allowed; }
+.explain-out { display: none; margin-top: 12px; padding: 14px 16px; background: var(--surface-1); border: 1px solid var(--border-default); border-radius: 10px; font-size: 13.5px; line-height: 1.6; color: var(--text-secondary); white-space: pre-wrap; }
+.explain-out .disc { display: block; margin-top: 10px; font-size: 11px; color: var(--text-dim); white-space: normal; }
+.explain-spin { display: inline-block; animation: explainspin .7s linear infinite; }
+@keyframes explainspin { to { transform: rotate(360deg); } }
 .priv-pill { font-size: 11px; color: var(--green); background: var(--green-soft); padding: 4px 12px; border-radius: 20px; font-weight: 500; margin-left: 12px; }
 
 /* ── AI chat drawer ────────────────────────────────────────────────────── */
@@ -638,7 +650,7 @@ a { color: var(--accent); }
 
 <header class="site-header">
   <div class="container">
-    <div class="logo"><span class="logo-icon"><i class="ti ti-flask"></i></span> {{ t.app_title }} <span class="priv-pill"><i class="ti ti-lock"></i> {{ t.privacy_badge|safe }}</span></div>
+    <div class="logo"><img class="logo-icon" src="{{ url_for('static', filename='img/logo.svg') }}" alt="Gene Lens" width="26" height="26"> {{ t.app_title }} <span class="priv-pill"><i class="ti ti-lock"></i> {{ t.privacy_badge|safe }}</span></div>
     <div class="d-flex align-items-center gap-2">
       <a href="/settings" class="lang-sw" style="margin-right:8px;color:var(--text-muted);text-decoration:none;font-size:13px;display:inline-flex;align-items:center;gap:4px" title="{{ t.settings_link }}"><i class="ti ti-settings"></i> {{ t.settings_link }}</a>
       <div class="lang-sw"><a href="/lang/en?next={{ request.path }}" class="{% if lang == 'en' %}active{% endif %}">EN</a> <a href="/lang/pt?next={{ request.path }}" class="{% if lang == 'pt' %}active{% endif %}">PT-BR</a></div>
@@ -913,6 +925,7 @@ a { color: var(--accent); }
       <summary><i class="ti ti-alert-triangle tr"></i> {{ t.acc_disease }} {% if disease %}<span class="badge-count br">{{ (disease.pathogenic|length + disease.likely_pathogenic|length) }} {{ t.acc_variants }}</span>{% endif %}</summary>
       <div class="acc-body">
         {% if disease %}
+        {{ explain_button('disease') }}
         {% if conclusions.get('disease') %}<div class="cc"><h4><i class="ti ti-clipboard-text"></i> {{ t.conclusion_disease }}</h4><ul>{% for c in conclusions.disease %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
         {% if conclusions.get('disease_technical') %}<div class="tn">{% for n in conclusions.disease_technical %}<p style="margin:0">{{ n|bold|safe }}</p>{% endfor %}</div>{% endif %}
         {% set patho = disease.pathogenic + disease.likely_pathogenic %}
@@ -945,6 +958,7 @@ a { color: var(--accent); }
     <details>
       <summary><i class="ti ti-dna tr"></i> {{ t.acc_hereditary }} <span class="badge-count br">{{ hereditary.conditions|length }} {{ t.acc_findings }}</span>{% if hereditary.sex %} <span class="tm" style="font-size:11px;margin-left:8px">{% if hereditary.sex_inferred %}{{ t.sex_inferred }}{% endif %} {{ hereditary.sex }}</span>{% endif %}</summary>
       <div class="acc-body">
+        {{ explain_button('hereditary') }}
         <div class="tn" style="border-color:rgba(239,68,68,.2);margin-bottom:16px"><strong>{{ t.warning_label }}:</strong> {{ t.hereditary_disclaimer }}</div>
         {% for cond in hereditary.conditions %}
         <div class="gc" style="margin-bottom:12px;border-color:{% if cond.priority <= 1 %}rgba(239,68,68,.3){% elif cond.priority <= 2 %}rgba(234,179,8,.3){% else %}var(--border-default){% endif %}">
@@ -1053,6 +1067,7 @@ a { color: var(--accent); }
     <details>
       <summary><i class="ti ti-pill tr"></i> {{ t.level1_title }} <span class="badge-count br">{{ l1|length }}</span></summary>
       <div class="acc-body">
+        {{ explain_button('pharma') }}
         <p class="nt">CPIC = Clinical Pharmacogenetics Implementation Consortium</p>
         <table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_level }}</th><th>{{ t.col_drugs }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_annotation }}</th></tr></thead><tbody>
   {% for f in l1 %}<tr><td class="fw6">{{ f.gene }}</td><td><span class="bs br">{{ f.level }}</span></td><td>{{ f.drugs[:60] }}</td><td><code>{{ f.genotype }}</code></td>
@@ -1080,6 +1095,7 @@ a { color: var(--accent); }
 <!-- ═══ TAB 4: WELLNESS (Nutri + Fit + Skin + Aging) ═══ -->
 <div class="tp" id="tab-wellness">
   <div class="ctx"><h4>{{ t.tab_wellness }}</h4>{{ t.ctx_wellness }}</div>
+  {% if wellness %}{{ explain_button('wellness') }}{% endif %}
   {% if human.get('wellness') %}<div class="hc"><h4><i class="ti ti-circle-check"></i> {{ t.human_wellness }}</h4><ul>{% for c in human.wellness %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
   {% if wellness %}
   {% for pk, pn, acc_key in [('nutri', t.panel_nutri, 'acc_nutri'), ('fit', t.panel_fit, 'acc_fit'), ('skin', t.panel_skin, 'acc_skin'), ('aging', t.panel_aging, 'acc_aging')] %}
@@ -1146,6 +1162,7 @@ a { color: var(--accent); }
     <details>
       <summary><i class="ti ti-world tg"></i> {{ t.acc_ancestry }} <span class="badge-count bg">{{ ancestry.markers_used }} {{ t.acc_markers }}</span></summary>
       <div class="acc-body" id="ancestry-acc-body">
+        {{ explain_button('ancestry') }}
         {% if ancestry.conclusions %}
         <div class="cc"><h4><i class="ti ti-clipboard-text"></i> {{ t.acc_ancestry }}</h4><ul>{% for c in ancestry.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>
         {% endif %}
@@ -1171,6 +1188,7 @@ a { color: var(--accent); }
     <details>
       <summary><i class="ti ti-users ty"></i> {{ t.acc_family }} <span class="badge-count by">{{ family.summary.total_relevant }} {{ t.acc_variants }}</span></summary>
       <div class="acc-body">
+        {{ explain_button('family') }}
         {% if human.get('family') %}<div class="hc"><h4><i class="ti ti-circle-check"></i> {{ t.human_family }}</h4><ul>{% for c in human.family %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
         {% if family.conclusions %}<details class="gc acc" style="margin-bottom:16px"><summary style="font-size:13px;color:var(--text-muted)"><i class="ti ti-microscope"></i> {{ t.technical_details }}</summary><div class="acc-body"><div class="cc" style="margin:0"><h4><i class="ti ti-clipboard-text"></i> {{ t.family_conclusion_title }}</h4><ul>{% for c in family.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div></div></details>{% endif %}
         {% if family.dominant_findings %}
@@ -1397,6 +1415,46 @@ const de=document.getElementById('chart-ancestry-donut');if(de){const c=echarts.
 const me=document.getElementById('chart-ancestry-map');if(me){fetch('/static/js/world.json').then(r=>r.json()).then(w=>{echarts.registerMap('world',w);const c=echarts.init(me);const co={{ POP_COUNTRIES|tojson }};const d=[];for(const[p,cl]of Object.entries(co)){const pc=a.percentages[p]||0;if(pc<0.5)continue;for(const cn of cl)d.push({name:cn,value:pc,pop:p,itemStyle:{areaColor:a.colors[p]}});}c.setOption({tooltip:{trigger:'item',formatter:p=>p.data&&p.data.pop?a.labels[p.data.pop]+': '+p.data.value+'%':p.name},visualMap:{show:false},series:[{type:'map',map:'world',roam:true,emphasis:{label:{show:true,color:'#fff'},itemStyle:{areaColor:'#3b82f6'}},itemStyle:{areaColor:'#18181b',borderColor:'#27272a',borderWidth:.5},data:d}]});});}}
 {% endif %}
 {% endif %}
+
+// In-tab "Explain these results" — one-click local-AI explanation per section.
+const T_EXPLAINING = "{{ t.explain_loading }}";
+const T_EXPLAIN_ERR = "{{ t.explain_error }}";
+const T_EXPLAIN_DISC = "{{ t.explain_disclaimer }}";
+function explainSection(btn, section) {
+  const wrap = btn.closest('.explain-wrap');
+  const out = wrap.querySelector('.explain-out');
+  const orig = btn.innerHTML;
+  const fail = () => {
+    btn.disabled = false; btn.innerHTML = orig;
+    out.textContent = T_EXPLAIN_ERR; out.style.display = 'block';
+  };
+  const done = (text) => {
+    btn.disabled = false; btn.innerHTML = orig;
+    out.textContent = text;                            // textContent = no XSS
+    const disc = document.createElement('span');
+    disc.className = 'disc'; disc.textContent = T_EXPLAIN_DISC;
+    out.appendChild(disc);
+    out.style.display = 'block';
+  };
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader-2 explain-spin"></i> ' + T_EXPLAINING;
+  out.style.display = 'none';
+  // Kick off the background job, then poll — the request returns immediately,
+  // so the model's (up to ~2 min) generation never blocks the connection.
+  fetch('/api/explain', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ section: section }),
+  }).then(r => r.json()).then(d => {
+    if (!d.ok || !d.job_id) { fail(); return; }
+    const timer = setInterval(() => {
+      fetch('/api/explain/status/' + d.job_id).then(r => r.json()).then(s => {
+        if (s.status === 'done') { clearInterval(timer); done(s.explanation); }
+        else if (s.status === 'error' || s.status === 'not_found') { clearInterval(timer); fail(); }
+      }).catch(() => {});
+    }, 1500);
+  }).catch(fail);
+}
 </script>
 
 {% if results %}

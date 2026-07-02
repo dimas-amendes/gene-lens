@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" data-bs-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ t.setup_title }} · {{ t.app_title }}</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/logo-icon.svg') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/halfmoon.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tabler-icons.min.css') }}">
+<style>
+@font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-400.woff2') }}") format('woff2'); font-weight:400; font-display:swap; }
+@font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-500.woff2') }}") format('woff2'); font-weight:500; font-display:swap; }
+@font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-600.woff2') }}") format('woff2'); font-weight:600; font-display:swap; }
+@font-face { font-family:'Geist'; src:url("{{ url_for('static', filename='fonts/geist-700.woff2') }}") format('woff2'); font-weight:700; font-display:swap; }
+@font-face { font-family:'Geist Mono'; src:url("{{ url_for('static', filename='fonts/geist-mono-400.woff2') }}") format('woff2'); font-weight:400; font-display:swap; }
+
+body { font-family: 'Geist', -apple-system, system-ui, sans-serif; background: var(--bs-body-bg); color: var(--text); margin: 0; }
+.site-header { background: var(--bg); border-bottom: 1px solid var(--border-default); padding: 16px 0; }
+.site-header .container { display: flex; justify-content: space-between; align-items: center; max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+.logo { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+.logo-icon { color: var(--accent); font-size: 22px; }
+.lang-sw a { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none; color: var(--text-muted); transition: color .2s; }
+.lang-sw a:hover { color: var(--text-secondary); }
+.lang-sw a.active { background: var(--accent-soft); color: var(--accent); }
+.wrap { max-width: 760px; margin: 32px auto; padding: 0 16px; }
+h1.page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+.subtitle { color: var(--text-faint); font-size: 14px; margin-bottom: 24px; }
+.note { background: rgba(59,130,246,.05); border: 1px solid rgba(59,130,246,.2); border-radius: 10px; padding: 14px 18px; font-size: 13px; color: #cbd5e1; margin-bottom: 24px; line-height: 1.55; }
+.note .ti { color: var(--accent); margin-right: 6px; }
+.section-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint); margin: 22px 0 10px; }
+.card { background: var(--surface-3); border: 1px solid var(--border-default); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; }
+.opt { display: flex; align-items: flex-start; gap: 12px; }
+.opt input[type=checkbox] { margin-top: 3px; width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; }
+.opt input[type=checkbox]:disabled { cursor: default; opacity: .9; }
+.opt-body { flex: 1; }
+.opt-title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.opt-desc { color: var(--text-muted); font-size: 12.5px; line-height: 1.5; margin-top: 3px; }
+.badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+.badge.required { color: var(--yellow); background: rgba(234,179,8,.1); }
+.badge.optional { color: var(--text-muted); background: var(--surface-1); }
+.badge.ok { color: var(--green); background: var(--green-soft); }
+.addon { opacity: .82; }
+.addon .opt-title { font-size: 14px; }
+.addon-link { display: inline-flex; align-items: center; gap: 5px; margin-top: 9px; font-size: 12.5px; color: var(--accent); text-decoration: none; font-weight: 500; }
+.addon-link:hover { text-decoration: underline; }
+.actions { margin-top: 26px; display: flex; align-items: center; gap: 14px; }
+.btn-primary { background: var(--accent); color: #fff; border: none; padding: 11px 22px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+.hint { color: var(--text-dim); font-size: 12px; }
+.progress-wrap { margin-top: 22px; display: none; }
+.prog-row { margin-bottom: 12px; }
+.prog-label { font-size: 13px; display: flex; justify-content: space-between; margin-bottom: 4px; }
+.prog-bar { height: 8px; background: var(--surface-1); border-radius: 6px; overflow: hidden; }
+.prog-fill { height: 100%; width: 0%; background: var(--accent); transition: width .3s ease; }
+.prog-fill.indeterminate { width: 40%; animation: slide 1.2s infinite ease-in-out; }
+@keyframes slide { 0%{margin-left:-40%} 100%{margin-left:100%} }
+.err { color: var(--red); font-size: 13px; margin-top: 10px; }
+</style>
+</head>
+<body>
+<header class="site-header">
+  <div class="container">
+    <div class="logo"><img class="logo-icon" src="{{ url_for('static', filename='img/logo.svg') }}" alt="Gene Lens" width="26" height="26"> {{ t.app_title }}</div>
+    <div class="lang-sw"><a href="/lang/en?next=/setup" class="{% if lang == 'en' %}active{% endif %}">EN</a> <a href="/lang/pt?next=/setup" class="{% if lang == 'pt' %}active{% endif %}">PT-BR</a></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <h1 class="page-title">{{ t.setup_title }}</h1>
+  <p class="subtitle">{{ t.setup_subtitle }}</p>
+
+  <div class="note"><i class="ti ti-shield-lock"></i> {{ t.setup_internet_note }}</div>
+
+  <div class="section-title">{{ t.setup_db_heading }}</div>
+
+  <div class="card">
+    <label class="opt">
+      <input type="checkbox" id="db-clinvar" checked disabled title="{{ t.setup_required }}">
+      <div class="opt-body">
+        <div class="opt-title">{{ t.setup_clinvar_name }}
+          {% if clinvar_present %}<span class="badge ok">{{ t.setup_present }}</span>{% else %}<span class="badge required">{{ t.setup_required }}</span>{% endif %}
+        </div>
+        <div class="opt-desc">{{ t.setup_clinvar_desc }}</div>
+      </div>
+    </label>
+  </div>
+
+  <div class="card">
+    <label class="opt">
+      <input type="checkbox" id="db-pharmgkb" {% if pharmgkb_present %}checked disabled{% else %}checked{% endif %}>
+      <div class="opt-body">
+        <div class="opt-title">{{ t.setup_pharmgkb_name }}
+          {% if pharmgkb_present %}<span class="badge ok">{{ t.setup_present }}</span>{% else %}<span class="badge optional">{{ t.setup_optional }}</span>{% endif %}
+        </div>
+        <div class="opt-desc">{{ t.setup_pharmgkb_desc }}</div>
+      </div>
+    </label>
+  </div>
+
+  <div class="section-title">{{ t.setup_addons_heading }}</div>
+  <div class="note" style="margin-bottom:14px;"><i class="ti ti-info-circle"></i> {{ t.setup_addons_note }}</div>
+
+  <div class="card addon">
+    <div class="opt">
+      <i class="ti ti-robot" style="font-size:19px;color:var(--text-faint);margin-top:2px;"></i>
+      <div class="opt-body">
+        <div class="opt-title">{{ t.setup_ollama_name }}
+          {% if ollama_installed %}<span class="badge ok">{{ t.setup_present }}</span>{% endif %}
+        </div>
+        <div class="opt-desc">{{ t.setup_ollama_desc }}</div>
+        {% if not ollama_installed %}<a class="addon-link" href="{{ ollama_url }}" target="_blank" rel="noopener noreferrer"><i class="ti ti-external-link"></i> {{ t.settings_download_ollama }}</a>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card addon">
+    <div class="opt">
+      <i class="ti ti-language" style="font-size:19px;color:var(--text-faint);margin-top:2px;"></i>
+      <div class="opt-body">
+        <div class="opt-title">{{ t.setup_argos_name }}
+          {% if argos_installed %}<span class="badge ok">{{ t.setup_present }}</span>{% endif %}
+        </div>
+        <div class="opt-desc">{{ t.setup_argos_desc }}</div>
+        <a class="addon-link" href="https://www.argosopentech.com/" target="_blank" rel="noopener noreferrer"><i class="ti ti-external-link"></i> {{ t.setup_learn_more }}</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions" id="actions">
+    <button class="btn-primary" id="download-btn" onclick="startDownload()"
+      {% if clinvar_present and pharmgkb_present %}disabled{% endif %}>{{ t.setup_download_btn }}</button>
+    {% if clinvar_present %}
+    <a class="btn-primary" href="/" style="text-decoration:none;">{{ t.setup_done_btn }}</a>
+    {% else %}
+    <span class="hint">{{ t.setup_select_hint }}</span>
+    {% endif %}
+  </div>
+
+  <div class="progress-wrap" id="progress-wrap"></div>
+  <div class="err" id="err" style="display:none;">{{ t.setup_error }}</div>
+
+  {% if app_version %}<div style="margin-top:32px;color:var(--text-dim);font-size:12px;">Gene Lens v{{ app_version }}</div>{% endif %}
+</div>
+
+<script>
+const LABELS = { clinvar: "{{ t.setup_clinvar_name }}", pharmgkb: "{{ t.setup_pharmgkb_name }}" };
+const PHASE_LABELS = { download: "{{ t.setup_phase_downloading }}", process: "{{ t.setup_phase_processing }}" };
+const CLINVAR_PRESENT = {{ 'true' if clinvar_present else 'false' }};
+const PHARMGKB_PRESENT = {{ 'true' if pharmgkb_present else 'false' }};
+const T_DL = "{{ t.setup_downloading }}";
+const T_DONE = "{{ t.setup_done_btn }}";
+let pollTimer = null;
+
+function startDownload() {
+  const dbs = [];
+  const pg = document.getElementById('db-pharmgkb');
+  // ClinVar is required and locked-on: download it whenever it's missing.
+  if (!CLINVAR_PRESENT) dbs.push('clinvar');
+  // PharmGKB is optional: download only if the user left it checked and it's missing.
+  if (pg.checked && !PHARMGKB_PRESENT) dbs.push('pharmgkb');
+  if (dbs.length === 0) { window.location.href = '/'; return; }
+
+  const btn = document.getElementById('download-btn');
+  btn.disabled = true; btn.textContent = T_DL;
+  document.getElementById('err').style.display = 'none';
+
+  fetch('/api/setup/download', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ databases: dbs }),
+  }).then(r => r.json()).then(data => {
+    if (!data.ok) { showError(); return; }
+    document.getElementById('progress-wrap').style.display = 'block';
+    pollTimer = setInterval(pollStatus, 800);
+  }).catch(showError);
+}
+
+function pollStatus() {
+  fetch('/api/setup/status').then(r => r.json()).then(s => {
+    renderProgress(s.items);
+    if (s.finished) {
+      clearInterval(pollTimer);
+      const anyErr = Object.values(s.items).some(i => i.error);
+      if (anyErr) { showError(); resetBtn(); }
+      else { window.location.href = '/'; }
+    }
+  }).catch(() => {});
+}
+
+function renderProgress(items) {
+  const wrap = document.getElementById('progress-wrap');
+  let html = '';
+  for (const [name, it] of Object.entries(items)) {
+    const indet = it.pct < 0 && !it.done;               // only when no percent
+    const pct = it.done ? 100 : (it.pct < 0 ? 0 : it.pct);
+    const phase = it.done ? '' : (PHASE_LABELS[it.phase] ? ' · ' + PHASE_LABELS[it.phase] : '');
+    html += '<div class="prog-row">'
+      + '<div class="prog-label"><span>' + (LABELS[name] || name) + phase + '</span>'
+      + '<span>' + (it.done ? '100%' : (indet ? '…' : pct + '%')) + '</span></div>'
+      + '<div class="prog-bar"><div class="prog-fill ' + (indet ? 'indeterminate' : '')
+      + '" style="width:' + pct + '%"></div></div></div>';
+  }
+  wrap.innerHTML = html;
+}
+
+function showError() { document.getElementById('err').style.display = 'block'; resetBtn(); }
+function resetBtn() {
+  const btn = document.getElementById('download-btn');
+  btn.disabled = false; btn.textContent = "{{ t.setup_download_btn }}";
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<svg width="120" height="120" viewBox="88 88 336 336" xmlns="http://www.w3.org/2000/svg">
+  <!-- Gene Lens glyph (transparent): DNA helix inside a lens ring, brand blue. -->
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#3b82f6" stroke-width="10" opacity="0.6"/>
+  <g stroke="#3b82f6" stroke-width="20" stroke-linecap="round" fill="none">
+    <path d="M256 178 C 300 195,300 212,256 230 C 212 248,212 264,256 282 C 300 300,300 316,256 334"/>
+    <path d="M256 178 C 212 195,212 212,256 230 C 300 248,300 264,256 282 C 212 300,212 316,256 334"/>
+  </g>
+  <g stroke="#3b82f6" stroke-width="9" stroke-linecap="round" opacity="0.55">
+    <line x1="230" y1="203" x2="282" y2="203"/>
+    <line x1="226" y1="256" x2="286" y2="256"/>
+    <line x1="230" y1="309" x2="282" y2="309"/>
+  </g>
+</svg>

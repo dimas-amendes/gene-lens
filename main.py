@@ -242,6 +242,37 @@ def cmd_install_translator_model(args):
         sys.exit(1)
 
 
+def cmd_check_updates(args):
+    """Check whether newer reference databases are available upstream.
+
+    Explicit, on-demand network call (HEAD only). Prints per-database status
+    and how to update. Nothing is downloaded automatically."""
+    import download_databases
+
+    print()
+    print("=" * 60)
+    print("  DATABASE UPDATE CHECK")
+    print("=" * 60)
+    print("  Contacting sources (metadata only, no data downloaded)...\n")
+
+    status = download_databases.check_for_updates()
+    labels = {
+        "up-to-date": "up to date",
+        "update-available": "UPDATE AVAILABLE",
+        "not-downloaded": "not downloaded yet",
+        "unknown": "unknown (downloaded before tracking, or source unreachable)",
+    }
+    for name, state in status.items():
+        print(f"    {name:10s} : {labels.get(state, state)}")
+
+    if any(s == "update-available" for s in status.values()):
+        print("\n  A newer database is available. To update, run:")
+        print("    python main.py download")
+    else:
+        print("\n  Everything current (or nothing to check).")
+    print()
+
+
 def cmd_privacy_check(args):
     """Verify privacy setup."""
     from src.privacy import NetworkBlocker
@@ -341,6 +372,12 @@ Examples:
     # download
     p_download = subparsers.add_parser("download", help="Download reference databases")
 
+    # check-updates
+    p_check = subparsers.add_parser(
+        "check-updates",
+        help="Check if newer reference databases are available (HEAD only)",
+    )
+
     # privacy-check
     p_privacy = subparsers.add_parser("privacy-check", help="Verify privacy setup")
 
@@ -367,6 +404,8 @@ Examples:
         cmd_analyze(args)
     elif args.command == "download":
         cmd_download(args)
+    elif args.command == "check-updates":
+        cmd_check_updates(args)
     elif args.command == "web":
         from dashboard import run_dashboard
         run_dashboard(port=args.port, lang=args.lang)

@@ -34,7 +34,12 @@ jobs:
           # Pull only the first ~64KB and gunzip to read the header line
           HEADER=$(curl -s --range 0-65535 "$URL" | gunzip 2>/dev/null | head -n 1 || true)
           echo "Header: $HEADER"
-          REQUIRED="#AlleleID Type GeneSymbol ClinicalSignificance Chromosome Start Stop ReferenceAllele AlternateAllele ReviewStatus Assembly PhenotypeList RCVaccession Origin VariationID LastEvaluated"
+          # NOTE: the real alleles live in the *VCF columns; the legacy
+          # ReferenceAllele/AlternateAllele are present but "na" per row, so we
+          # depend on ReferenceAlleleVCF/AlternateAlleleVCF. Header-presence
+          # alone can't catch content drift — download_clinvar's low-count
+          # sanity warning is the second line of defense for that.
+          REQUIRED="#AlleleID Type GeneSymbol ClinicalSignificance Chromosome Start Stop ReferenceAlleleVCF AlternateAlleleVCF ReviewStatus Assembly PhenotypeList RCVaccession Origin VariationID LastEvaluated"
           MISSING=""
           for col in $REQUIRED; do
             if ! echo "$HEADER" | grep -q "$(echo "$col" | sed 's/[[]/\\[/g; s/[]]/\\]/g')"; then

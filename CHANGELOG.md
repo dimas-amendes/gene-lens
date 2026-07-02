@@ -7,6 +7,42 @@ and this project tries to follow [Semantic Versioning](https://semver.org/spec/v
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-07-02
+
+### Added (desktop app & first-run setup)
+- Double-click desktop bundles so non-technical users can run Gene Lens
+  without installing Python: a macOS `Gene Lens.app`, a single-file
+  Windows `GeneLens.exe`, and a console (Terminal) build for watching
+  logs. Built with PyInstaller (`packaging/gene_lens.spec` plus
+  `build_macos.sh` / `build_windows.bat`) and published automatically on
+  a version tag by `.github/workflows/release.yml`.
+- `app_launcher.py`: the packaged entry point. Asks the language (a
+  native macOS dialog in `.app` mode, a terminal prompt otherwise),
+  starts the local server, and opens the browser.
+- Browser first-run setup page (`/setup`): pick which reference databases
+  to download (ClinVar required, PharmGKB optional), each with a plain
+  explanation, a progress bar, and a clear "this is the only step that
+  uses the internet, everything after is 100% offline" notice. The home
+  route gates to it until the core database is present.
+- Automatic PharmGKB download (the public clinical-annotations archive,
+  no login), with graceful degradation if it is unavailable.
+- Manual database update check: a "Check for updates" button in Settings
+  and `python main.py check-updates`. Metadata-only, never auto-downloads,
+  and records source freshness (Last-Modified / ETag) in a `.db_meta.json`
+  sidecar so it can tell you when ClinVar or PharmGKB has a newer version.
+- New brand logo (a DNA helix inside a lens) as `static/img/logo.svg` and
+  `logo-icon.svg`, wired into every page header, a favicon on all pages,
+  and macOS/Windows app icons (`packaging/icon.icns`, `icon.ico`).
+- App version shown in the setup and settings footers, stamped into the
+  macOS bundle Info.plist, and used in the release asset names.
+- Frozen-bundle path handling (`config.py`): databases, history, logs,
+  and I/O are written to a per-user writable directory
+  (`~/Library/Application Support/GeneLens`, `%APPDATA%\GeneLens`) instead
+  of the read-only app folder.
+- Tests for the PharmGKB download and update check
+  (`tests/test_download_databases.py`) and the first-run setup flow and
+  gate (`tests/test_setup_flow.py`).
+
 ### Added
 - Per-analysis chat persistence (`src/chat_store.py`). Conversations
   survive closing the drawer and live under `history/<hid>/chat.json`
@@ -71,9 +107,12 @@ and this project tries to follow [Semantic Versioning](https://semver.org/spec/v
 - `_csrf_check` is now a `before_request` hook only; the buggy inline
   call inside `/api/chat/ask` that turned every valid POST into a 403
   was removed.
-
----
-
-This is the pre-1.0 development log. v0.1.0 will be tagged when the
-dashboard, settings page, and chat drawer are deemed launch-ready and a
-fresh setup walkthrough has been verified end-to-end on a clean machine.
+- `/api/check-updates` is POST-only so the global CSRF/Origin guard
+  covers it. As a GET it could have been fired from any site open in the
+  browser, triggering outbound pings to NCBI/PharmGKB and leaking the
+  user's IP.
+- First-run setup download errors return an opaque code to the browser;
+  the detailed exception (which can include filesystem paths) stays in
+  the local log only.
+- The `GENE_LENS_DATA_HOME` override is resolved with `.resolve()` so a
+  `..` path cannot redirect where databases and downloads are written.

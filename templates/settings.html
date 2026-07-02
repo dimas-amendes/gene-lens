@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ t.settings_title }} · {{ t.app_title }}</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/logo-icon.svg') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/halfmoon.min.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tabler-icons.min.css') }}">
@@ -49,12 +50,32 @@ h1.page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
 .ai-toggle-btn.is-on { background: transparent; color: var(--text); border: 1px solid var(--border-strong); }
 .ai-toggle-btn:hover:not(:disabled) { filter: brightness(1.1); }
 .ai-toggle-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.dl-btn { display: inline-flex; width: fit-content; max-width: max-content; align-items: center; gap: 5px; background: var(--accent-soft); color: var(--accent); border: 1px solid transparent; padding: 5px 11px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; text-decoration: none; }
+.dl-btn:hover:not(:disabled) { background: rgba(59,130,246,.2); }
+.dl-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.spin { display: inline-block; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.danger-card { border-color: rgba(239,68,68,.3); }
+.btn-danger { background: rgba(239,68,68,.12); color: var(--red); border: 1px solid rgba(239,68,68,.4); padding: 6px 13px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.btn-danger:hover:not(:disabled) { background: rgba(239,68,68,.2); }
+.btn-danger:disabled { opacity: .5; cursor: not-allowed; }
+.btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border-strong); padding: 6px 13px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; }
+.btn-ghost:hover { color: var(--text); }
+.confirm-box { margin-top: 14px; font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+.confirm-actions { margin-top: 12px; display: flex; gap: 10px; }
+.dl-progress { margin-top: 14px; display: none; }
+.dl-label { font-size: 12px; color: var(--text-muted); margin-bottom: 5px; display: flex; justify-content: space-between; }
+.dl-bar { height: 7px; background: var(--surface-1); border-radius: 6px; overflow: hidden; }
+.dl-fill { height: 100%; width: 0%; background: var(--accent); transition: width .3s ease; }
+.dl-fill.indet { width: 40%; animation: dlslide 1.2s infinite ease-in-out; }
+@keyframes dlslide { 0%{margin-left:-40%} 100%{margin-left:100%} }
+.or-terminal { font-size: 12px; color: var(--text-dim); margin: 16px 0 2px; }
 </style>
 </head>
 <body>
 <header class="site-header">
   <div class="container">
-    <div class="logo"><span class="logo-icon"><i class="ti ti-flask"></i></span> {{ t.app_title }}</div>
+    <div class="logo"><img class="logo-icon" src="{{ url_for('static', filename='img/logo.svg') }}" alt="Gene Lens" width="26" height="26"> {{ t.app_title }}</div>
     <a href="/" class="back-link"><i class="ti ti-arrow-left"></i> {{ t.settings_back }}</a>
   </div>
 </header>
@@ -64,6 +85,17 @@ h1.page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
   <p class="subtitle">{{ t.settings_subtitle }}</p>
 
   <div class="note"><i class="ti ti-info-circle"></i> {{ t.settings_safety_note }}</div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h3 class="card-title"><i class="ti ti-refresh"></i> {{ t.settings_updates_title }}</h3>
+        <div class="card-meta">{{ t.settings_updates_desc }}</div>
+      </div>
+      <button id="check-updates-btn" class="ai-toggle-btn" onclick="checkUpdates(this)">{{ t.settings_updates_check }}</button>
+    </div>
+    <div id="check-updates-result" class="commands" style="display:none; margin-top:14px;"></div>
+  </div>
 
   {% for c in components %}
   <div class="card">
@@ -81,7 +113,21 @@ h1.page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
       </span>
     </div>
 
-    {% if not c.installed or c.key == 'ollama' %}
+    {% if not c.installed and c.key in ['clinvar', 'pharmgkb'] %}
+    <button class="dl-btn" style="margin-top:14px;" onclick="downloadDb('{{ c.key }}', this)"><i class="ti ti-download"></i> {{ t.settings_download_now }}</button>
+    <div class="dl-progress" id="dl-progress-{{ c.key }}">
+      <div class="dl-label"><span>{{ c.name }}</span><span class="dl-pct">…</span></div>
+      <div class="dl-bar"><div class="dl-fill indet"></div></div>
+    </div>
+    <div class="or-terminal">{{ t.settings_download_or_terminal }}</div>
+    {% endif %}
+
+    {% if not c.installed and c.key == 'ollama' %}
+    <a class="dl-btn" style="margin-top:14px;" href="{{ ollama_url }}" target="_blank" rel="noopener noreferrer"><i class="ti ti-external-link"></i> {{ t.settings_download_ollama }}</a>
+    <div class="or-terminal">{{ t.settings_download_or_terminal }}</div>
+    {% endif %}
+
+    {% if (not c.installed or c.key == 'ollama') and c.install_commands %}
     <div class="commands">
       <button onclick="copyCmds(this)" data-cmds="{% for cmd in c.install_commands %}{{ cmd }}{% if not loop.last %}&#10;{% endif %}{% endfor %}">{{ t.settings_copy }}</button>
       {% for cmd in c.install_commands %}
@@ -114,9 +160,37 @@ h1.page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
     {% endif %}
   </div>
   {% endfor %}
+
+  <div class="card danger-card">
+    <div class="card-head">
+      <div>
+        <h3 class="card-title"><i class="ti ti-trash" style="color:var(--red)"></i> {{ t.settings_reset_title }}</h3>
+        <div class="card-meta">{{ t.settings_reset_desc }}</div>
+      </div>
+      <button class="btn-danger" id="reset-btn" onclick="showResetConfirm()">{{ t.settings_reset_btn }}</button>
+    </div>
+    <div class="confirm-box" id="reset-confirm" style="display:none;">
+      {{ t.settings_reset_confirm_q }}
+      <div class="confirm-actions">
+        <button class="btn-danger" onclick="doReset(this)">{{ t.settings_reset_confirm }}</button>
+        <button class="btn-ghost" onclick="hideResetConfirm()">{{ t.settings_reset_cancel }}</button>
+      </div>
+      <div id="reset-err" style="display:none; color:var(--red); font-size:12px; margin-top:8px;">{{ t.settings_reset_error }}</div>
+    </div>
+  </div>
+
+  {% if app_version %}<div style="margin-top:24px;color:var(--text-dim);font-size:12px;">Gene Lens v{{ app_version }}</div>{% endif %}
 </div>
 
 <script>
+const UPDATE_LABELS = {
+  "up-to-date": "{{ t.settings_updates_uptodate }}",
+  "update-available": "{{ t.settings_updates_available }}",
+  "not-downloaded": "{{ t.settings_updates_notdownloaded }}",
+  "unknown": "{{ t.settings_updates_unknown }}",
+};
+const PHASE_LABELS = { download: "{{ t.setup_phase_downloading }}", process: "{{ t.setup_phase_processing }}" };
+
 function copyCmds(btn) {
   const text = btn.dataset.cmds.replaceAll('&#10;', '\n');
   navigator.clipboard.writeText(text).then(() => {
@@ -124,6 +198,122 @@ function copyCmds(btn) {
     btn.textContent = '{{ t.settings_copied }}';
     setTimeout(() => { btn.textContent = orig; }, 1500);
   });
+}
+
+const T_DOWNLOADING = "{{ t.setup_downloading }}";
+
+// Core download used by both the "Download now" and the "Update" buttons: same
+// endpoint and shared _setup_state, one database at a time. The server writes
+// the file with mode "w", so an update simply overwrites the existing copy.
+function runDbDownload(key, btn, wrap) {
+  const fill = wrap ? wrap.querySelector('.dl-fill') : null;
+  const pct = wrap ? wrap.querySelector('.dl-pct') : null;
+  const orig = btn.innerHTML;
+  const reset = () => { btn.disabled = false; btn.innerHTML = orig; };
+  btn.disabled = true;
+  btn.textContent = T_DOWNLOADING;
+  if (wrap) wrap.style.display = 'block';
+  fetch('/api/setup/download', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ databases: [key] }),
+  }).then(r => r.json()).then(d => {
+    if (!d.ok) { reset(); return; }
+    const timer = setInterval(() => {
+      fetch('/api/setup/status').then(r => r.json()).then(s => {
+        const it = s.items[key];
+        if (it && fill) {
+          const indet = it.pct < 0 && !it.done;
+          const width = it.done ? 100 : (it.pct < 0 ? 0 : it.pct);
+          fill.classList.toggle('indet', indet);
+          fill.style.width = width + '%';
+          if (pct) {
+            const ph = it.done ? '' : (PHASE_LABELS[it.phase] ? PHASE_LABELS[it.phase] + ' ' : '');
+            pct.textContent = it.done ? '100%' : (indet ? '…' : ph + width + '%');
+          }
+        }
+        if (s.finished) {
+          clearInterval(timer);
+          if (it && it.error) { reset(); }
+          else { location.reload(); }  // refresh installed badges / status
+        }
+      }).catch(() => {});
+    }, 800);
+  }).catch(() => reset());
+}
+function downloadDb(key, btn) { runDbDownload(key, btn, document.getElementById('dl-progress-' + key)); }
+function updateDb(key, btn) { runDbDownload(key, btn, document.getElementById('upd-progress-' + key)); }
+
+function checkUpdates(btn) {
+  const out = document.getElementById('check-updates-result');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader-2 spin"></i> {{ t.settings_updates_checking }}';
+  // Keep the spinner up for at least 1s so a fast response doesn't just flash.
+  const started = Date.now();
+  const finish = (payload, isText) => {
+    setTimeout(() => {
+      out.style.display = 'block';
+      if (isText) out.textContent = payload; else out.innerHTML = payload;
+      btn.disabled = false;
+      btn.innerHTML = orig;
+    }, Math.max(0, 1000 - (Date.now() - started)));
+  };
+  fetch('/api/check-updates', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) { finish('{{ t.settings_updates_error }}', true); return; }
+      const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      const T_UPDATE = "{{ t.settings_update_btn }}";
+      let rows = '';
+      for (const [name, state] of Object.entries(data.status)) {
+        const label = esc(UPDATE_LABELS[state] || state);
+        if (state === 'update-available') {
+          // Offer an in-place Update that re-downloads and overwrites the file.
+          rows += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">'
+            + '<span><strong>' + esc(name) + '</strong>: ' + label + '</span>'
+            + '<button class="dl-btn" onclick="updateDb(\'' + esc(name) + '\', this)"><i class="ti ti-download"></i> ' + T_UPDATE + '</button></div>'
+            + '<div class="dl-progress" id="upd-progress-' + esc(name) + '">'
+            + '<div class="dl-label"><span>' + esc(name) + '</span><span class="dl-pct">…</span></div>'
+            + '<div class="dl-bar"><div class="dl-fill indet"></div></div></div>';
+        } else {
+          rows += '<div><strong>' + esc(name) + '</strong>: ' + label + '</div>';
+        }
+      }
+      finish(rows, false);
+    })
+    .catch(() => finish('{{ t.settings_updates_error }}', true));
+}
+
+// Two-step reset: the button reveals a confirm prompt; only the second click
+// wipes. Redirects home afterward (which routes to /setup, now that the
+// databases are gone).
+function showResetConfirm() {
+  document.getElementById('reset-btn').style.display = 'none';
+  document.getElementById('reset-confirm').style.display = 'block';
+}
+function hideResetConfirm() {
+  document.getElementById('reset-confirm').style.display = 'none';
+  document.getElementById('reset-btn').style.display = '';
+}
+function doReset(btn) {
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader-2 spin"></i> {{ t.settings_reset_working }}';
+  fetch('/api/reset-data', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: "{{ reset_token }}" }),
+  })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) { window.location.href = '/'; return; }
+      throw new Error();
+    })
+    .catch(() => {
+      document.getElementById('reset-err').style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = '{{ t.settings_reset_confirm }}';
+    });
 }
 </script>
 </body>

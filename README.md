@@ -82,7 +82,69 @@ If there are inherited conditions in your family, or you're just curious about w
 
 ---
 
+## For non-technical users (no Python, no terminal)
+
+You do not need to install Python or know any commands. Download one file, open
+it, and use Gene Lens in your normal web browser.
+
+**1. Download the file for your computer** from the
+[Releases page](https://github.com/dimas-amendes/gene-lens/releases):
+
+- **macOS** — `GeneLens-<version>-macOS.zip`
+- **Windows** — `GeneLens-<version>-Windows.exe`
+
+**2. Open it.**
+
+- **macOS** — double-click the zip to unzip it, then double-click **Gene Lens**.
+- **Windows** — double-click **GeneLens.exe**.
+
+**3. First time only, get past the security warning** (the app is not paid-signed,
+so the system is cautious):
+
+- **macOS** — if it says *"can't be opened because it is from an unidentified
+  developer"*, right-click (Control-click) **Gene Lens** and choose **Open**,
+  then **Open** again. macOS remembers it after that.
+- **Windows** — if you see *"Windows protected your PC"*, click **More info**,
+  then **Run anyway**.
+
+**4. Follow the setup.** It asks your language (English or Portuguese), then your
+browser opens a **setup page** where you choose which reference databases to
+download (ClinVar, required; PharmGKB, optional), each explained in plain words.
+This one download is **the only time Gene Lens uses the internet**. After it
+finishes, everything runs on your computer and nothing ever leaves it.
+
+That is it. From then on you upload your raw DNA file and read your results, all
+locally. Keep the little window (or the browser tab) open while you use it;
+closing it stops the app.
+
+Your reports and data are saved on your own machine, not inside the app:
+
+- **macOS** — `~/Library/Application Support/GeneLens/`
+- **Windows** — `%APPDATA%\GeneLens\`
+
+> The app is a local web dashboard. The macOS/Windows file you downloaded is a
+> small launcher that starts a server on your own computer and opens your browser
+> at it, so the interface is the same everywhere. On macOS there is also a
+> `GeneLens-<version>-Terminal-macOS.zip` if you prefer to run it from a terminal
+> and watch the logs.
+
+### Keeping the databases current
+
+Downloads are one-time and the app stays fully offline afterward. To check for
+newer reference data on your terms, open **Settings** in the app and click
+**Check for updates** (or run `python main.py check-updates` from a source
+checkout). It only compares dates; it never auto-downloads.
+
+The optional AI chat (Ollama) and neural PT-BR translation are **not** bundled;
+the app works without them and points you to install them if you want those
+extras. See the optional sections below.
+
+---
+
 ## Quick Start
+
+> For developers, or to build the bundles yourself. End users can use the
+> prebuilt download above instead.
 
 ### Prerequisites
 
@@ -155,6 +217,19 @@ Only required if you want analyses in Portuguese. English analyses don't need it
 ollama pull llama3.1:8b
 python main.py analyze input/your_dna.txt --ai
 ```
+
+### Build the desktop bundle yourself
+
+The prebuilt downloads come from `packaging/`. To build locally (PyInstaller
+must run on the target OS — no cross-compilation):
+
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
+bash packaging/build_macos.sh        # macOS  -> dist/GeneLens-macos.zip
+packaging\build_windows.bat          # Windows -> dist/GeneLens-windows.zip
+```
+
+CI does this automatically on a version tag via `.github/workflows/release.yml`.
 
 ---
 

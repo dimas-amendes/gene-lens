@@ -3,6 +3,8 @@ Status introspection for the /settings page. These tests focus on the
 detector contract — that each checker returns a populated ComponentStatus
 without raising — rather than the specific install state of the runner.
 """
+import pytest
+
 from src.system_status import (
     ComponentStatus,
     check_all,
@@ -11,6 +13,15 @@ from src.system_status import (
     check_ollama,
     check_pharmgkb,
 )
+
+
+@pytest.fixture(autouse=True)
+def _no_ollama_network(monkeypatch):
+    """Ollama is now detected over HTTP (127.0.0.1:11434). Stub it so these
+    detector-contract tests stay deterministic and never touch the network."""
+    import src.local_ai as local_ai
+    monkeypatch.setattr(local_ai, "is_ollama_available", lambda: False)
+    monkeypatch.setattr(local_ai, "list_models", lambda: [])
 
 
 def _assert_well_formed(status: ComponentStatus) -> None:

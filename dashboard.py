@@ -17,10 +17,10 @@ from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response, make_response
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response, make_response, session
 from werkzeug.utils import secure_filename
 
-from config import DATA_DIR, INPUT_DIR, OUTPUT_DIR
+from config import DATA_DIR, INPUT_DIR, OUTPUT_DIR, BUNDLE_DIR, HISTORY_DIR, LOG_PATH
 from src.privacy import NetworkBlocker, ensure_directories
 from src.parsers import load_genome
 from src.databases import load_clinvar, load_pharmgkb
@@ -42,7 +42,32 @@ from src.hereditary_conditions import analyze_hereditary_conditions
 import secrets
 import threading
 
-app = Flask(__name__)
+# Point Flask at absolute resource folders so template/static lookup works
+# both in dev (BUNDLE_DIR == project root) and inside a PyInstaller bundle
+# (BUNDLE_DIR == the extracted resource dir), where Flask(__name__)'s default
+# relative lookup would miss the bundled templates.
+_APP_VERSION = None
+
+
+def app_version() -> str:
+    """App version, read once from the bundled pyproject.toml (single source of
+    truth; works both in dev and inside the frozen bundle). Empty on failure."""
+    global _APP_VERSION
+    if _APP_VERSION is None:
+        try:
+            import tomllib
+            with open(BUNDLE_DIR / "pyproject.toml", "rb") as f:
+                _APP_VERSION = tomllib.load(f)["project"]["version"]
+        except Exception:
+            _APP_VERSION = ""
+    return _APP_VERSION
+
+
+app = Flask(
+    __name__,
+    template_folder=str(BUNDLE_DIR / "templates"),
+    static_folder=str(BUNDLE_DIR / "static"),
+)
 app.secret_key = secrets.token_hex(32)
 app.config["MAX_CONTENT_LENGTH"] = 80 * 1024 * 1024
 
@@ -84,9 +109,6 @@ def _csrf_check():
         if not origin and referer and not any(referer.startswith(a) for a in allowed):
             _log(f"CSRF blocked: Referer={referer}")
             return "Forbidden: cross-origin POST blocked", 403
-
-LOG_PATH = Path(__file__).parent / "dashboard.log"
-HISTORY_DIR = Path(__file__).parent / "history"
 
 def _log(msg):
     try:
@@ -161,6 +183,74 @@ def _preload_dbs_async():
     waits on the first analysis. Safe to call multiple times — _ensure_dbs
     is idempotent and protected by _db_lock."""
     threading.Thread(target=_ensure_dbs, daemon=True, name="db-preloader").start()
+
+
+# ── First-run setup (browser-driven database download) ───────────────────────
+# The user picks which reference databases to download on the /setup page; the
+# download runs here in a background thread (NOT inside NetworkBlocker — this is
+# the one intended network step, not analysis) and reports progress the page
+# polls. After setup, analysis is fully offline.
+_setup_state = {"running": False, "finished": False, "items": {}}
+_setup_lock = threading.Lock()
+
+
+def _run_setup_download(selected: list):
+    import download_databases as dd
+
+    with _setup_lock:
+        if _setup_state["running"]:
+            return
+        _setup_state["running"] = True
+        _setup_state["finished"] = False
+        _setup_state["items"] = {
+            name: {"phase": "queued", "pct": 0, "done": False, "error": None}
+            for name in selected
+        }
+
+    # Mutations below are single dict-key assignments read concurrently by
+    # /api/setup/status. Correct under CPython's GIL (each assignment is
+    # atomic); revisit if this ever runs on a free-threaded (no-GIL) build.
+    def _do(name, fn):
+        item = _setup_state["items"][name]
+        item["phase"] = "download"
+        try:
+            ok = fn()
+            item["done"] = bool(ok)
+            item["pct"] = 100 if ok else item["pct"]
+            if not ok:
+                item["error"] = "failed"
+            item["phase"] = "done" if ok else "error"
+        except Exception as e:
+            # Opaque code to the client; the real detail (which may include
+            # filesystem paths) stays in the local log only.
+            _log(f"setup download error [{name}]: {e}")
+            item["error"] = "download_failed"
+            item["phase"] = "error"
+
+    # PharmGKB first: it's ~1 MB and finishes in seconds, so it isn't stuck at
+    # 0% behind ClinVar's minutes-long download + parse.
+    if "pharmgkb" in selected:
+        # force=True so an explicit Download/Update re-fetches even when the
+        # files already exist (download_clinvar always re-downloads already).
+        _do("pharmgkb", lambda: dd.download_pharmgkb(force=True))
+
+    if "clinvar" in selected:
+        def _cb(phase, pct):
+            it = _setup_state["items"]["clinvar"]
+            it["phase"] = phase
+            if pct >= 0:
+                it["pct"] = pct
+        _do("clinvar", lambda: dd.download_clinvar(progress_cb=_cb))
+
+    # Refresh the in-memory DB cache so the freshly downloaded data is live
+    # without a restart.
+    _db_cache["loaded"] = False
+    _preload_dbs_async()
+
+    # finished first: a poll landing between these sees {running, finished:true}
+    # (benign) rather than {running:false, finished:false} ("nothing happening").
+    _setup_state["finished"] = True
+    _setup_state["running"] = False
 
 
 # ── Job system (async analysis with progress) ────────────────────────────────
@@ -1219,6 +1309,10 @@ def index():
     saved_lang = request.cookies.get("lang")
     if saved_lang:
         _current_lang = normalize_lang(saved_lang)
+    # First-run gate: without the core reference DB, send the user to the setup
+    # page (choose + download databases) instead of an empty dashboard.
+    if _clinvar_missing():
+        return redirect(url_for("setup"))
     active = _jobs.get("active_result")
     history = _load_history_index()
     t = get_strings(_current_lang)
@@ -1644,6 +1738,67 @@ def consent():
     return render_template("consent.html", terms=TERMS_TEXT, t=t, lang=_current_lang)
 
 
+def _ollama_download_url() -> str:
+    """Official Ollama installer page for the current OS. Unlike Argos (a
+    Python package excluded from the frozen bundle), Ollama is a standalone
+    installer that works even for packaged users — so a real download link
+    is actionable here."""
+    import sys
+    if sys.platform == "darwin":
+        return "https://ollama.com/download/mac"
+    if sys.platform.startswith("win"):
+        return "https://ollama.com/download/windows"
+    return "https://ollama.com/download/linux"
+
+
+@app.route("/setup")
+def setup():
+    """First-run setup: explain and let the user choose which reference
+    databases to download. Add-ons (Ollama, Argos) are explained here but
+    installed later via Settings, since they're large external installs."""
+    t = get_strings(_get_lang())
+    from src.system_status import check_all
+    components = check_all()
+    ollama_installed = any(c.key == "ollama" and c.installed for c in components)
+    argos_installed = any(c.key == "argos" and c.installed for c in components)
+    return render_template(
+        "setup.html",
+        t=t,
+        lang=_get_lang(),
+        clinvar_present=not _clinvar_missing(),
+        pharmgkb_present=not _pharmgkb_missing(),
+        ollama_installed=ollama_installed,
+        argos_installed=argos_installed,
+        ollama_url=_ollama_download_url(),
+        app_version=app_version(),
+    )
+
+
+@app.route("/api/setup/download", methods=["POST"])
+def api_setup_download():
+    """Start downloading the user-selected databases in the background.
+    CSRF is enforced by the global before_request hook."""
+    data = request.get_json(silent=True) or {}
+    valid = {"clinvar", "pharmgkb"}
+    selected = [x for x in data.get("databases", []) if x in valid]
+    if not selected:
+        return jsonify({"ok": False, "error": "nothing_selected"})
+    threading.Thread(
+        target=_run_setup_download, args=(selected,), daemon=True, name="setup-download"
+    ).start()
+    return jsonify({"ok": True, "selected": selected})
+
+
+@app.route("/api/setup/status")
+def api_setup_status():
+    """Polled by the setup page to render download progress."""
+    return jsonify({
+        "running": _setup_state["running"],
+        "finished": _setup_state["finished"],
+        "items": _setup_state["items"],
+    })
+
+
 def _block_pt_without_translator() -> bool:
     """In PT mode the analysis depends on the neural translator. If the
     model isn't installed, redirect the user to /settings instead of
@@ -1655,15 +1810,16 @@ def _block_pt_without_translator() -> bool:
 
 
 def _clinvar_missing() -> bool:
-    """ClinVar is the core reference DB. Analysing without it yields an
-    empty report — better to redirect than fake success."""
-    from config import CLINVAR_TSV
-    return not CLINVAR_TSV.exists()
+    """ClinVar is the core reference DB. Analysing without it yields an empty
+    report — better to redirect than fake success. Treats a present-but-tiny
+    (corrupt/incomplete) file as missing so the UI offers a re-download."""
+    from src.system_status import clinvar_present
+    return not clinvar_present()
 
 
 def _pharmgkb_missing() -> bool:
-    from config import PHARMGKB_ANNOTATIONS, PHARMGKB_ALLELES
-    return not (PHARMGKB_ANNOTATIONS.exists() and PHARMGKB_ALLELES.exists())
+    from src.system_status import pharmgkb_present
+    return not pharmgkb_present()
 
 
 @app.route("/analyze", methods=["POST"])
@@ -2083,6 +2239,76 @@ def chat_ask():
     }
 
 
+# One-click "Explain these results" runs in the background so the request isn't
+# held for the model's full generation (up to 120s). Client polls for the result.
+_explain_jobs = {}
+_explain_lock = threading.Lock()
+EXPLAIN_NUM_PREDICT = 900  # concise explanations — faster than the 2048 chat default
+
+
+def _run_explain(job_id: str, context: str, question: str, lang: str):
+    from src.local_ai import chat_about_analysis, DEFAULT_MODEL
+    try:
+        ok, reply = chat_about_analysis(
+            context=context, history=[], question=question,
+            model=DEFAULT_MODEL, language=lang, num_predict=EXPLAIN_NUM_PREDICT,
+        )
+        if ok:
+            result = {"status": "done", "explanation": reply}
+        else:
+            _log(f"explain failed: {reply}")
+            result = {"status": "error"}
+    except Exception as e:
+        _log(f"explain error: {e}")
+        result = {"status": "error"}
+    with _explain_lock:
+        _explain_jobs[job_id] = result
+        if len(_explain_jobs) > 20:  # keep it small (single-user local app)
+            for k in list(_explain_jobs)[:-20]:
+                _explain_jobs.pop(k, None)
+
+
+@app.route("/api/explain", methods=["POST"])
+def api_explain():
+    """Start a per-section explanation in the background; returns a job_id the
+    client polls via /api/explain/status. Reuses the chat pipeline (context +
+    language-aware, non-prescriptive system prompt) with a pre-made section
+    prompt. CSRF-guarded by before_request."""
+    from src.local_ai import EXPLAIN_PROMPTS
+    from src.preferences import is_ai_chat_enabled
+
+    payload = request.get_json(silent=True) or {}
+    section = (payload.get("section") or "").strip()
+    if section not in EXPLAIN_PROMPTS:
+        return {"ok": False, "error": "unknown_section"}, 400
+    if not is_ai_chat_enabled():
+        return {"ok": False, "error": "ai_disabled"}, 403
+
+    active = _jobs.get("active_result")
+    if not active:
+        return {"ok": False, "error": "no_analysis"}, 400
+
+    lang = _get_lang()
+    context = _build_chat_context(active, lang)  # build in the request thread
+    question = EXPLAIN_PROMPTS[section]["pt" if lang == "pt" else "en"]
+    job_id = secrets.token_hex(8)
+    with _explain_lock:
+        _explain_jobs[job_id] = {"status": "running"}
+    threading.Thread(
+        target=_run_explain, args=(job_id, context, question, lang),
+        daemon=True, name=f"explain-{section}",
+    ).start()
+    return {"ok": True, "job_id": job_id}
+
+
+@app.route("/api/explain/status/<job_id>")
+def api_explain_status(job_id):
+    """Polled by the Explain button until the background generation finishes."""
+    with _explain_lock:
+        job = _explain_jobs.get(job_id, {"status": "not_found"})
+    return jsonify(job)
+
+
 @app.route("/settings")
 def settings():
     """Show installation status of databases and optional integrations."""
@@ -2094,16 +2320,97 @@ def settings():
     argos = next((c for c in components if c.key == "argos"), None)
     # argos.installed is True only when both package AND model are present.
     argos_pkg_present = bool(argos and "not installed in this Python" not in argos.detail)
+    # One-time token the reset button must echo back, so a blind cross-origin
+    # POST (which the CSRF hook permits when it carries no Origin/Referer) can't
+    # wipe the user's data.
+    session["reset_token"] = secrets.token_hex(16)
     return render_template(
         "settings.html",
         t=t,
         lang=_get_lang(),
+        reset_token=session["reset_token"],
         components=components,
         ai_chat_enabled=is_ai_chat_enabled(),
         ollama_installed=ollama_installed,
         translator_ready=bool(argos and argos.installed),
         translator_pkg_present=argos_pkg_present,
+        ollama_url=_ollama_download_url(),
+        app_version=app_version(),
     )
+
+
+def _reset_all_data() -> None:
+    """Delete all local data: reference databases, uploaded genome files,
+    reports, history, logs, and the consent/preferences flags. Genetic data
+    (input/output/history) is securely overwritten; the public databases are
+    plain-deleted (secure-wiping ~380 MB would be pointlessly slow)."""
+    import shutil
+    from src.privacy import secure_delete, secure_delete_dir
+    from src.consent import CONSENT_FILE
+    from src.preferences import PREFS_FILE
+
+    for d in (INPUT_DIR, OUTPUT_DIR, HISTORY_DIR):
+        try:
+            secure_delete_dir(d)  # genetic data — overwrite before deleting
+        except OSError as e:
+            _log(f"reset: secure_delete_dir {d} failed: {e}")
+    shutil.rmtree(DATA_DIR, ignore_errors=True)  # public DBs — plain delete
+    for f in (LOG_PATH, CONSENT_FILE, PREFS_FILE):
+        try:
+            if f.exists():
+                secure_delete(f)
+        except OSError as e:
+            _log(f"reset: delete {f} failed: {e}")
+
+    # Forget in-memory state so the UI reflects the wipe immediately.
+    _db_cache["loaded"] = False
+    _db_cache["clinvar"] = None
+    _db_cache["pharmgkb"] = None
+    _jobs.pop("active_result", None)
+
+    ensure_directories()
+    HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+
+
+@app.route("/api/reset-data", methods=["POST"])
+def api_reset_data():
+    """Wipe all local data. Irreversible (genetic files are securely erased), so
+    beyond the global CSRF hook it requires a one-time token issued when the
+    Settings page was rendered — a blind POST (no Origin/Referer) can't wipe.
+    """
+    data = request.get_json(silent=True) or {}
+    token = data.get("token")
+    expected = session.get("reset_token")
+    if not expected or token != expected:
+        return jsonify({"ok": False, "error": "bad_token"}), 403
+    session.pop("reset_token", None)  # single use
+    try:
+        _reset_all_data()
+        return jsonify({"ok": True})
+    except Exception as e:
+        _log(f"reset-data failed: {e}")
+        return jsonify({"ok": False})
+
+
+@app.route("/api/check-updates", methods=["POST"])
+def api_check_updates():
+    """User-initiated freshness check against the database sources.
+
+    Explicit, on-demand outbound HEAD only — triggered by the Settings button,
+    never automatically. Not part of analysis and carries no genetic data, so
+    it runs outside NetworkBlocker (which must never wrap a request handler).
+
+    POST (not GET) so the global CSRF/Origin guard applies: without it, any
+    site open in the browser could fire this and cause outbound pings to
+    NCBI/PharmGKB, leaking the user's IP. Offline-first promise stays honest.
+    """
+    import download_databases
+    try:
+        status = download_databases.check_for_updates()
+        return jsonify({"ok": True, "status": status})
+    except Exception as e:
+        _log(f"check-updates failed: {e}")
+        return jsonify({"ok": False, "error": "check_failed"})
 
 
 # Neural translator install is documented in the settings page as a one-time

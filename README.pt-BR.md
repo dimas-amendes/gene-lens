@@ -82,7 +82,60 @@ Se tem condições hereditárias na sua família, ou você é só curioso sobre 
 
 ---
 
+## Para quem não é técnico (sem Python, sem terminal)
+
+Você não precisa instalar Python nem saber nenhum comando. Baixe um arquivo,
+abra, e use o Gene Lens no seu navegador normal.
+
+**1. Baixe o arquivo do seu computador** na
+[página de Releases](https://github.com/dimas-amendes/gene-lens/releases):
+
+- **macOS** — `GeneLens-<versão>-macOS.zip`
+- **Windows** — `GeneLens-<versão>-Windows.exe`
+
+**2. Abra.**
+
+- **macOS** — dê duplo-clique no zip para descompactar, depois duplo-clique em
+  **Gene Lens**.
+- **Windows** — dê duplo-clique em **GeneLens.exe**.
+
+**3. Só na primeira vez, passe pelo aviso de segurança** (o app não é assinado
+pago, então o sistema é cauteloso):
+
+- **macOS** — se aparecer *"não pode ser aberto porque é de um desenvolvedor não
+  identificado"*, clique com o botão direito (Control-clique) em **Gene Lens** e
+  escolha **Abrir**, depois **Abrir** de novo. O macOS lembra a partir daí.
+- **Windows** — se aparecer *"O Windows protegeu seu PC"*, clique em **Mais
+  informações** e depois **Executar assim mesmo**.
+
+**4. Siga o setup.** Ele pergunta seu idioma (Inglês ou Português) e então seu
+navegador abre uma **página de configuração** onde você escolhe quais bancos de
+referência baixar (ClinVar, obrigatório; PharmGKB, opcional), cada um explicado
+em palavras simples. Esse download é **a única vez que o Gene Lens usa a
+internet**. Depois que termina, tudo roda no seu computador e nada nunca sai
+dele.
+
+É isso. Daí em diante você sobe seu arquivo bruto de DNA e lê os resultados,
+tudo local. Mantenha a janelinha (ou a aba do navegador) aberta enquanto usa;
+fechá-la encerra o app.
+
+Seus relatórios e dados ficam salvos na sua própria máquina, fora do app:
+
+- **macOS** — `~/Library/Application Support/GeneLens/`
+- **Windows** — `%APPDATA%\GeneLens\`
+
+> O app é um painel web local. O arquivo que você baixou (macOS/Windows) é um
+> pequeno iniciador que sobe um servidor no seu próprio computador e abre o
+> navegador nele, então a interface é a mesma em todo lugar. No macOS também
+> existe um `GeneLens-<versão>-Terminal-macOS.zip` caso você prefira rodar pelo
+> terminal e acompanhar os logs.
+
+---
+
 ## Início Rápido
+
+> Para desenvolvedores, ou para gerar os executáveis você mesmo. Quem não é
+> técnico pode usar o download pronto acima.
 
 ### Pré-requisitos
 

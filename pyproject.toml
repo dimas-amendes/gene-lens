@@ -1,6 +1,6 @@
 [project]
 name = "genetic-health-analyzer"
-version = "2.0.0"
+version = "1.0.0"
 description = "Privacy-first, local-only exploration of consumer genome files (23andMe, AncestryDNA, etc.)"
 readme = "README.md"
 requires-python = ">=3.10"

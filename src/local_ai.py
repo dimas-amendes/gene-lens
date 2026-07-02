@@ -39,39 +39,36 @@ RECOMMENDED_MODELS: list[str] = [
 DEFAULT_MODEL: str = RECOMMENDED_MODELS[0]
 
 
+OLLAMA_HOST = "http://127.0.0.1:11434"
+
+
 def is_ollama_available() -> bool:
-    """Check if Ollama is installed and running."""
+    """True if the local Ollama daemon is reachable over loopback.
+
+    Detects via the HTTP API (127.0.0.1:11434), NOT the `ollama` binary: a
+    Finder-launched macOS .app doesn't inherit the shell PATH, so
+    `which ollama` / `subprocess ["ollama", ...]` fail even when Ollama is
+    installed and running. The daemon check is PATH-independent, works no
+    matter how Ollama was installed, and matches how chat/explain actually
+    talk to it (the daemon must be up for the AI to work anyway).
+    """
     try:
-        result = subprocess.run(
-            ["ollama", "list"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        return result.returncode == 0
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+        import urllib.request
+        with urllib.request.urlopen(f"{OLLAMA_HOST}/api/version", timeout=3):
+            return True
+    except Exception:
         return False
 
 
 def list_models() -> list[str]:
-    """List available Ollama models."""
+    """Installed Ollama model names via the HTTP API (PATH-independent)."""
     try:
-        result = subprocess.run(
-            ["ollama", "list"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        if result.returncode != 0:
-            return []
-        lines = result.stdout.strip().split("\n")
-        models = []
-        for line in lines[1:]:  # skip header
-            parts = line.split()
-            if parts:
-                models.append(parts[0])
-        return models
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+        import json
+        import urllib.request
+        with urllib.request.urlopen(f"{OLLAMA_HOST}/api/tags", timeout=5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        return [m["name"] for m in data.get("models", []) if m.get("name")]
+    except Exception:
         return []
 
 
@@ -415,6 +412,54 @@ at your next appointment", "a [test] panel could help clarify this",
 """
 
 
+# Pre-made, per-section prompts for the in-tab "Explain these results" button.
+# Sent as the user question; the language-aware SYSTEM_PROMPT (which already
+# forbids prescriptive language) handles tone and language. The full analysis
+# context is provided, so each prompt just points the model at one section.
+EXPLAIN_PROMPTS = {
+    "disease": {
+        "en": "Explain, in plain language, the disease-risk findings in this analysis "
+              "(pathogenic variants and risk factors). What do they suggest and what would "
+              "be worth discussing with a doctor? Keep it short and non-alarming.",
+        "pt": "Explique, em linguagem simples, os achados de risco de doença desta análise "
+              "(variantes patogênicas e fatores de risco). O que eles sugerem e o que valeria "
+              "conversar com um médico? Seja breve e sem alarmismo.",
+    },
+    "hereditary": {
+        "en": "Explain the hereditary-condition findings in this analysis in plain language: "
+              "what they mean for the person and, where relevant, for family or children.",
+        "pt": "Explique os achados de condições hereditárias desta análise em linguagem simples: "
+              "o que significam para a pessoa e, quando relevante, para a família ou filhos.",
+    },
+    "family": {
+        "en": "Explain the family-planning / carrier findings in this analysis in plain "
+              "language, and what they could mean for future children.",
+        "pt": "Explique os achados de planejamento familiar / portador desta análise em "
+              "linguagem simples, e o que podem significar para futuros filhos.",
+    },
+    "ancestry": {
+        "en": "Explain what this ancestry breakdown means in plain language, and its limits "
+              "(it's an estimate from consumer-grade markers).",
+        "pt": "Explique o que essa composição de ancestralidade significa em linguagem simples, "
+              "e seus limites (é uma estimativa a partir de marcadores de teste de consumo).",
+    },
+    "pharma": {
+        "en": "Explain the gene-drug (pharmacogenomic) findings in this analysis in plain "
+              "language: what they suggest about how the person may respond to certain "
+              "medications, and to always confirm with the prescribing doctor.",
+        "pt": "Explique os achados gene-medicamento (farmacogenômicos) desta análise em "
+              "linguagem simples: o que sugerem sobre como a pessoa pode responder a certos "
+              "medicamentos, e que sempre confirme com o médico que prescreve.",
+    },
+    "wellness": {
+        "en": "Explain the wellness-panel results in this analysis in plain language: the main "
+              "takeaways across the panels (nutrition, fitness, sleep, etc.) and their limits.",
+        "pt": "Explique os resultados dos painéis de bem-estar desta análise em linguagem "
+              "simples: os principais destaques (nutrição, fitness, sono, etc.) e seus limites.",
+    },
+}
+
+
 def chat_about_analysis(
     context: str,
     history: list[dict],
@@ -422,6 +467,7 @@ def chat_about_analysis(
     model: str = DEFAULT_MODEL,
     language: str = "pt",
     timeout: int = 120,
+    num_predict: int = 2048,
 ) -> tuple[bool, str]:
     """Ask a question about a previously generated analysis.
 
@@ -444,7 +490,7 @@ def chat_about_analysis(
         "stream": False,
         "options": {
             "num_ctx": 8192,
-            "num_predict": 2048,
+            "num_predict": num_predict,
             "temperature": 0.3,
         },
     }).encode("utf-8")

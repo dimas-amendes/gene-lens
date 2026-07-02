@@ -223,10 +223,13 @@ function runDbDownload(key, btn, wrap) {
       fetch('/api/setup/status').then(r => r.json()).then(s => {
         const it = s.items[key];
         if (it && fill) {
-          const indet = it.pct < 0 && !it.done;
+          // Animate at 0% too (connecting / first bytes), so a slow start
+          // doesn't look frozen.
+          const indet = !it.done && it.pct <= 0;
           const width = it.done ? 100 : (it.pct < 0 ? 0 : it.pct);
           fill.classList.toggle('indet', indet);
-          fill.style.width = width + '%';
+          // Clear inline width when indeterminate so the .indet CSS (40% + slide) animates.
+          fill.style.width = indet ? '' : (width + '%');
           if (pct) {
             const ph = it.done ? '' : (PHASE_LABELS[it.phase] ? PHASE_LABELS[it.phase] + ' ' : '');
             pct.textContent = it.done ? '100%' : (indet ? '…' : ph + width + '%');

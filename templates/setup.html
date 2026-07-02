@@ -193,14 +193,16 @@ function renderProgress(items) {
   const wrap = document.getElementById('progress-wrap');
   let html = '';
   for (const [name, it] of Object.entries(items)) {
-    const indet = it.pct < 0 && !it.done;               // only when no percent
+    // Animate at 0% too (connecting / first bytes / queued): a static 0% bar
+    // reads as "frozen" while NCBI is slow to start the 419 MB transfer.
+    const indet = !it.done && it.pct <= 0;
     const pct = it.done ? 100 : (it.pct < 0 ? 0 : it.pct);
     const phase = it.done ? '' : (PHASE_LABELS[it.phase] ? ' · ' + PHASE_LABELS[it.phase] : '');
     html += '<div class="prog-row">'
       + '<div class="prog-label"><span>' + (LABELS[name] || name) + phase + '</span>'
       + '<span>' + (it.done ? '100%' : (indet ? '…' : pct + '%')) + '</span></div>'
       + '<div class="prog-bar"><div class="prog-fill ' + (indet ? 'indeterminate' : '')
-      + '" style="width:' + pct + '%"></div></div></div>';
+      + '"' + (indet ? '' : ' style="width:' + pct + '%"') + '></div></div></div>';
   }
   wrap.innerHTML = html;
 }

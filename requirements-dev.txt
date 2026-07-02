@@ -5,4 +5,4 @@
 # run the test suite, lint, or develop locally goes here. Keeps the
 # end-user install path light (Flask + Tqdm + Requests only).
 
-pytest==9.0.3
+pytest==9.1.1

@@ -24,7 +24,7 @@ jobs:
             artifact: dist/GeneLens-*.zip
           - os: windows-latest
             script: packaging\build_windows.bat
-            artifact: dist/GeneLens-*.exe
+            artifact: dist/GeneLens-*.zip
 
     runs-on: ${{ matrix.os }}
 

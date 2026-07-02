@@ -91,13 +91,19 @@ abra, e use o Gene Lens no seu navegador normal.
 [página de Releases](https://github.com/dimas-amendes/gene-lens/releases):
 
 - **macOS** — `GeneLens-<versão>-macOS.zip`
-- **Windows** — `GeneLens-<versão>-Windows.exe`
+- **Windows** — `GeneLens-<versão>-Windows.zip`
+
+Todos os downloads são arquivos `.zip`. É porque um app de macOS na verdade é
+uma pasta (um "bundle"), e um Release do GitHub só hospeda arquivos únicos,
+então precisa ser zipado; o Windows é zipado também só pra manter todos os
+downloads padronizados.
 
 **2. Abra.**
 
 - **macOS** — dê duplo-clique no zip para descompactar, depois duplo-clique em
   **Gene Lens**.
-- **Windows** — dê duplo-clique em **GeneLens.exe**.
+- **Windows** — dê duplo-clique no zip para descompactar, depois duplo-clique em
+  **GeneLens.exe**.
 
 **3. Só na primeira vez, passe pelo aviso de segurança** (o app não é assinado
 pago, então o sistema é cauteloso):

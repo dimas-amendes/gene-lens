@@ -457,6 +457,34 @@ EXPLAIN_PROMPTS = {
         "pt": "Explique os resultados dos painéis de bem-estar desta análise em linguagem "
               "simples: os principais destaques (nutrição, fitness, sono, etc.) e seus limites.",
     },
+    "advanced": {
+        "en": "Explain the advanced-health panel results in this analysis in plain language: "
+              "the main takeaways across the panels (sensory, sleep, longevity, mental well-being, "
+              "food sensitivities, thyroid, eyes, bones, allergy, autoimmune) and their limits.",
+        "pt": "Explique os resultados dos painéis de saúde avançada desta análise em linguagem "
+              "simples: os principais destaques (sensorial, sono, longevidade, bem-estar mental, "
+              "sensibilidades alimentares, tireoide, olhos, ossos, alergia, autoimune) e seus limites.",
+    },
+}
+
+# Appended to every EXPLAIN_PROMPTS question. Two jobs: (1) a fixed 3-part
+# skeleton so lay users get a predictable, scannable structure instead of the
+# model inventing a new layout each time; (2) reinforce the non-prescriptive
+# register — the shared system prompt bans "you should" but the model was
+# still leaking "recommended", which our own house rules forbid.
+EXPLAIN_STYLE = {
+    "en": "\n\nStructure the answer with exactly these three short bold headers: "
+          "**What we found**, **What it means**, **What to discuss with a doctor**. "
+          "Cover at most the 3-5 most important findings, not every marker. Plain "
+          "language for a non-expert, short paragraphs and bullets. Never write "
+          "'you should', 'recommended', 'take X', or a dose as advice — say "
+          "'associated with', 'may', 'worth discussing with your doctor'.",
+    "pt": "\n\nEstruture a resposta com exatamente estes três títulos curtos em negrito: "
+          "**O que encontramos**, **O que significa**, **O que conversar com o médico**. "
+          "Cubra no máximo os 3-5 achados mais importantes, não todos os marcadores. "
+          "Linguagem simples para leigo, parágrafos curtos e bullets. Nunca escreva "
+          "'você deve', 'recomendado', 'tome X', nem dose como conselho — diga "
+          "'associado a', 'pode', 'vale conversar com seu médico'.",
 }
 
 

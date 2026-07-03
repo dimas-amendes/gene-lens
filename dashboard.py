@@ -628,9 +628,56 @@ def build_charts_json(health, disease, lang="en"):
 
 # ── Conclusions ───────────────────────────────────────────────────────────────
 
-def _get_drug_gene_note(gene: str, genotype: str) -> str:
-    """Return clinical interpretation for pharmacogenes."""
-    notes = {
+_DRUG_GENE_NOTES = {
+    "en": {
+        "CYP2D6": {
+            "_default": "CYP2D6 metabolizes ~25% of all medications, including codeine, tramadol, tamoxifen, and many antidepressants.",
+            "poor": "Poor metabolizer — codeine will be ineffective (does not convert to morphine), tramadol reduced. Risk of adverse effects with standard antidepressant doses.",
+            "intermediate": "Intermediate metabolizer — may need dose adjustment for opioids and antidepressants.",
+        },
+        "CYP2C19": {
+            "_default": "CYP2C19 metabolizes clopidogrel (anticoagulant), proton-pump inhibitors (omeprazole), and some antidepressants.",
+            "poor": "Poor metabolizer — clopidogrel will be INEFFECTIVE (does not convert to the active form). Consider an alternative anticoagulant (prasugrel, ticagrelor).",
+            "intermediate": "Intermediate metabolizer — clopidogrel may have reduced efficacy. Discuss alternatives with a cardiologist.",
+            "rapid": "Rapid metabolizer — may need higher doses of omeprazole/PPIs. Antidepressants metabolized faster.",
+            "ultrarapid": "Ultrarapid metabolizer — standard doses of PPIs and antidepressants may be insufficient.",
+        },
+        "CYP2C9": {
+            "_default": "CYP2C9 metabolizes warfarin (anticoagulant) and NSAIDs (ibuprofen, naproxen).",
+            "poor": "Poor metabolizer — warfarin requires significant dose reduction (bleeding risk). NSAIDs may accumulate.",
+            "intermediate": "Intermediate metabolizer — warfarin requires moderate dose reduction.",
+        },
+        "VKORC1": {
+            "_default": "VKORC1 is the target of warfarin. Variants directly affect sensitivity.",
+            "sensitive": "Increased sensitivity — significantly lower warfarin doses required.",
+            "highly_sensitive": "Highly sensitive — much lower warfarin doses. Elevated bleeding risk at a standard dose.",
+        },
+        "DPYD": {
+            "_default": "DPYD metabolizes fluoropyrimidines (5-FU, capecitabine) used in chemotherapy.",
+            "intermediate": "Reduced DPYD — 5-FU/capecitabine dose should be reduced by 50%. Severe toxicity at a standard dose.",
+            "deficient": "DPYD deficient — 5-FU and capecitabine are CONTRAINDICATED. Can be fatal at a standard dose.",
+        },
+        "TPMT": {
+            "_default": "TPMT metabolizes thiopurines (azathioprine, 6-mercaptopurine) used in autoimmune conditions and leukemia.",
+            "intermediate": "Intermediate TPMT — thiopurine dose reduction needed to avoid myelosuppression.",
+            "poor": "TPMT deficient — thiopurines can cause severe myelosuppression. Drastically reduced dose or an alternative.",
+        },
+        "SLCO1B1": {
+            "_default": "SLCO1B1 transports statins into the liver. Variants affect myopathy risk.",
+            "intermediate": "Intermediate transporter — 4x higher myopathy risk with simvastatin. Consider rosuvastatin or pravastatin.",
+            "poor": "Deficient transporter — 17x higher myopathy risk with simvastatin. AVOID simvastatin. Use alternatives.",
+        },
+        "CYP3A5": {
+            "_default": "CYP3A5 affects metabolism of tacrolimus (a post-transplant immunosuppressant).",
+        },
+        "HLA-B": {
+            "_default": "HLA-B*5701 — abacavir (an HIV antiretroviral) is contraindicated in carriers due to the risk of severe hypersensitivity.",
+        },
+        "CYP1A2": {
+            "_default": "CYP1A2 metabolizes caffeine, theophylline, and some antipsychotics (clozapine).",
+        },
+    },
+    "pt": {
         "CYP2D6": {
             "_default": "CYP2D6 metaboliza ~25% de todos os medicamentos, incluindo codeina, tramadol, tamoxifeno e muitos antidepressivos.",
             "poor": "Metabolizador lento — codeina sera ineficaz (nao converte em morfina), tramadol reduzido. Risco de efeitos adversos com doses padrao de antidepressivos.",
@@ -677,9 +724,17 @@ def _get_drug_gene_note(gene: str, genotype: str) -> str:
         "CYP1A2": {
             "_default": "CYP1A2 metaboliza cafeina, teofilina e alguns antipsicoticos (clozapina).",
         },
-    }
+    },
+}
 
-    gene_info = notes.get(gene)
+
+def _get_drug_gene_note(gene: str, genotype: str, lang: Lang = "en") -> str:
+    """Return the EN or PT clinical interpretation for a pharmacogene.
+
+    These are clinically sensitive strings, so they're a hardcoded EN+PT pair
+    (see the i18n decision table) rather than neural-translated at runtime.
+    Defaults to EN — the source-of-truth language — never PT."""
+    gene_info = _DRUG_GENE_NOTES.get(lang, _DRUG_GENE_NOTES["en"]).get(gene)
     if not gene_info:
         return ""
 
@@ -876,7 +931,7 @@ def build_conclusions(health, disease, protocol, lang="en"):
                 drugs_str = ", ".join(sorted(drugs_list)[:5])
                 genotype = findings[0].get("genotype", "?")
                 level = findings[0].get("level", "?")
-                gene_note = _get_drug_gene_note(gene, genotype)
+                gene_note = _get_drug_gene_note(gene, genotype, lang)
                 if gene_note:
                     drugs_conc.append(f"**{gene}** ({genotype_label} `{genotype}`, {level_label} {level}) — {meds_label}: {drugs_str}. {gene_note}")
                 else:
@@ -2007,15 +2062,14 @@ def clear():
     return redirect(url_for("index"))
 
 
-def _build_chat_context(active: dict, lang: Lang) -> str:
-    """Serialize the active analysis into a compact text the LLM can read."""
-    if not active:
-        return "No analysis is loaded."
-
+def _profile_header(active: dict, lang: Lang) -> list[str]:
+    """Total-SNP + profile preamble shared by the full chat context and the
+    per-section explain context. Kept in one place so the sex-inference safety
+    annotation never drifts between the two callers."""
     lines = []
     info = active.get("genome_info") or {}
     if info:
-        lines.append(f"Total SNPs: {info.get('total_snps', '?')}, format: {info.get('format', '?')}")
+        lines.append(f"Total SNPs: {info.get('total_snps', info.get('snp_count', '?'))}, format: {info.get('format', '?')}")
         profile = info.get("profile") or {}
         if profile:
             bits = []
@@ -2033,6 +2087,15 @@ def _build_chat_context(active: dict, lang: Lang) -> str:
                     bits.append(f"{key}={val}")
             if bits:
                 lines.append("Profile: " + ", ".join(bits))
+    return lines
+
+
+def _build_chat_context(active: dict, lang: Lang) -> str:
+    """Serialize the active analysis into a compact text the LLM can read."""
+    if not active:
+        return "No analysis is loaded."
+
+    lines = _profile_header(active, lang)
 
     health_findings = (active.get("health") or {}).get("findings") or []
     if health_findings:
@@ -2115,6 +2178,108 @@ def _build_chat_context(active: dict, lang: Lang) -> str:
             )
 
     return "\n".join(lines) if lines else "Analysis loaded but no notable findings."
+
+
+# Which wellness-dict panels the two panel-based Explain sections cover. Mirror
+# of the tab loops in dashboard.html (Tab 4 = wellness, Tab 4B = advanced).
+_WELLNESS_PANELS = ("nutri", "fit", "skin", "aging")
+_ADVANCED_PANELS = ("sensory", "sleep", "longevity", "mental", "food",
+                    "thyroid", "eyes", "bones", "allergy", "autoimmune")
+
+
+def _build_explain_context(active: dict, section: str, lang: Lang) -> str:
+    """Section-scoped context for the per-section Explain buttons.
+
+    The chat needs the whole analysis (the user can ask anything); an Explain
+    button is about ONE section. Feeding only that section's findings keeps the
+    local model on-topic — it was bleeding wellness/mental genes into the
+    pharma explanation — and cuts input tokens, so generation is faster. Falls
+    back to the full chat context for a section we don't special-case."""
+    if not active:
+        return "No analysis is loaded."
+
+    lines = _profile_header(active, lang)
+
+    def _section(title: str, items: list[str]):
+        if items:
+            lines.append("")
+            lines.append(title)
+            lines.extend(items)
+
+    if section == "disease":
+        disease = active.get("disease") or {}
+        findings = disease.get("findings") if isinstance(disease, dict) else []
+        _section(
+            f"Disease-associated variants ({len(findings or [])} total):",
+            [f"- {f.get('rsid')} ({f.get('gene', '?')}): {f.get('clinical_significance', '?')} "
+             f"— {(f.get('phenotype') or f.get('description') or '')[:180]}"
+             for f in (findings or [])[:20]],
+        )
+
+    elif section == "hereditary":
+        conditions = (active.get("hereditary") or {}).get("conditions") or []
+        _section(
+            f"Hereditary conditions matched ({len(conditions)}):",
+            [f"- {c.get('name', '?')} [{', '.join(c.get('genes_found', []))}, "
+             f"{c.get('max_stars', '?')}/4 stars]: {(c.get('text') or c.get('evidence') or '')[:220]}"
+             for c in conditions[:15]],
+        )
+
+    elif section == "pharma":
+        pharm = (active.get("health") or {}).get("pharmgkb_findings") or []
+        _section(
+            f"Gene-drug (pharmacogenomic) findings ({len(pharm)} total):",
+            [f"- {f.get('rsid')} ({f.get('gene', '?')}, level {f.get('level', '?')}): "
+             f"{f.get('genotype', '?')} — drugs: {f.get('drugs', '?')}; "
+             f"{(f.get('annotation') or f.get('description') or '')[:180]}"
+             for f in pharm[:20]],
+        )
+
+    elif section == "ancestry":
+        ancestry = active.get("ancestry") or {}
+        pcts = ancestry.get("percentages") or {}
+        ranked = sorted(pcts.items(), key=lambda kv: kv[1], reverse=True)
+        _section(
+            f"Ancestry estimate ({ancestry.get('markers_used', '?')} of "
+            f"{ancestry.get('markers_total', '?')} AIM markers, confidence: "
+            f"{ancestry.get('confidence', '?')}):",
+            [f"- {region}: {pct}%" for region, pct in ranked if pct > 0],
+        )
+
+    elif section == "family":
+        family = active.get("family") or {}
+        cond_key = "condition_pt" if lang == "pt" else "condition_en"
+        for label, key in (("Carrier", "carrier_findings"),
+                           ("Dominant", "dominant_findings"),
+                           ("X-linked", "x_linked_findings"),
+                           ("Risk-factor", "risk_factor_findings")):
+            items = family.get(key) or []
+            _section(
+                f"{label} findings ({len(items)}):",
+                [f"- {f.get('gene', '?')}: {f.get(cond_key) or f.get('condition_en') or '?'}"
+                 for f in items[:15]],
+            )
+        _section("Summary:", [f"- {c}" for c in (family.get("conclusions") or [])[:6]])
+
+    elif section in ("wellness", "advanced"):
+        wellness = active.get("wellness") or {}
+        keys = _WELLNESS_PANELS if section == "wellness" else _ADVANCED_PANELS
+        for pk in keys:
+            panel = wellness.get(pk) or {}
+            findings = panel.get("findings") or []
+            _section(
+                f"{pk} panel ({len(findings)} findings):",
+                [f"- {f.get('trait', '?')} ({f.get('gene', '?')}): {f.get('genotype', '?')} "
+                 f"→ {f.get('label', '?')} — {(f.get('text') or '')[:150]}"
+                 for f in findings[:12]],
+            )
+
+    # Only the profile header made it in → we don't have a scoped view for this
+    # section (or it's empty). Fall back to the full context so the button still
+    # produces something useful rather than "no data".
+    if len(lines) <= 2:
+        return _build_chat_context(active, lang)
+    return "\n".join(lines)
 
 
 @app.route("/api/chat/stream", methods=["POST"])
@@ -2274,7 +2439,7 @@ def api_explain():
     client polls via /api/explain/status. Reuses the chat pipeline (context +
     language-aware, non-prescriptive system prompt) with a pre-made section
     prompt. CSRF-guarded by before_request."""
-    from src.local_ai import EXPLAIN_PROMPTS
+    from src.local_ai import EXPLAIN_PROMPTS, EXPLAIN_STYLE
     from src.preferences import is_ai_chat_enabled
 
     payload = request.get_json(silent=True) or {}
@@ -2289,8 +2454,10 @@ def api_explain():
         return {"ok": False, "error": "no_analysis"}, 400
 
     lang = _get_lang()
-    context = _build_chat_context(active, lang)  # build in the request thread
-    question = EXPLAIN_PROMPTS[section]["pt" if lang == "pt" else "en"]
+    # Section-scoped context (not the whole analysis): keeps the local model
+    # on-topic and faster. See _build_explain_context.
+    context = _build_explain_context(active, section, lang)  # build in the request thread
+    question = EXPLAIN_PROMPTS[section]["pt" if lang == "pt" else "en"] + EXPLAIN_STYLE[lang]
     job_id = secrets.token_hex(8)
     with _explain_lock:
         _explain_jobs[job_id] = {"status": "running"}
@@ -2307,6 +2474,55 @@ def api_explain_status(job_id):
     with _explain_lock:
         job = _explain_jobs.get(job_id, {"status": "not_found"})
     return jsonify(job)
+
+
+@app.route("/api/explain/stream", methods=["POST"])
+def api_explain_stream():
+    """Stream a per-section explanation token-by-token via SSE. Same section
+    context + non-prescriptive skeleton prompt as /api/explain, but the text
+    renders as it generates instead of after the full ~30-120s. The frontend
+    falls back to the /api/explain job path if it can't consume the stream.
+    CSRF enforced by before_request."""
+    from src.local_ai import (
+        EXPLAIN_PROMPTS, EXPLAIN_STYLE, chat_about_analysis_stream, DEFAULT_MODEL,
+    )
+    from src.preferences import is_ai_chat_enabled
+
+    payload = request.get_json(silent=True) or {}
+    section = (payload.get("section") or "").strip()
+    if section not in EXPLAIN_PROMPTS:
+        return {"ok": False, "error": "unknown_section"}, 400
+    if not is_ai_chat_enabled():
+        return {"ok": False, "error": "ai_disabled"}, 403
+    active = _jobs.get("active_result")
+    if not active:
+        return {"ok": False, "error": "no_analysis"}, 400
+
+    lang = _get_lang()
+    context = _build_explain_context(active, section, lang)
+    question = EXPLAIN_PROMPTS[section]["pt" if lang == "pt" else "en"] + EXPLAIN_STYLE[lang]
+    model = payload.get("model") or DEFAULT_MODEL
+
+    def _events():
+        try:
+            for item in chat_about_analysis_stream(
+                context=context, history=[], question=question,
+                model=model, language=lang,
+            ):
+                if isinstance(item, dict) and item.get("event") == "error":
+                    yield "data: " + json.dumps(
+                        {"event": "error", "message": item.get("message") or "Unknown error"}
+                    ) + "\n\n"
+                    return
+                yield "data: " + json.dumps({"event": "chunk", "text": item}) + "\n\n"
+        except GeneratorExit:
+            return
+        yield "data: " + json.dumps({"event": "done"}) + "\n\n"
+
+    return Response(_events(), mimetype="text/event-stream", headers={
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+    })
 
 
 @app.route("/settings")

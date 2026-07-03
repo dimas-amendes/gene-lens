@@ -140,6 +140,67 @@ def test_explain_rejects_unknown_section(client):
     assert resp.get_json()["error"] == "unknown_section"
 
 
+def test_explain_stream_emits_sse_chunks(client, monkeypatch):
+    import src.local_ai as local_ai
+    from src import preferences
+    monkeypatch.setattr(preferences, "is_ai_chat_enabled", lambda: True)
+    # Stub the generator so the test never touches Ollama.
+    monkeypatch.setattr(local_ai, "chat_about_analysis_stream",
+                        lambda **k: iter(["Hello ", "world."]))
+    dashboard._jobs["active_result"] = {"health": {}}
+    try:
+        resp = client.post("/api/explain/stream", json={"section": "disease"})
+        assert resp.status_code == 200
+        body = resp.get_data(as_text=True)
+        assert '"event": "chunk"' in body
+        assert "Hello " in body and "world." in body
+        assert '"event": "done"' in body
+    finally:
+        dashboard._jobs.pop("active_result", None)
+
+
+def test_explain_stream_rejects_unknown_section(client):
+    resp = client.post("/api/explain/stream", json={"section": "nope"})
+    assert resp.status_code == 400
+    assert resp.get_json()["error"] == "unknown_section"
+
+
+def test_build_explain_context_is_section_scoped():
+    # Each section's context must contain ONLY that section's findings, so the
+    # local model stops bleeding wellness/mental genes into the pharma answer.
+    active = {
+        "genome_info": {"snp_count": 100, "format": "csv", "profile": {"sex": "F"}},
+        "health": {
+            "findings": [{"rsid": "rs1801133", "gene": "MTHFR", "category": "methylation",
+                          "genotype": "TT", "description": "reduced enzyme"}],
+            "pharmgkb_findings": [{"rsid": "rs4149056", "gene": "SLCO1B1", "level": "1A",
+                                   "genotype": "CC", "drugs": "simvastatin",
+                                   "annotation": "myopathy risk"}],
+        },
+        "hereditary": {"conditions": [{"name": "Hereditary breast cancer",
+                                       "genes_found": ["BRCA1"], "max_stars": 3,
+                                       "text": "BRCA1 pathogenic variant"}]},
+        "wellness": {"nutri": {"findings": [{"trait": "Vitamin D", "gene": "VDR",
+                                             "genotype": "AA", "label": "low",
+                                             "text": "vit d panel"}]}},
+    }
+    pharma = dashboard._build_explain_context(active, "pharma", "en")
+    assert "SLCO1B1" in pharma
+    assert "VDR" not in pharma      # wellness must not leak into pharma
+    assert "BRCA1" not in pharma    # hereditary must not leak either
+    assert "MTHFR" not in pharma    # lifestyle findings are a different section
+
+    hered = dashboard._build_explain_context(active, "hereditary", "en")
+    assert "BRCA1" in hered and "SLCO1B1" not in hered
+
+    wellness = dashboard._build_explain_context(active, "wellness", "en")
+    assert "VDR" in wellness and "SLCO1B1" not in wellness
+
+    # A section with no scoped view falls back to the full analysis context.
+    fallback = dashboard._build_explain_context(active, "mystery", "en")
+    assert "MTHFR" in fallback
+
+
 def test_explain_requires_ai_enabled(client, monkeypatch):
     from src import preferences
     monkeypatch.setattr(preferences, "is_ai_chat_enabled", lambda: False)

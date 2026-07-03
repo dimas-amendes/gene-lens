@@ -1,5 +1,5 @@
-{%- macro explain_button(section) -%}
-{% if ollama_ready %}<div class="explain-wrap"><button class="explain-btn" onclick="explainSection(this,'{{ section }}')"><i class="ti ti-sparkles"></i> {{ t.explain_btn }}</button><div class="explain-out"></div></div>{% endif %}
+{%- macro explain_button(section, label='') -%}
+{% if ollama_ready %}<div class="explain-wrap"><button class="explain-btn" onclick="explainSection(this,'{{ section }}')"><i class="ti ti-sparkles"></i> {% if label %}{{ t.explain_btn_short }}: {{ label }}{% else %}{{ t.explain_btn }}{% endif %}</button><div class="explain-out"></div></div>{% endif %}
 {%- endmacro -%}
 <!DOCTYPE html>
 <html lang="{{ 'en' if lang == 'en' else 'pt-BR' }}" data-bs-theme="dark">
@@ -60,11 +60,19 @@ a { color: var(--accent); }
 .lang-sw a:hover { color: var(--text-secondary); }
 .lang-sw a.active { background: var(--accent-soft); color: var(--accent); }
 .explain-wrap { margin: 0 0 16px; }
+.explain-bar { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin: 4px 0 18px; }
+.explain-bar .explain-wrap { margin: 0; width: 100%; }
 .explain-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-soft); color: var(--accent); border: 1px solid transparent; padding: 6px 13px; border-radius: 6px; font-size: 12.5px; font-weight: 500; cursor: pointer; font-family: inherit; }
 .explain-btn:hover:not(:disabled) { background: rgba(59,130,246,.2); }
 .explain-btn:disabled { opacity: .6; cursor: not-allowed; }
-.explain-out { display: none; margin-top: 12px; padding: 14px 16px; background: var(--surface-1); border: 1px solid var(--border-default); border-radius: 10px; font-size: 13.5px; line-height: 1.6; color: var(--text-secondary); white-space: pre-wrap; }
-.explain-out .disc { display: block; margin-top: 10px; font-size: 11px; color: var(--text-dim); white-space: normal; }
+.explain-out { display: none; margin-top: 12px; padding: 14px 16px; background: var(--surface-1); border: 1px solid var(--border-default); border-radius: 10px; font-size: 13.5px; line-height: 1.65; color: var(--text-secondary); }
+.explain-out ul { margin: 8px 0; padding-left: 20px; }
+.explain-out li { margin: 4px 0; }
+.explain-out strong { color: var(--text); font-weight: 600; }
+.explain-out code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; font-family: 'Geist Mono', monospace; font-size: 12px; }
+.explain-out .rsid-chip { background: var(--accent-soft); border: 1px solid rgba(59,130,246,.3); color: var(--accent); font-family: 'Geist Mono', monospace; font-size: 12px; padding: 1px 6px; border-radius: 4px; cursor: pointer; transition: background .15s; }
+.explain-out .rsid-chip:hover { background: rgba(59,130,246,.18); }
+.explain-out .disc { display: block; margin-top: 12px; font-size: 11px; color: var(--text-dim); }
 .explain-spin { display: inline-block; animation: explainspin .7s linear infinite; }
 @keyframes explainspin { to { transform: rotate(360deg); } }
 .priv-pill { font-size: 11px; color: var(--green); background: var(--green-soft); padding: 4px 12px; border-radius: 20px; font-weight: 500; margin-left: 12px; }
@@ -905,6 +913,13 @@ a { color: var(--accent); }
 
   {% if human.get('health') %}<div class="hc"><h4><i class="ti ti-circle-check"></i> {{ t.human_health }}</h4><ul>{% for c in human.health %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
 
+  {% if disease or (hereditary and hereditary.conditions) %}
+  <div class="explain-bar">
+    {% if disease %}{{ explain_button('disease', t.explain_lbl_disease) }}{% endif %}
+    {% if hereditary and hereditary.conditions %}{{ explain_button('hereditary', t.explain_lbl_hereditary) }}{% endif %}
+  </div>
+  {% endif %}
+
   <!-- Accordion: Lifestyle -->
   <div class="gc acc">
     <details>
@@ -925,7 +940,6 @@ a { color: var(--accent); }
       <summary><i class="ti ti-alert-triangle tr"></i> {{ t.acc_disease }} {% if disease %}<span class="badge-count br">{{ (disease.pathogenic|length + disease.likely_pathogenic|length) }} {{ t.acc_variants }}</span>{% endif %}</summary>
       <div class="acc-body">
         {% if disease %}
-        {{ explain_button('disease') }}
         {% if conclusions.get('disease') %}<div class="cc"><h4><i class="ti ti-clipboard-text"></i> {{ t.conclusion_disease }}</h4><ul>{% for c in conclusions.disease %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
         {% if conclusions.get('disease_technical') %}<div class="tn">{% for n in conclusions.disease_technical %}<p style="margin:0">{{ n|bold|safe }}</p>{% endfor %}</div>{% endif %}
         {% set patho = disease.pathogenic + disease.likely_pathogenic %}
@@ -958,7 +972,6 @@ a { color: var(--accent); }
     <details>
       <summary><i class="ti ti-dna tr"></i> {{ t.acc_hereditary }} <span class="badge-count br">{{ hereditary.conditions|length }} {{ t.acc_findings }}</span>{% if hereditary.sex %} <span class="tm" style="font-size:11px;margin-left:8px">{% if hereditary.sex_inferred %}{{ t.sex_inferred }}{% endif %} {{ hereditary.sex }}</span>{% endif %}</summary>
       <div class="acc-body">
-        {{ explain_button('hereditary') }}
         <div class="tn" style="border-color:rgba(239,68,68,.2);margin-bottom:16px"><strong>{{ t.warning_label }}:</strong> {{ t.hereditary_disclaimer }}</div>
         {% for cond in hereditary.conditions %}
         <div class="gc" style="margin-bottom:12px;border-color:{% if cond.priority <= 1 %}rgba(239,68,68,.3){% elif cond.priority <= 2 %}rgba(234,179,8,.3){% else %}var(--border-default){% endif %}">
@@ -1059,6 +1072,7 @@ a { color: var(--accent); }
 <div class="tp" id="tab-drugs">
   <div class="ctx ctx-danger"><h4>{{ t.tab_drugs }}</h4>{{ t.ctx_drugs }}</div>
   {% if human.get('drugs') %}<div class="hc"><h4><i class="ti ti-circle-check"></i> {{ t.human_drugs }}</h4><ul>{% for c in human.drugs %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
+  {% if results.pharmgkb_findings %}<div class="explain-bar">{{ explain_button('pharma') }}</div>{% endif %}
   {% if conclusions.get('drugs') %}<details class="gc acc" style="margin-bottom:16px"><summary style="font-size:13px;color:var(--text-muted)"><i class="ti ti-microscope"></i> {{ t.technical_details }}</summary><div class="acc-body"><div class="cc" style="margin:0"><h4><i class="ti ti-clipboard-text"></i> {{ t.conclusion_drugs }}</h4><ul>{% for c in conclusions.drugs %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div></div></details>{% endif %}
   {% if results.pharmgkb_findings %}
   {% set l1 = results.pharmgkb_findings|selectattr('level','in',['1A','1B'])|list %}
@@ -1067,7 +1081,6 @@ a { color: var(--accent); }
     <details>
       <summary><i class="ti ti-pill tr"></i> {{ t.level1_title }} <span class="badge-count br">{{ l1|length }}</span></summary>
       <div class="acc-body">
-        {{ explain_button('pharma') }}
         <p class="nt">CPIC = Clinical Pharmacogenetics Implementation Consortium</p>
         <table class="tb"><thead><tr><th>{{ t.col_gene }}</th><th>{{ t.col_level }}</th><th>{{ t.col_drugs }}</th><th>{{ t.col_genotype }}</th><th>{{ t.col_annotation }}</th></tr></thead><tbody>
   {% for f in l1 %}<tr><td class="fw6">{{ f.gene }}</td><td><span class="bs br">{{ f.level }}</span></td><td>{{ f.drugs[:60] }}</td><td><code>{{ f.genotype }}</code></td>
@@ -1125,6 +1138,9 @@ a { color: var(--accent); }
 <!-- ═══ TAB 4B: ADVANCED HEALTH (Sensory + Sleep + Longevity + Mental + Food + Thyroid + Eyes + Bones) ═══ -->
 <div class="tp" id="tab-advanced">
   <div class="ctx"><h4>{{ t.tab_advanced }}</h4>{{ t.ctx_advanced }}</div>
+  {% set adv = namespace(has=false) %}
+  {% if wellness %}{% for pk in ['sensory','sleep','longevity','mental','food','thyroid','eyes','bones','allergy','autoimmune'] %}{% if wellness.get(pk, {}).get('findings') %}{% set adv.has = true %}{% endif %}{% endfor %}{% endif %}
+  {% if adv.has %}<div class="explain-bar">{{ explain_button('advanced') }}</div>{% endif %}
   {% if wellness %}
   {% for pk, pn, acc_key in [('sensory', t.panel_sensory, 'acc_sensory'), ('sleep', t.panel_sleep, 'acc_sleep'), ('longevity', t.panel_longevity, 'acc_longevity'), ('mental', t.panel_mental, 'acc_mental'), ('food', t.panel_food, 'acc_food'), ('thyroid', t.panel_thyroid, 'acc_thyroid'), ('eyes', t.panel_eyes, 'acc_eyes'), ('bones', t.panel_bones, 'acc_bones'), ('allergy', t.panel_allergy, 'acc_allergy'), ('autoimmune', t.panel_autoimmune, 'acc_autoimmune')] %}
   {% set panel = wellness.get(pk, {}) %}
@@ -1156,13 +1172,19 @@ a { color: var(--accent); }
 <div class="tp" id="tab-heritage">
   <div class="ctx"><h4>{{ t.tab_heritage }}</h4>{{ t.ctx_heritage }}</div>
 
+  {% if (ancestry and ancestry.percentages) or (family and family.summary.total_relevant > 0) %}
+  <div class="explain-bar">
+    {% if ancestry and ancestry.percentages %}{{ explain_button('ancestry', t.explain_lbl_ancestry) }}{% endif %}
+    {% if family and family.summary.total_relevant > 0 %}{{ explain_button('family', t.explain_lbl_family) }}{% endif %}
+  </div>
+  {% endif %}
+
   <!-- Accordion: Ancestry (first) -->
   {% if ancestry and ancestry.percentages %}
   <div class="gc acc">
     <details>
       <summary><i class="ti ti-world tg"></i> {{ t.acc_ancestry }} <span class="badge-count bg">{{ ancestry.markers_used }} {{ t.acc_markers }}</span></summary>
       <div class="acc-body" id="ancestry-acc-body">
-        {{ explain_button('ancestry') }}
         {% if ancestry.conclusions %}
         <div class="cc"><h4><i class="ti ti-clipboard-text"></i> {{ t.acc_ancestry }}</h4><ul>{% for c in ancestry.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>
         {% endif %}
@@ -1188,7 +1210,6 @@ a { color: var(--accent); }
     <details>
       <summary><i class="ti ti-users ty"></i> {{ t.acc_family }} <span class="badge-count by">{{ family.summary.total_relevant }} {{ t.acc_variants }}</span></summary>
       <div class="acc-body">
-        {{ explain_button('family') }}
         {% if human.get('family') %}<div class="hc"><h4><i class="ti ti-circle-check"></i> {{ t.human_family }}</h4><ul>{% for c in human.family %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div>{% endif %}
         {% if family.conclusions %}<details class="gc acc" style="margin-bottom:16px"><summary style="font-size:13px;color:var(--text-muted)"><i class="ti ti-microscope"></i> {{ t.technical_details }}</summary><div class="acc-body"><div class="cc" style="margin:0"><h4><i class="ti ti-clipboard-text"></i> {{ t.family_conclusion_title }}</h4><ul>{% for c in family.conclusions %}<li>{{ c|bold|safe }}</li>{% endfor %}</ul></div></div></details>{% endif %}
         {% if family.dominant_findings %}
@@ -1424,36 +1445,107 @@ function explainSection(btn, section) {
   const wrap = btn.closest('.explain-wrap');
   const out = wrap.querySelector('.explain-out');
   const orig = btn.innerHTML;
+  const csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+  // rsID chips in the rendered explanation jump to the matching row, same as
+  // the chat drawer. Bind once per output box (explainSection can re-run).
+  if (!out.dataset.chipBound) {
+    out.dataset.chipBound = '1';
+    out.addEventListener('click', e => {
+      const chip = e.target.closest('.rsid-chip');
+      if (chip && chip.dataset.rsid && window.jumpToRsid) window.jumpToRsid(chip.dataset.rsid);
+    });
+  }
+  // Elapsed-seconds counter on the button so a slow local model (up to ~2 min
+  // for a big section) doesn't read as frozen.
+  // Elapsed-seconds counter on the button so a slow local model doesn't read
+  // as frozen even before the first streamed token arrives.
+  let secs = 0, tick = null, fullText = '';
+  const label = n => '<i class="ti ti-loader-2 explain-spin"></i> ' + T_EXPLAINING + ' ' + n + 's';
+  const stopTick = () => { if (tick) { clearInterval(tick); tick = null; } };
+  // renderMd escapes HTML first (XSS-safe), then applies markdown so bullets /
+  // bold / rsIDs render structured instead of a wall of text.
+  const render = () => {
+    if (window.renderMd) out.innerHTML = window.renderMd(fullText);
+    else out.textContent = fullText;
+  };
   const fail = () => {
+    stopTick();
     btn.disabled = false; btn.innerHTML = orig;
     out.textContent = T_EXPLAIN_ERR; out.style.display = 'block';
   };
-  const done = (text) => {
+  const finish = (text) => {
+    stopTick();
     btn.disabled = false; btn.innerHTML = orig;
-    out.textContent = text;                            // textContent = no XSS
+    if (typeof text === 'string') fullText = text;
+    render();
     const disc = document.createElement('span');
     disc.className = 'disc'; disc.textContent = T_EXPLAIN_DISC;
     out.appendChild(disc);
     out.style.display = 'block';
   };
   btn.disabled = true;
-  btn.innerHTML = '<i class="ti ti-loader-2 explain-spin"></i> ' + T_EXPLAINING;
+  btn.innerHTML = label(0);
+  tick = setInterval(() => { secs++; btn.innerHTML = label(secs); }, 1000);
   out.style.display = 'none';
-  // Kick off the background job, then poll — the request returns immediately,
-  // so the model's (up to ~2 min) generation never blocks the connection.
-  fetch('/api/explain', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ section: section }),
-  }).then(r => r.json()).then(d => {
-    if (!d.ok || !d.job_id) { fail(); return; }
-    const timer = setInterval(() => {
-      fetch('/api/explain/status/' + d.job_id).then(r => r.json()).then(s => {
-        if (s.status === 'done') { clearInterval(timer); done(s.explanation); }
-        else if (s.status === 'error' || s.status === 'not_found') { clearInterval(timer); fail(); }
-      }).catch(() => {});
-    }, 1500);
-  }).catch(fail);
+
+  // Fallback: background job + poll (the pre-streaming path). Used only if the
+  // browser/environment can't consume the SSE stream.
+  const viaJob = () => {
+    fetch('/api/explain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ section: section }),
+    }).then(r => r.json()).then(d => {
+      if (!d.ok || !d.job_id) { fail(); return; }
+      const timer = setInterval(() => {
+        fetch('/api/explain/status/' + d.job_id).then(r => r.json()).then(s => {
+          if (s.status === 'done') { clearInterval(timer); finish(s.explanation); }
+          else if (s.status === 'error' || s.status === 'not_found') { clearInterval(timer); fail(); }
+        }).catch(() => {});
+      }, 1500);
+    }).catch(fail);
+  };
+
+  // Primary: SSE stream — render tokens as they arrive so the reply writes
+  // itself out instead of appearing all at once after the full generation.
+  (async () => {
+    let sawChunk = false, errored = null;
+    try {
+      const r = await fetch('/api/explain/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+        body: JSON.stringify({ section: section }),
+      });
+      if (!r.ok || !r.body) throw new Error('no stream');
+      const reader = r.body.getReader();
+      const dec = new TextDecoder('utf-8');
+      let buf = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let idx;
+        while ((idx = buf.indexOf('\n\n')) !== -1) {
+          const raw = buf.slice(0, idx); buf = buf.slice(idx + 2);
+          if (!raw.startsWith('data:')) continue;
+          const j = raw.slice(5).trim(); if (!j) continue;
+          let ev; try { ev = JSON.parse(j); } catch (_) { continue; }
+          if (ev.event === 'chunk') {
+            sawChunk = true; fullText += ev.text;
+            out.style.display = 'block'; render();
+          } else if (ev.event === 'error') {
+            errored = ev.message || 'error';
+          }
+        }
+      }
+      if (errored && !fullText) { fail(); return; }
+      if (!sawChunk) { viaJob(); return; }  // stream opened but empty → fall back
+      finish();
+    } catch (err) {
+      if (!sawChunk) viaJob();  // couldn't stream at all → fall back to job path
+      else fail();
+    }
+  })();
 }
 </script>
 
@@ -1974,6 +2066,11 @@ function explainSection(btn, section) {
       target.classList.add('rsid-flash');
     }, 320); // wait for drawer close + tab switch repaint
   }
+
+  // Share the markdown renderer + rsID jump with the in-tab "Explain" buttons
+  // (defined in an earlier script block, outside this IIFE's scope).
+  window.renderMd = renderMd;
+  window.jumpToRsid = jumpToRsid;
 })();
 </script>
 {% endif %}

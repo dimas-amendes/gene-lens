@@ -149,6 +149,7 @@ h1.page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
           </span>
         </div>
         <div class="ai-toggle-desc">{{ t.settings_ai_chat_desc }}</div>
+        <div class="ai-toggle-desc" style="margin-top:4px;font-size:12px;color:var(--text-dim)"><i class="ti ti-cpu"></i> {{ t.ai_ram_note }}</div>
         {% if not c.installed %}<div class="ai-toggle-warn">{{ t.settings_ai_chat_needs_ollama }}</div>{% endif %}
       </div>
       <form method="POST" action="{{ url_for('settings_ai_toggle') }}">
@@ -190,6 +191,7 @@ const UPDATE_LABELS = {
   "unknown": "{{ t.settings_updates_unknown }}",
 };
 const PHASE_LABELS = { download: "{{ t.setup_phase_downloading }}", process: "{{ t.setup_phase_processing }}" };
+const T_CONNECTING = "{{ t.setup_phase_connecting }}";
 
 function copyCmds(btn) {
   const text = btn.dataset.cmds.replaceAll('&#10;', '\n');
@@ -231,8 +233,12 @@ function runDbDownload(key, btn, wrap) {
           // Clear inline width when indeterminate so the .indet CSS (40% + slide) animates.
           fill.style.width = indet ? '' : (width + '%');
           if (pct) {
-            const ph = it.done ? '' : (PHASE_LABELS[it.phase] ? PHASE_LABELS[it.phase] + ' ' : '');
-            pct.textContent = it.done ? '100%' : (indet ? '…' : ph + width + '%');
+            if (it.done) pct.textContent = '100%';
+            else if (indet) pct.textContent = T_CONNECTING + ' …';
+            else {
+              const ph = it.phase === 'process' ? PHASE_LABELS.process : PHASE_LABELS.download;
+              pct.textContent = ph + ' ' + width + '%';
+            }
           }
         }
         if (s.finished) {

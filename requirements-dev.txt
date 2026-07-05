@@ -9,7 +9,7 @@ pytest==9.1.1
 
 # Desktop packaging — builds the double-click executable (see packaging/).
 # Only needed to cut a release, not to run the test suite.
-pyinstaller==6.11.1
+pyinstaller==6.21.0
 # Pillow generates the Windows .ico app icon (packaging/icon.ico). The .icns is
 # built natively with iconutil, so this is only for the Windows icon.
 pillow==11.0.0
